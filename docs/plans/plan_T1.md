@@ -327,12 +327,12 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D10 | 통과. 새 세션에서 PreToolUse 훅이 고치는 법 문장과 함께 막았고 커밋이 생기지 않음 | `docs/plans/evidence/T1/D10.txt`, `hooks-pipe.txt` 1절 |
 | D11 | 통과 | `docs/plans/evidence/T1/D11.txt` |
 | D12 | 통과 (필수 검사 verify, 관리자 우회 금지, 승인 0명 PR 필수, squash 만 허용) | `docs/plans/evidence/T1/D12.txt` |
-| D13 | e2e 통과(5개, `CI=1` 에서도 통과). 브라우저 창 판정은 메인 세션 | `docs/plans/evidence/T1/D13-e2e.txt` |
+| D13 | 통과. 브라우저 창에서 `mobile-web` 이름으로 열림(세션 첫 폴더에 같은 명령 설정), e2e 5개 통과. 저장소에서 시작한 세션의 확인은 남음 | `D13-16-17-18-screen.md`, `D13-e2e.txt` |
 | D14 | | |
 | D15 | 통과 (175자, CLAUDE.local.md 0, `.claude/` 에 stop_hook_active 없음) | `docs/plans/evidence/T1/D15.txt` |
-| D16 | | |
-| D17 | | |
-| D18 | | |
+| D16 | 통과. 하단 세 탭 머리글 확인, 「탐색」 「찜」 없음 | `D13-16-17-18-screen.md`, D16-*.jpg |
+| D17 | 통과. 피팅룸 네 칸 화면 확인, 「스토어」 없음 | `D13-16-17-18-screen.md`, D17-*.jpg |
+| D18 | 통과. 어댑터 expo-sqlite, 값 한 줄이 새로고침 뒤에도 남음, 콘솔 오류 0 | `D13-16-17-18-screen.md`, D18-*.jpg |
 | D19 | 통과. 「기술 검토 결과」 여섯 칸을 채움. 고른 웹 어댑터는 expo-sqlite | `docs/plans/evidence/T1/D19.txt` |
 | D20 | 환경 없음 | Xcode 없음 |
 
