@@ -38,6 +38,8 @@
 
 - Task 는 전역 task-dod-loop 스킬로 한다. 순서는 plan 파일 → 리뷰 → 구현 → 화면 테스트 → DoD 전부 통과다.
 - plan 파일은 `docs/plans/plan_<TaskID>.md` 다.
+- Claude 세션은 이 저장소 폴더에서 시작한다. 다른 폴더에서 옮겨 오면 `.claude/settings.json` 훅이 실리지 않는다.
+- 훅은 PATH 의 node 와 pnpm 을 쓴다. 못 찾으면 Stop 은 알리기만 하고 PreToolUse 는 도구를 모두 막는다. 그때는 사람에게 알린다.
 - 컨텍스트끼리 직접 import 하지 않는다. 필요한 쪽 application 에 포트를 두고 앱 composition 이 잇는다.
 - 패키지 밖으로는 `src/index.ts` 에서 이름을 하나씩 내보낸다. 시험 대역은 `src/testing/index.ts` 로만 낸다.
 - 패키지 `src` 아래에는 `domain`, `application`, `testing`, `index.ts` 만 둔다.
@@ -60,6 +62,7 @@
 - 실패하는 시험을 skip 하거나 단언을 약하게 하지 않는다. 기대값을 실제 출력에서 베끼지 않는다.
 - `export *`, `utils/`, `helpers/`, 쓰지 않는 컨텍스트 폴더를 만들지 않는다. `CLAUDE.local.md` 도 만들지 않는다.
 - 공개 저장소라 비밀값, 개인 이름, PRD 원문을 넣지 않는다.
+- 훅과 CI 설정(.claude/hooks, .claude/settings.json, .github)을 고치지 않는다. 고쳐야 하면 기획자에게 묻는다.
 
 ## 룰 색인
 

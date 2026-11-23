@@ -1,0 +1,15 @@
+# D8: AGENTS.md 작업 루프 줄과 새 세션 스킬 목록
+# 날짜: 2026-11-24 07:02 KST, 커밋 93d970d, 훅 등록 전
+
+$ grep -n task-dod-loop AGENTS.md CLAUDE.md
+CLAUDE.md:3:- 작업 루프는 전역 task-dod-loop 스킬을 따른다. plan 파일부터 쓰고 리뷰한 뒤 구현하고, DoD 를 하나씩 판정한다.
+AGENTS.md:39:- Task 는 전역 task-dod-loop 스킬로 한다. 순서는 plan 파일 → 리뷰 → 구현 → 화면 테스트 → DoD 전부 통과다.
+
+$ claude -p "ok" --output-format stream-json --verbose --max-turns 1   (저장소 폴더에서)
+종료 코드 1: 최대 턴 1 에 걸린 결과(result/error_max_turns)다. 판정은 첫 system/init 줄로 한다.
+init 줄: cwd=~/IdeaProjects/personal/NUNO, claude_code_version=2.1.323, skills 160개
+skills 에 task-dod-loop 있음: true
+skills 에서 dod 가 든 이름: task-dod-loop
+마지막 result 줄: subtype=error_max_turns
+
+판정: 통과. AGENTS.md 39줄과 CLAUDE.md 3줄이 task-dod-loop 를 가리키고, 새 세션 init 줄 skills 에 task-dod-loop 가 있다.
