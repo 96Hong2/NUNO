@@ -219,6 +219,8 @@ options: `tsConfig`, `tsPreCompilationDeps: true`, `enhancedResolveOptions: { ex
 
 ## 구현 중 바뀐 것
 
+- 이 작업을 한 메인 세션은 다른 폴더에서 시작해 저장소로 옮겨 왔다. 그래서 저장소 `.claude/settings.json` 훅이 이 세션에는 실리지 않았다. D9, D10 은 저장소 폴더에서 새로 띄운 세션으로 판정했다. 훅 보호는 저장소에서 시작한 세션에만 걸린다(AGENTS.md 에 적음).
+
 PR A (2026-11-24)
 
 - typescript-eslint 8.74.0 은 출시 하루째라 pnpm 출시 대기 정책에 걸려 `~8.73.0` 을 쓴다. 받는 TS 범위는 같다(<6.1).
@@ -285,8 +287,8 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D6 | 통과 (틀 다섯 파일 뒤 exit 0, twin import 는 exit 2). 리뷰 반영 뒤 새 틀로 다시 확인해 exit 0 | `docs/plans/evidence/T1/D6.txt` |
 | D7 | 통과 (두 경우 모두 exit 1, 파일 이름 출력) | `docs/plans/evidence/T1/D7.txt` |
 | D8 | 통과 (AGENTS.md 39줄, 새 세션 init 줄 skills 에 task-dod-loop) | `docs/plans/evidence/T1/D8.txt` |
-| D9 | 파이프 확인 통과(타입 오류에 TS2322 줄로 막음). 세션 확인은 메인 세션이 한다 | `docs/plans/evidence/T1/hooks-pipe.txt` 3-3 |
-| D10 | 파이프 확인 통과. 세션 확인은 메인 세션이 한다 | `docs/plans/evidence/T1/hooks-pipe.txt` 1절 |
+| D9 | 통과. 파이프 확인과 새 세션 확인 모두 Stop 훅이 tsc 오류 줄로 막았고, 지운 뒤 통과 | `docs/plans/evidence/T1/D9.txt`, `hooks-pipe.txt` 3-3 |
+| D10 | 통과. 새 세션에서 PreToolUse 훅이 고치는 법 문장과 함께 막았고 커밋이 생기지 않음 | `docs/plans/evidence/T1/D10.txt`, `hooks-pipe.txt` 1절 |
 | D11 | 통과 | `docs/plans/evidence/T1/D11.txt` |
 | D12 | 통과 (필수 검사 verify, 관리자 우회 금지, 승인 0명 PR 필수, squash 만 허용) | `docs/plans/evidence/T1/D12.txt` |
 | D13 | | |
