@@ -60,6 +60,7 @@
 - 실패하는 시험을 skip 하거나 단언을 약하게 하지 않는다. 기대값을 실제 출력에서 베끼지 않는다.
 - `export *`, `utils/`, `helpers/`, 쓰지 않는 컨텍스트 폴더를 만들지 않는다. `CLAUDE.local.md` 도 만들지 않는다.
 - 공개 저장소라 비밀값, 개인 이름, PRD 원문을 넣지 않는다.
+- 훅과 CI 설정(.claude/hooks, .claude/settings.json, .github)을 고치지 않는다. 고쳐야 하면 기획자에게 묻는다.
 
 ## 룰 색인
 
