@@ -80,6 +80,47 @@ describe("runMigrations", () => {
     });
   });
 
+  it("같은 연결에서 동시에 두 번 불러도 판마다 한 번만 적용한다", async () => {
+    db = openNodeSqliteDatabase();
+    const both = await Promise.all([
+      runMigrations(db, [createNotes, addNoteTag], options),
+      runMigrations(db, [createNotes, addNoteTag], options),
+    ]);
+
+    expect(both.flatMap((report) => report.applied).sort()).toEqual([1, 2]);
+    expect(both.map((report) => report.to)).toEqual([2, 2]);
+    expect(await db.all("SELECT version FROM probe_versions ORDER BY version")).toEqual([
+      { version: 1 },
+      { version: 2 },
+    ]);
+  });
+
+  it("SQLite 가 먼저 트랜잭션을 되돌린 실패도 원래 오류를 다시 던지고 연결은 계속 쓴다", async () => {
+    db = openNodeSqliteDatabase();
+    const raising: Migration = {
+      version: 2,
+      name: "raising",
+      up: async (tx) => {
+        await tx.exec(
+          "CREATE TABLE guarded (id TEXT); " +
+            "CREATE TRIGGER guarded_no_insert BEFORE INSERT ON guarded " +
+            "BEGIN SELECT RAISE(ROLLBACK, 'guarded 에는 넣지 않는다'); END;",
+        );
+        await tx.run("INSERT INTO guarded (id) VALUES (?)", ["g1"]);
+      },
+    };
+
+    await expect(runMigrations(db, [createNotes, raising], options)).rejects.toThrow(
+      "guarded 에는 넣지 않는다",
+    );
+    expect(await tableNames()).toEqual(["notes", "probe_versions"]);
+    expect(await runMigrations(db, [createNotes, addNoteTag], options)).toEqual({
+      from: 1,
+      to: 2,
+      applied: [2],
+    });
+  });
+
   it("기기 판이 앱이 아는 판보다 높으면 아무것도 적용하지 않고 던진다", async () => {
     db = openNodeSqliteDatabase();
     await runMigrations(db, [createNotes, addNoteTag], options);

@@ -38,7 +38,9 @@ test("「저장소 보기」 에서 「시험 값 쓰기」 로 쓴 값이 새�
   console.log(`새로고침 뒤 남은 값: ${written}`);
 });
 
-test("웹 기기 DB 도 같은 키 두 번과 value 의 NULL 을 막는다", async ({ page }) => {
+test("웹 기기 DB 도 같은 키 두 번과 value 의 NULL 을 막고, 실패한 트랜잭션을 되돌린다", async ({
+  page,
+}) => {
   await page.goto("/dev/storage");
   await expect(page.getByText(/^어댑터: /)).toBeVisible();
   await page.getByRole("button", { name: "제약 확인" }).click();
@@ -46,5 +48,9 @@ test("웹 기기 DB 도 같은 키 두 번과 value 의 NULL 을 막는다", asy
   const results = page.getByLabel("제약 확인 결과");
   await expect(results.getByText(/^같은 키 두 번: 막힘/)).toBeVisible();
   await expect(results.getByText(/^value 에 NULL: 막힘/)).toBeVisible();
+  // SqlDatabase 계약: 던진 트랜잭션은 되돌리고, 그동안 밖에서 부른 쓰기는 따로 남는다.
+  await expect(
+    results.getByText("중간에 실패한 트랜잭션: 막힘 (안 0줄, 밖 1줄)", { exact: true }),
+  ).toBeVisible();
   console.log((await results.innerText()).trim());
 });

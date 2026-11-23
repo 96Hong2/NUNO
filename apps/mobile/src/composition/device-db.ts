@@ -11,11 +11,17 @@ export interface DeviceDb {
 
 let opening: Promise<DeviceDb> | undefined;
 
-/** 앱 전체가 나눠 쓰는 기기 DB 연결 하나. 처음 부를 때 연다. */
+/**
+ * 앱 전체가 나눠 쓰는 기기 DB 연결 하나. 처음 부를 때 연다.
+ * 열기에 실패하면(다른 탭이 OPFS 를 잠근 때 등) 기억을 비워 다음 호출이 다시 연다.
+ */
 export function getDeviceDb(): Promise<DeviceDb> {
-  opening ??= openExpoSqliteDatabase(DATABASE_NAME).then((db) => ({
-    adapterName: EXPO_SQLITE_ADAPTER_NAME,
-    db,
-  }));
+  opening ??= openExpoSqliteDatabase(DATABASE_NAME).then(
+    (db) => ({ adapterName: EXPO_SQLITE_ADAPTER_NAME, db }),
+    (error: unknown) => {
+      opening = undefined;
+      throw error;
+    },
+  );
   return opening;
 }

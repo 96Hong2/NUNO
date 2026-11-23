@@ -1,7 +1,8 @@
 import { systemClock } from "../adapters/system-clock";
 import { getDeviceDb } from "./device-db";
 
-// 「저장소 보기」 전용. dev_probe 는 판 사슬에 넣지 않는 개발용 표다.
+// 「저장소 보기」 전용 개발용 예외다. 컨텍스트 표의 SQL 은 그 패키지 application 에 두므로 본보기로 쓰지 않는다.
+// dev_probe 는 판 사슬에 넣지 않는 개발용 표다.
 const CREATE_DEV_PROBE =
   "CREATE TABLE IF NOT EXISTS dev_probe (key TEXT PRIMARY KEY, value TEXT NOT NULL, written_at TEXT)";
 
@@ -57,7 +58,10 @@ export interface ConstraintCheck {
   message: string;
 }
 
-/** 「제약 확인」: 같은 키 두 번, value 에 NULL 을 넣어 보고 막혔는지 낸다. 쓴 줄은 지운다. */
+/**
+ * 「제약 확인」: 같은 키 두 번, value 에 NULL 을 넣어 보고 막혔는지 낸다.
+ * 중간에 던진 트랜잭션은 안에서 쓴 줄이 되돌려지고, 그동안 밖에서 쓴 줄은 남는지 본다. 쓴 줄은 지운다.
+ */
 export async function checkDevProbeConstraints(): Promise<ConstraintCheck[]> {
   const { db } = await getDeviceDb();
   await db.exec(CREATE_DEV_PROBE);
@@ -85,6 +89,31 @@ export async function checkDevProbeConstraints(): Promise<ConstraintCheck[]> {
       null,
     ]),
   ];
+  const inside = `${key}-tx-inside`;
+  const outside = `${key}-tx-outside`;
+  const failing = db.transaction(async (tx) => {
+    await tx.run("INSERT INTO dev_probe (key, value) VALUES (?, ?)", [inside, "안 값"]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    throw new Error("중간 실패");
+  });
+  const outsideWrite = db.run("INSERT INTO dev_probe (key, value) VALUES (?, ?)", [
+    outside,
+    "밖 값",
+  ]);
+  const thrown = await failing.then(
+    () => false,
+    () => true,
+  );
+  await outsideWrite;
+  const count = async (k: string) =>
+    (await db.get<{ n: number }>("SELECT COUNT(*) AS n FROM dev_probe WHERE key = ?", [k]))?.n ?? 0;
+  const insideRows = await count(inside);
+  const outsideRows = await count(outside);
+  results.push({
+    label: "중간에 실패한 트랜잭션",
+    blocked: thrown && insideRows === 0 && outsideRows === 1,
+    message: `안 ${insideRows}줄, 밖 ${outsideRows}줄`,
+  });
   await db.run("DELETE FROM dev_probe WHERE key LIKE ?", [`${key}%`]);
   return results;
 }

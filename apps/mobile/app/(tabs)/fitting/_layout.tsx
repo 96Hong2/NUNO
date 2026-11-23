@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 // 피팅룸 위쪽 네 칸. 경로는 GLOSSARY.md 의 fitting/* 이름이다.
 // Link asChild 의 자식에는 스타일 배열을 넘기지 못해 flatten 한다.
+// 칸 아래 하위 경로(예: 옷장 안 두 칸)에서도 위 칸은 선택된 채로 둔다.
 const CELLS = [
   { href: "/fitting/coordi", label: "코디" },
   { href: "/fitting/closet", label: "옷장" },
@@ -16,7 +17,7 @@ export default function FittingLayout() {
     <View style={styles.container}>
       <View role="tablist" aria-label="피팅룸 칸" style={styles.cells}>
         {CELLS.map(({ href, label }) => {
-          const selected = pathname === href;
+          const selected = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link key={href} href={href} replace asChild>
               <Pressable

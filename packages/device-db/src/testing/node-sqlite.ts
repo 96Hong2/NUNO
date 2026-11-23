@@ -48,7 +48,8 @@ export function openNodeSqliteDatabase(path = ":memory:"): NodeSqliteDatabase {
           db.exec("COMMIT");
           return result;
         } catch (error) {
-          db.exec("ROLLBACK");
+          // SQLite 가 이미 되돌렸으면(RAISE(ROLLBACK) 등) ROLLBACK 이 실패한다. 원래 오류를 남긴다.
+          if (db.isTransaction) db.exec("ROLLBACK");
           throw error;
         }
       }),

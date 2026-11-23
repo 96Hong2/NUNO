@@ -563,6 +563,18 @@ flowchart LR
 
 ---
 
+## 다음 Task 착수 때 볼 것
+
+T1 의 앱 셸 PR 리뷰에서 나온 것이다. 그 Task 의 plan 파일을 쓸 때 반영하고, 이 목록에서 지운다.
+
+- T2: 온보딩은 `app/onboarding/` 에 두고 루트 `_layout.tsx` 에서 들어갈 화면을 가른다. `/home` 깊은 링크도 판정을 거쳐야 한다.
+- T2: 판정값을 읽는 동안 첫 화면을 보이지 않는다. e2e 는 온보딩을 마친 상태를 만드는 준비 단계와 global-setup 대기 대상을 바꾼다.
+- T2: `runMigrations` 는 composition 에서 연결을 연 직후 한 번만 부르고 그 Promise 를 나눠 쓴다.
+- T3: 피팅룸 칸 막대를 옷장 안 두 칸도 쓰게 `src/ui` 로 뺀다. 이름은 GLOSSARY 에 먼저 더한다.
+- T3, T4: 탭 위로 덮는 옷 상세와 모달은 루트 Stack 에 둔다. 피팅룸 칸 아래에는 칸 화면만 둔다.
+- 기획자 확인: CI 실패 때 `test-results/` 를 올리는 단계와 Playwright 브라우저 캐시를 `.github` 에 더할지.
+- 기획자 확인: 화면이 쓸 수 있는 npm 모듈을 허용 목록으로 바꿀지(지금은 막을 SDK 를 `FEATURE_SDKS` 에 하나씩 적는다).
+
 ## iOS 와 사람 확인 대기
 
 Xcode 가 없어 「환경 없음」 인 [iOS] DoD 와 [사람] DoD 를 모은다. Task 완료 판정에서는 빼고, 환경이 생긴 주에 Task 순서대로 판정한다.

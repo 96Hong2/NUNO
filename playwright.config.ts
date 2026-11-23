@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const WEB_URL = "http://localhost:8090";
+// 개발 서버(pnpm web, 8090)와 다른 포트에 이 체크아웃의 서버를 따로 띄운다.
+// 떠 있는 서버를 다시 쓰면 다른 작업 트리의 코드를 시험할 수 있다. worktree 둘이 함께 돌면 포트를 바꾼다.
+const PORT = Number(process.env.NUNO_E2E_PORT ?? 8091);
+const WEB_URL = `http://localhost:${PORT}`;
 
 // Expo 웹(Metro)을 띄워 화면을 사용자처럼 눌러 본다. Metro 는 첫 요청 때 번들을 만들어 느리다.
 export default defineConfig({
@@ -19,11 +22,12 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm web",
+    command: `pnpm --filter mobile exec expo start --port ${PORT}`,
     url: WEB_URL,
     timeout: 180_000,
-    reuseExistingServer: !process.env.CI,
-    stdout: "ignore",
+    reuseExistingServer: false,
+    // 번들 오류는 Metro stdout 에만 나온다. 버리면 실패 원인이 로그에 남지 않는다.
+    stdout: "pipe",
     stderr: "pipe",
   },
 });
