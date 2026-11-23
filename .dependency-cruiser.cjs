@@ -51,14 +51,19 @@ module.exports = {
       to: { pathNot: ["^packages/$1/src/domain/", "^packages/clock/src/index\\.ts$"] },
     },
 
-    // 2. application 은 같은 패키지와 공유 패키지 공개 면만 쓴다.
+    // 2. application 은 같은 패키지 domain, application 과 공유 패키지 공개 면만 쓴다.
     {
       name: "application-allowlist",
       severity: "error",
       comment:
-        "application 은 같은 패키지와 @nuno/clock, @nuno/ids, @nuno/device-db 만 import 한다. 다른 컨텍스트가 필요하면 포트를 선언하고 apps/mobile/src/composition 에서 꽂는다.",
+        "application 은 같은 패키지 domain, application 과 @nuno/clock, @nuno/ids, @nuno/device-db 만 import 한다. 계층은 domain 과 application 둘뿐이다. 바깥 기능은 포트로 선언하고 apps/mobile/src/adapters 에서 구현한다.",
       from: { path: "^packages/([^/]+)/src/application/", pathNot: TEST_FILE },
-      to: { pathNot: ["^packages/$1/src/", `^packages/(${SHARED})/src/index\\.ts$`] },
+      to: {
+        pathNot: [
+          "^packages/$1/src/(domain|application)/",
+          `^packages/(${SHARED})/src/index\\.ts$`,
+        ],
+      },
     },
 
     // 3. 패키지 밖에서는 공개 면 두 곳만 들어간다.

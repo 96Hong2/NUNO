@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fixedClock } from "./testing";
+import { fixedClock } from "../testing";
 import { toKstDateString } from "./kst-date";
 
 describe("toKstDateString", () => {

@@ -29,6 +29,8 @@ const files = {
       type: "module",
       sideEffects: false,
       exports: { ".": "./src/index.ts" },
+      // import 하는 @nuno/* 를 여기에 "workspace:*" 로 적는다. pnpm check:packages 가 본다.
+      dependencies: {},
     },
     null,
     2,

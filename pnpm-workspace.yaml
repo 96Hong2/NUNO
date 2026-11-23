@@ -2,7 +2,9 @@ packages:
   - apps/*
   - packages/*
 
-# Expo 는 hoisted 에서 가장 덜 막힌다. pnpm 11 이상은 이 두 설정을 이 파일에서만 읽는다.
+# Expo 는 hoisted 에서 가장 덜 막힌다.
+# nodeLinker, allowBuilds 같은 설정은 pnpm 11 이상에서 이 파일에서만 읽는다.
+# 빌드 스크립트가 있는 의존성이 생기면 allowBuilds 를 여기에 더한다.
 nodeLinker: hoisted
 
 catalog:

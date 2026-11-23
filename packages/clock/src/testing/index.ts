@@ -1,4 +1,4 @@
-import type { Clock } from "../clock";
+import type { Clock } from "../domain/clock";
 
 export interface FixedClock extends Clock {
   /** 시계를 앞으로 돌린다. 음수면 뒤로 간다. */
