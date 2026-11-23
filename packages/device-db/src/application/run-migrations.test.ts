@@ -95,6 +95,21 @@ describe("runMigrations", () => {
     ]);
   });
 
+  it("동시에 부른 다른 호출이 더 높은 판을 올리면 짧은 목록을 받은 호출은 던진다", async () => {
+    db = openNodeSqliteDatabase();
+    const [long, short] = await Promise.allSettled([
+      runMigrations(db, [createNotes, addNoteTag, createTags], options),
+      runMigrations(db, [createNotes, addNoteTag], options),
+    ]);
+
+    expect(long).toEqual({
+      status: "fulfilled",
+      value: { from: 0, to: 3, applied: [1, 2, 3] },
+    });
+    expect(short.status).toBe("rejected");
+    expect(short.status === "rejected" && String(short.reason)).toMatch(/앱을 새 판으로/);
+  });
+
   it("SQLite 가 먼저 트랜잭션을 되돌린 실패도 원래 오류를 다시 던지고 연결은 계속 쓴다", async () => {
     db = openNodeSqliteDatabase();
     const raising: Migration = {

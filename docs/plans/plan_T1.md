@@ -9,25 +9,25 @@ AI 가 같은 규칙으로 기능을 반복해 더하고 고칠 수 있는 저�
 
 ## DoD (로드맵 원문, 번호는 이 파일에서 붙임)
 
-- [ ] D1 [명령] `pnpm install` 뒤 `pnpm verify:fast` 가 타입 검사, 린트, 경계 검사, 단위 시험을 돌고 통과한다.
-- [ ] D2 [명령] `packages/twin` 도메인 파일에 `react-native` import 를 넣으면 경계 검사가 실패한다. 실패 문구에 고치는 법이 한 문장 있다.
-- [ ] D3 [명령] 같은 도메인 파일에 `Date.now()`, `Math.random()`, `fetch` 를 넣으면 린트가 실패한다.
-- [ ] D4 [명령] 앱 코드가 `packages/twin` 의 `src/domain` 안쪽 경로를 import 하면 타입 검사나 경계 검사가 실패한다.
-- [ ] D5 [명령] 시험 파일에 `.only`, `.skip`, 단언 없는 시험 중 하나를 넣으면 린트가 실패한다.
-- [ ] D6 [명령] `pnpm new:context wardrobe` 를 돌리면 세 계층 틀이 생기고 `pnpm verify:fast` 가 그대로 통과한다.
-- [ ] D7 [명령] 룰 색인에 없는 `.claude/rules/*.md` 파일이 있거나 `paths:` 가 빠지면 `pnpm verify:fast` 가 실패한다.
-- [ ] D8 [명령] `AGENTS.md` 의 작업 루프 줄이 전역 `task-dod-loop` 스킬을 가리키고, 새 세션의 스킬 목록에 그 스킬이 보인다.
-- [ ] D9 [명령] 일부러 넣은 타입 오류 하나를 Stop 훅이 막고 이유를 보인다. 이 확인은 한 번만 한다.
-- [ ] D10 [명령] Claude 가 `git commit --no-verify` 를 부르면 PreToolUse 훅이 막는다.
-- [ ] D11 [명령] PR 하나가 CI `pnpm verify` 를 통과해 squash 로 머지된다.
-- [ ] D12 [명령] `gh api repos/96Hong2/NUNO/branches/main/protection` 응답에 필수 검사 `verify` 와 관리자 우회 금지가 있다.
-- [ ] D13 [웹화면] Claude 브라우저 창에서 `.claude/launch.json` 의 이름으로 앱이 열린다. `pnpm e2e` 가 통과한다.
-- [ ] D14 [명령] 새 세션 `/context` 에 루트 `CLAUDE.md` 가 보이고, 터미널 Loaded 줄에 `apps/mobile/CLAUDE.md` 가 보인다.
-- [ ] D15 [명령] `wc -m CLAUDE.md` 가 150~250 이다. 저장소에 `CLAUDE.local.md` 가 없고, Stop 훅에 `stop_hook_active` 확인이 없다.
-- [ ] D16 [웹화면] `pnpm web` 으로 연 브라우저에서 하단 「홈」, 「피팅룸」, 「마이」 를 누르면 머리글에 그 탭 이름이 보이는 빈 화면이 열린다. 하단에 「탐색」 과 「찜」 은 없다.
-- [ ] D17 [웹화면] 「피팅룸」 위쪽 「코디」, 「옷장」, 「트윈」, 「룩북」 칸을 누르면 그 칸의 빈 화면이 열린다. 「스토어」 칸은 없다.
-- [ ] D18 [웹화면] 개발 빌드에서 「저장소 보기」 를 열면 쓰는 기기 저장소 어댑터 이름(expo-sqlite 또는 wa-sqlite)과 시험으로 쓴 값 한 줄이 보인다. 새로고침 뒤에도 그 값이 남는다.
-- [ ] D19 [명령] `plan_T1.md` 에 expo-sqlite 웹 읽기 쓰기 결과와 고른 웹 어댑터가 있다. Skia 웹 빌드 결과도 있다.
+- [x] D1 [명령] `pnpm install` 뒤 `pnpm verify:fast` 가 타입 검사, 린트, 경계 검사, 단위 시험을 돌고 통과한다.
+- [x] D2 [명령] `packages/twin` 도메인 파일에 `react-native` import 를 넣으면 경계 검사가 실패한다. 실패 문구에 고치는 법이 한 문장 있다.
+- [x] D3 [명령] 같은 도메인 파일에 `Date.now()`, `Math.random()`, `fetch` 를 넣으면 린트가 실패한다.
+- [x] D4 [명령] 앱 코드가 `packages/twin` 의 `src/domain` 안쪽 경로를 import 하면 타입 검사나 경계 검사가 실패한다.
+- [x] D5 [명령] 시험 파일에 `.only`, `.skip`, 단언 없는 시험 중 하나를 넣으면 린트가 실패한다.
+- [x] D6 [명령] `pnpm new:context wardrobe` 를 돌리면 세 계층 틀이 생기고 `pnpm verify:fast` 가 그대로 통과한다.
+- [x] D7 [명령] 룰 색인에 없는 `.claude/rules/*.md` 파일이 있거나 `paths:` 가 빠지면 `pnpm verify:fast` 가 실패한다.
+- [x] D8 [명령] `AGENTS.md` 의 작업 루프 줄이 전역 `task-dod-loop` 스킬을 가리키고, 새 세션의 스킬 목록에 그 스킬이 보인다.
+- [x] D9 [명령] 일부러 넣은 타입 오류 하나를 Stop 훅이 막고 이유를 보인다. 이 확인은 한 번만 한다.
+- [x] D10 [명령] Claude 가 `git commit --no-verify` 를 부르면 PreToolUse 훅이 막는다.
+- [x] D11 [명령] PR 하나가 CI `pnpm verify` 를 통과해 squash 로 머지된다.
+- [x] D12 [명령] `gh api repos/96Hong2/NUNO/branches/main/protection` 응답에 필수 검사 `verify` 와 관리자 우회 금지가 있다.
+- [x] D13 [웹화면] Claude 브라우저 창에서 `.claude/launch.json` 의 이름으로 앱이 열린다. `pnpm e2e` 가 통과한다.
+- [x] D14 [명령] 새 세션 `/context` 에 루트 `CLAUDE.md` 가 보이고, 터미널 Loaded 줄에 `apps/mobile/CLAUDE.md` 가 보인다.
+- [x] D15 [명령] `wc -m CLAUDE.md` 가 150~250 이다. 저장소에 `CLAUDE.local.md` 가 없고, Stop 훅에 `stop_hook_active` 확인이 없다.
+- [x] D16 [웹화면] `pnpm web` 으로 연 브라우저에서 하단 「홈」, 「피팅룸」, 「마이」 를 누르면 머리글에 그 탭 이름이 보이는 빈 화면이 열린다. 하단에 「탐색」 과 「찜」 은 없다.
+- [x] D17 [웹화면] 「피팅룸」 위쪽 「코디」, 「옷장」, 「트윈」, 「룩북」 칸을 누르면 그 칸의 빈 화면이 열린다. 「스토어」 칸은 없다.
+- [x] D18 [웹화면] 개발 빌드에서 「저장소 보기」 를 열면 쓰는 기기 저장소 어댑터 이름(expo-sqlite 또는 wa-sqlite)과 시험으로 쓴 값 한 줄이 보인다. 새로고침 뒤에도 그 값이 남는다.
+- [x] D19 [명령] `plan_T1.md` 에 expo-sqlite 웹 읽기 쓰기 결과와 고른 웹 어댑터가 있다. Skia 웹 빌드 결과도 있다.
 - [ ] D20 [iOS] Xcode 설치 뒤 iOS 시뮬레이터에 같은 빈 셸이 뜬다.
 
 ## 확인한 사실 (2026-11-24)
@@ -89,7 +89,7 @@ NUNO/
 | 기기 저장소 | `device-db` 는 비동기 포트 `SqlDatabase` 와 `transaction(async tx => …)`, 판 목록을 차례로 돌리는 옮기기 실행기만 가진다. 각 컨텍스트가 자기 표의 옮기기 단계를 낸다. 판 순서는 `apps/mobile/src/composition/migrations.ts` 한 곳. `schema_migrations` 와 실제 표는 T2-1 | device-db 가 모든 표를 앎: Task 마다 공유 패키지를 고친다 |
 | D18 시험 값 | 개발 빌드에서만 `CREATE TABLE IF NOT EXISTS dev_probe` 로 만드는 표에 쓴다. 판 사슬에 넣지 않는다 | T1 에 판 1 을 씀: T2-1 판 번호와 겹친다 |
 | 기기 저장소 웹 | expo-sqlite 웹을 먼저 쓴다. 2시간 안에 안 되면 OPFS 에 저장하는 wa-sqlite 어댑터를 꽂는다. 웹은 http://localhost 로만 연다 | sql.js: 새로고침하면 값이 사라져 D18 을 통과하지 못한다 |
-| 화면 시험 | Playwright 로 Expo 웹(port 8090)을 띄운다 | Detox, Maestro: Xcode 가 없다 |
+| 화면 시험 | Playwright 로 Expo 웹을 띄운다. 개발 서버는 8090, e2e 는 8091(`NUNO_E2E_PORT`)에 따로 띄운다 | Detox, Maestro: Xcode 가 없다 |
 | 단위 시험 | vitest 5 | node --test: `.only` 를 막는 린트 규칙이 없다 |
 | 훅 언어 | Node `.mjs` | 셸과 jq: jq 가 없을 수 있다 |
 | Stop 훅 | `stop_hook_active` 확인을 넣지 않는다(연속 상한 8회가 끊음). 바뀐 것이 없거나 docs 와 *.md 만 바뀌었으면 바로 통과. typecheck 는 incremental, lint 는 캐시 없이 돈다. timeout 180초 | 확인을 넣음: 한 턴에 한 번만 막는다(전역 규칙) |
@@ -107,7 +107,7 @@ options: `tsConfig`, `tsPreCompilationDeps: true`, `enhancedResolveOptions: { ex
 3. `packages/` 밖 파일은 `packages/[^/]+/src/` 안쪽을 import 하지 못한다. 허용은 `src/index.ts` 와 `src/testing/index.ts` 둘이다. 상대 경로, 별칭, `import type` 모두 풀린 경로로 판정한다.
 4. `^packages/([^/]+)/` 파일이 다른 `packages/` 파일을 import 하면 실패한다. 예외는 같은 패키지와 공유 패키지 `clock`, `ids`, `device-db`(group matching). 새 컨텍스트는 규칙을 고치지 않아도 막힌다.
 5. `@nuno/*/testing` 은 `*.test.ts` 와 `e2e/` 에서만 import 한다.
-6. 바깥 SDK(expo-*, react-native-* 중 앱 기능 SDK)는 `apps/*/src/adapters/**` 에서만, 어댑터는 `apps/*/src/composition/**` 에서만 import 한다. 문구: 「어댑터는 composition 에서 만들어 화면에 넘긴다.」
+6. 바깥 SDK(expo-*, react-native-* 중 앱 기능 SDK)는 `apps/*/src/adapters/**` 에서만, 어댑터는 `apps/*/src/composition/**` 에서만 import 한다. 문구: 「어댑터는 composition 에서 연다. 화면은 composition 의 함수를 불러 쓰고 어댑터를 직접 import 하지 않는다.」
 7. `packages/*/src` 아래 domain, application, testing, index.ts 밖 파일은 `scripts/check-packages.mjs` 가 막는다. 같은 스크립트가 src 밖 시험 파일과 선언하지 않은 `@nuno/*` 의존도 막는다.
 
 ## 린트 규칙 (eslint.config.mjs)
@@ -328,7 +328,7 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D11 | 통과 | `docs/plans/evidence/T1/D11.txt` |
 | D12 | 통과 (필수 검사 verify, 관리자 우회 금지, 승인 0명 PR 필수, squash 만 허용) | `docs/plans/evidence/T1/D12.txt` |
 | D13 | 통과. 브라우저 창에서 `mobile-web` 이름으로 열림(세션 첫 폴더에 같은 명령 설정), e2e 5개 통과. 저장소에서 시작한 세션의 확인은 남음 | `D13-16-17-18-screen.md`, `D13-e2e.txt` |
-| D14 | | |
+| D14 | 통과. 새 세션 `/context` 에 루트 CLAUDE.md, AGENTS.md. 하위 파일을 읽으면 apps/mobile/CLAUDE.md 가 nested_memory 로 실림. 머지 전 브랜치에서 확인 | `docs/plans/evidence/T1/D14.txt` |
 | D15 | 통과 (175자, CLAUDE.local.md 0, `.claude/` 에 stop_hook_active 없음) | `docs/plans/evidence/T1/D15.txt` |
 | D16 | 통과. 하단 세 탭 머리글 확인, 「탐색」 「찜」 없음 | `D13-16-17-18-screen.md`, D16-*.jpg |
 | D17 | 통과. 피팅룸 네 칸 화면 확인, 「스토어」 없음 | `D13-16-17-18-screen.md`, D17-*.jpg |
@@ -423,7 +423,7 @@ main 시험 판정은 `git cat-file -e` 대신 `git ls-tree origin/main` 목록�
 | 옮기기를 동시에 두 번 부르면 한 판을 두 번 적용 | 반영 | 판마다 트랜잭션 안에서 판 번호를 다시 읽는다. 단위 시험 더함 |
 | expo 어댑터 트랜잭션 경로를 실행으로 본 적 없음 | 반영 | 「제약 확인」 에 중간 실패 트랜잭션을 더하고 e2e 로 단언 |
 | work 안에서 바깥 db 를 부르면 교착 | 반영 | 계약 주석과 domain.md 에 적음. 감시 장치는 저장소 계층이 생기는 T2 에서 본다 |
-| 번들 오류가 CI 로그에 안 남음 | 반영 | Metro stdout 을 남기고, 첫 화면 오류는 global-setup 이 바로 실패 |
+| 번들 오류가 CI 로그에 안 남음 | 반영 | Metro stdout 을 남긴다. 번들 응답 오류와 첫 화면 오류는 global-setup 이 바로 실패 |
 | 피팅룸 칸이 하위 경로에서 선택 풀림 | 반영 | 하위 경로도 그 칸을 선택으로 본다 |
 | FEATURE_SDKS 빈틈 다섯 | 반영 | 저장, 파일, 인증 SDK 다섯을 더함. 허용 목록 방식은 기획자 확인 대기 |
 | 화면 import 범위 문장이 문서마다 다름 | 반영 | apps/mobile/AGENTS.md 와 mobile-ui.md 를 같은 문장으로 맞춤 |
@@ -433,3 +433,7 @@ main 시험 판정은 `git cat-file -e` 대신 `git ls-tree origin/main` 목록�
 
 화면 재확인: 「저장소 보기」 의 「제약 확인」 에 「중간에 실패한 트랜잭션: 막힘 (안 0줄, 밖 1줄)」 이 보인다(`D18-4-tx-rollback.jpg`).
 「시험 값 쓰기」 뒤 새로고침해도 값이 남고 콘솔 오류는 없다. `/fitting/closet` 에서 「옷장」 칸이 선택돼 있다.
+
+반영분 검증(관점 둘)에서 P2 넷이 더 나와 고쳤다.
+짧은 판 목록으로 동시에 부르면 던지게 했다. 번들 응답 오류도 global-setup 이 바로 실패한다(문법 오류를 넣어 2초 만에 실패 확인).
+경계 검사 문구와 plan 의 e2e 포트 문장을 새 문서에 맞췄다.

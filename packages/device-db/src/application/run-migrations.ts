@@ -12,8 +12,11 @@ export interface MigrationOptions {
 }
 
 export interface MigrationReport {
+  /** 이 호출이 시작할 때 읽은 기기 판 */
   from: number;
+  /** 이 호출이 끝난 뒤의 기기 판. 동시에 부른 다른 호출이 올린 판도 들어간다 */
   to: number;
+  /** 이 호출이 적용한 판 */
   applied: readonly number[];
 }
 
@@ -48,5 +51,8 @@ export async function runMigrations(
     });
     if (done) applied.push(migration.version);
   }
-  return { from, to: await currentVersion(db), applied };
+  const to = await currentVersion(db);
+  // 동시에 부른 다른 호출이 이 목록보다 높은 판을 올렸으면, 혼자 부를 때처럼 던진다.
+  pendingMigrations(migrations, to);
+  return { from, to, applied };
 }
