@@ -255,6 +255,22 @@ PR 1 리뷰 반영 (2026-11-24, 증거 `docs/plans/evidence/T1/review-fixes.txt`
 - AGENTS.md 에 `packages/profile`, 옮기기 단계 소유, `FEATURE_SDKS` 줄을 더하고 「먼저 묻는다」 를 좁혔다.
 - 로드맵의 결정 번호는 「결정 D21」 로 적고, DoD 체크박스는 글머리표로 바꿨다. DoD 판정은 이 파일 표에만 적는다.
 
+PR B (2026-11-24, 증거 `docs/plans/evidence/T1/hooks-pipe.txt`)
+
+- 보호 경로에 `.claude/settings.json` 과 `.claude/settings.local.json` 을 더했다. local 설정으로도 훅을 끌 수 있어서다.
+- PreToolUse 는 `git -c core.hooksPath=…` 와 `git config core.hooksPath …` 도 막는다. git 훅을 끄는 다른 길이다.
+- commit 의 `--no-verify` 는 git 이 받는 줄인 꼴(`--no-ver`)도 막는다. `-an` 처럼 붙은 `-n` 도 막는다.
+- Bash 쓰기 판정은 따옴표, `$( )`, heredoc 본문, `bash -c`, `cd` 를 따라 읽는다. 완전한 셸 해석기는 아니다.
+- `node -e` 같은 한 줄 코드에 보호 경로 글자가 보이면 쓰기로 보고 막는다.
+- 세 훅이 함께 쓰는 입력 읽기와 git 최상위 찾기는 `.claude/hooks/hook-input.mjs` 에 둔다.
+- Edit, Write 의 검사 루트는 고치는 파일 폴더의 git 최상위다. Bash 와 Stop 은 `input.cwd` 의 git 최상위다.
+- Stop 해시에는 HEAD, `git status`, `git diff HEAD` 에 더해 추적하지 않는 파일 내용도 넣는다. diff 에 안 나와서다.
+- 그래서 코드 변경이 남은 채 docs 를 고쳐도 해시가 바뀌어 verify:fast 를 다시 돈다.
+- 통과 해시는 `git rev-parse --git-path nuno-verify-ok` 자리에 둔다. worktree 마다 따로 생긴다.
+- Stop 은 verify:fast 가 170초 안에 끝나지 않거나 pnpm 을 찾지 못해도 막는다. 단계 이름은 pnpm 의 `$ 명령` 줄로 찾는다.
+- PostToolUse 는 eslint 경고도 알린다. prettier 대상은 ts, js 무리와 json, yml, css 다.
+- task-dod-loop 스킬이 부르는 `verify:fast` 는 저장소 명령과 같다. 스킬의 `pnpm --filter mobile web` 은 예시라서 PR C 의 `pnpm web` 과 달라도 고치지 않는다.
+
 ## DoD 판정
 
 D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료 판정에서 뺀다. `docs/roadmap.md` 의 「iOS 와 사람 확인 대기」 목록에 넣는다.
@@ -268,10 +284,10 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D5 | 통과 (셋 다 exit 1, `--fix` 뒤에도 `.only` 남음) | `docs/plans/evidence/T1/D5.txt` |
 | D6 | 통과 (틀 다섯 파일 뒤 exit 0, twin import 는 exit 2). 리뷰 반영 뒤 새 틀로 다시 확인해 exit 0 | `docs/plans/evidence/T1/D6.txt` |
 | D7 | 통과 (두 경우 모두 exit 1, 파일 이름 출력) | `docs/plans/evidence/T1/D7.txt` |
-| D8 | | |
-| D9 | | |
-| D10 | | |
-| D11 | PR 1 머지로 판정. 결과는 PR B 에서 적는다 | |
+| D8 | 통과 (AGENTS.md 39줄, 새 세션 init 줄 skills 에 task-dod-loop) | `docs/plans/evidence/T1/D8.txt` |
+| D9 | 파이프 확인 통과(타입 오류에 TS2322 줄로 막음). 세션 확인은 메인 세션이 한다 | `docs/plans/evidence/T1/hooks-pipe.txt` 3-3 |
+| D10 | 파이프 확인 통과. 세션 확인은 메인 세션이 한다 | `docs/plans/evidence/T1/hooks-pipe.txt` 1절 |
+| D11 | 통과 | `docs/plans/evidence/T1/D11.txt` |
 | D12 | 통과 (필수 검사 verify, 관리자 우회 금지, 승인 0명 PR 필수, squash 만 허용) | `docs/plans/evidence/T1/D12.txt` |
 | D13 | | |
 | D14 | | |

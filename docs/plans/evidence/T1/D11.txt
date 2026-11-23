@@ -1,0 +1,7 @@
+$ gh pr view 1 --json state,mergedAt,statusCheckRollup
+{"checks":[{"conclusion":"SUCCESS","name":"verify"}],"mergedAt":"2026-11-23T21:50:27Z","state":"MERGED"}
+
+$ git log -1 --format="%H 부모 %P" origin/main
+9187caca5f61b421cec9a41ad3d21595f0e75a4c 부모 33472afda8c3b04f531f2d09a812c61576855d61
+
+판정: 통과. verify SUCCESS, MERGED, squash 라 부모 커밋 하나 (보호를 건 뒤 첫 머지)
