@@ -1,0 +1,65 @@
+# D5: 임시 시험 파일 셋(.only, .skip, 단언 없음)을 하나씩 두고 pnpm lint
+# 날짜: 2026-11-24 06:22 KST, 커밋 bae1901
+
+$ cat packages/twin/src/domain/probe-only.test.ts
+import { expect, it } from "vitest";
+
+it.only("집중 시험", () => {
+  expect(1).toBe(1);
+});
+$ pnpm lint
+$ eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .
+
+packages/twin/src/domain/probe-only.test.ts
+  3:4  error  Focused tests are not allowed  vitest/no-focused-tests
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ cat packages/twin/src/domain/probe-skip.test.ts
+import { expect, it } from "vitest";
+
+it.skip("건너뛴 시험", () => {
+  expect(1).toBe(1);
+});
+$ pnpm lint
+$ eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .
+
+packages/twin/src/domain/probe-skip.test.ts
+  3:4  error  Disabled test - if you want to skip a test temporarily, use .todo() instead  vitest/no-disabled-tests
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ cat packages/twin/src/domain/probe-noassert.test.ts
+import { it } from "vitest";
+
+it("단언 없는 시험", () => {
+  const value = 1 + 1;
+  void value;
+});
+$ pnpm lint
+$ eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .
+
+packages/twin/src/domain/probe-noassert.test.ts
+  3:1  error  Test has no assertions  vitest/expect-expect
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+# .only 를 자동 고침이 지우지 않는지: eslint --fix 뒤 파일이 그대로인가
+$ pnpm exec eslint --fix packages/twin/src/domain/probe-only.test.ts
+
+packages/twin/src/domain/probe-only.test.ts
+  3:4  error  Focused tests are not allowed  vitest/no-focused-tests
+
+✖ 1 problem (1 error, 0 warnings)
+
+exit=1
+파일 그대로: .only 가 남아 있다
