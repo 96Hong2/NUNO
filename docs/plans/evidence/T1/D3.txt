@@ -1,0 +1,43 @@
+# D3: 같은 도메인 파일에 Date.now(), Math.random(), fetch 를 하나씩 넣고 pnpm lint 세 번
+# 날짜: 2026-11-24 06:22 KST, 커밋 bae1901
+
+$ cat packages/twin/src/domain/probe.ts
+export const probe = Date.now();
+$ pnpm lint
+$ eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .
+
+packages/twin/src/domain/probe.ts
+  1:22  error  'Date.now' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다  no-restricted-properties
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ cat packages/twin/src/domain/probe.ts
+export const probe = Math.random();
+$ pnpm lint
+$ eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .
+
+packages/twin/src/domain/probe.ts
+  1:22  error  'Math.random' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다  no-restricted-properties
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ cat packages/twin/src/domain/probe.ts
+export const probe = (url: string) => fetch(url);
+$ pnpm lint
+$ eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .
+
+packages/twin/src/domain/probe.ts
+  1:39  error  Unexpected use of 'fetch'. 도메인은 네트워크를 부르지 않는다. application 에 포트를 두고 앱 어댑터가 구현한다  no-restricted-globals
+  1:39  error  Unsafe return of a value of type error                                           @typescript-eslint/no-unsafe-return
+  1:39  error  Unsafe call of a type that could not be resolved                                 @typescript-eslint/no-unsafe-call
+
+✖ 3 problems (3 errors, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1

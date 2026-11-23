@@ -1,0 +1,12 @@
+# D15 일부: CLAUDE.md 글자 수, CLAUDE.local.md 없음 (Stop 훅은 PR B 에서 생겨 그때 다시 본다)
+# 날짜: 2026-11-24 06:23 KST, 커밋 bae1901
+$ LC_ALL=en_US.UTF-8 wc -m CLAUDE.md
+     175 CLAUDE.md
+$ git ls-files | grep -c CLAUDE.local.md
+0
+$ find . -name CLAUDE.local.md -not -path "./node_modules/*"
+(출력 없음)
+$ grep -rn stop_hook_active .claude/
+exit=1 (1 이면 찾은 줄 없음. .claude/hooks 는 아직 없다)
+$ ls .claude
+rules

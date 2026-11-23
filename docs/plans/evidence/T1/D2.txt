@@ -1,0 +1,25 @@
+# D2: twin 도메인 파일에 react-native import 를 넣고 pnpm depcruise
+# 날짜: 2026-11-24 06:21 KST, 커밋 bae1901
+$ cat packages/twin/src/domain/probe.ts
+import "react-native";
+
+export const probe = 1;
+$ pnpm depcruise
+$ depcruise packages --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+  error not-to-unresolvable: packages/twin/src/domain/probe.ts → react-native
+    import 한 모듈을 찾지 못했다. 패키지를 package.json 에 더하거나, 다른 패키지는 exports 에 있는 공개
+    면(@nuno/<이름>)으로 가져온다.
+
+  error domain-no-react-native: packages/twin/src/domain/probe.ts → react-native
+    도메인은 react-native 를 쓰지 않는다. 화면이 필요하면 apps/mobile 에서 이 도메인을 불러 쓴다.
+
+  error domain-allowlist: packages/twin/src/domain/probe.ts → react-native
+    도메인은 같은 패키지 domain 과 @nuno/clock 만 import 한다. 바깥 기능이 필요하면 application 에 포트를
+    선언하고 apps/mobile 에서 구현해 넘긴다.
+
+
+x 3 dependency violations (3 errors, 0 warnings). 16 modules, 17 dependencies cruised.
+
+[ELIFECYCLE] Command failed with exit code 3.
+exit=3

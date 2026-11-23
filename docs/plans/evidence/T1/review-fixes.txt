@@ -1,0 +1,363 @@
+# PR 1 리뷰 반영 확인: 리뷰가 뚫었던 사례를 임시 파일로 다시 해 본 결과
+# 날짜: 2026-11-24 06:37 KST, 커밋 05a0585 위 작업 트리, node v26.13.1, pnpm 12.21.0
+# 임시 파일은 확인 뒤 하나씩 지웠다. 출력의 홈 경로는 ~ 로 가렸다.
+# 1~5절은 리뷰가 통과시킨 사례가 이제 모두 실패(exit 0 아님)하는지 본다. 6절은 D1, D2, D3 를 다시 돌린 것이다.
+# 결과: 1~5절의 사례는 모두 실패했다. D1 은 exit 0, D2 는 exit 3, D3 는 세 번 모두 exit 1 이다.
+
+## 1. 도메인 시각과 난수 우회(경계-2, 경계-4), .tsx 와 .mts 도메인(경계-3), 동적 import(경계-5)
+$ for f in packages/twin/src/domain/probe-global.ts packages/twin/src/domain/probe-tsx.tsx packages/twin/src/domain/probe-mts.mts packages/twin/src/domain/probe-dynamic.ts packages/twin/src/application/probe-dynamic.ts; do echo "--- $f"; cat $f; done
+--- packages/twin/src/domain/probe-global.ts
+export const a = Date();
+export const b = globalThis.Date.now();
+export const c = new globalThis.Date();
+export const d = globalThis.Math.random();
+export const e = new Intl.DateTimeFormat().format();
+export const f = crypto.getRandomValues(new Uint8Array(4));
+export const g = performance.timeOrigin;
+--- packages/twin/src/domain/probe-tsx.tsx
+export const a = Date.now();
+export const b = Math.random();
+--- packages/twin/src/domain/probe-mts.mts
+export const a = Date.now();
+--- packages/twin/src/domain/probe-dynamic.ts
+export async function load(name: string): Promise<unknown> {
+  return import(name);
+}
+--- packages/twin/src/application/probe-dynamic.ts
+export async function load(name: string): Promise<unknown> {
+  return import(name);
+}
+exit=0
+
+$ pnpm lint
+$ eslint --max-warnings 0 .
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/application/probe-dynamic.ts
+  2:10  error  동적 import() 는 경계 검사가 보지 못한다. 맨 위 import 문으로 쓰고, 바깥 기능은 포트로 받는다  no-restricted-syntax
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe-dynamic.ts
+  2:10  error  동적 import() 는 경계 검사가 보지 못한다. 맨 위 import 문으로 쓰고, 바깥 기능은 포트로 받는다  no-restricted-syntax
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe-global.ts
+  1:18  error  Date() 는 지금 시각 문자열을 낸다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다                          no-restricted-syntax
+  2:18  error  Unexpected use of 'globalThis'. 도메인에서 막은 전역이다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다   no-restricted-globals
+  3:18  error  전역 객체를 거쳐 Date 를 만들지 않는다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다                        no-restricted-syntax
+  3:22  error  Unexpected use of 'globalThis'. 도메인에서 막은 전역이다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다   no-restricted-globals
+  4:18  error  Unexpected use of 'globalThis'. 도메인에서 막은 전역이다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다   no-restricted-globals
+  5:18  error  인자 없는 format() 은 지금 시각을 쓴다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다                      no-restricted-syntax
+  6:14  error  Unsafe assignment of an error typed value                                                                                 @typescript-eslint/no-unsafe-assignment
+  6:18  error  Unexpected use of 'crypto'. 도메인에서 막은 전역이다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다       no-restricted-globals
+  6:18  error  Unsafe call of a type that could not be resolved                                                                          @typescript-eslint/no-unsafe-call
+  6:25  error  Unsafe member access .getRandomValues on a type that cannot be resolved                                                   @typescript-eslint/no-unsafe-member-access
+  7:14  error  Unsafe assignment of an error typed value                                                                                 @typescript-eslint/no-unsafe-assignment
+  7:18  error  Unexpected use of 'performance'. 도메인에서 막은 전역이다. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다  no-restricted-globals
+  7:30  error  Unsafe member access .timeOrigin on a type that cannot be resolved                                                        @typescript-eslint/no-unsafe-member-access
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe-mts.mts
+  1:18  error  'Date.now' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다  no-restricted-properties
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe-tsx.tsx
+  1:18  error  'Date.now' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다     no-restricted-properties
+  2:18  error  'Math.random' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다  no-restricted-properties
+
+✖ 18 problems (18 errors, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+
+## 2. 시험 린트: skipIf, runIf, 매처 없는 expect(경계-6), .test.tsx(AI-12, 설정-6)
+
+$ cat packages/twin/src/domain/probe-cond.test.ts packages/twin/src/domain/probe-only.test.tsx
+import { expect, it } from "vitest";
+
+it.skipIf(true)("건너뛰는 시험", () => {
+  expect(1).toBe(1);
+});
+
+it.runIf(false)("돌지 않는 시험", () => {
+  expect(1).toBe(1);
+});
+
+it("매처 없는 시험", () => {
+  expect(1);
+});
+import { expect, it } from "vitest";
+
+it.only("tsx 시험의 only", () => {
+  expect(1).toBe(1);
+});
+exit=0
+
+$ pnpm lint
+$ eslint --max-warnings 0 .
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe-cond.test.ts
+   3:1  error  'it.skipIf' is restricted from being used. 조건으로 시험을 건너뛰지 않는다. 실패하는 시험은 실패한 채로 두고 알린다  no-restricted-properties
+   7:1  error  'it.runIf' is restricted from being used. 조건으로 시험을 건너뛰지 않는다. 실패하는 시험은 실패한 채로 두고 알린다   no-restricted-properties
+  12:3  error  Expect must have a corresponding matcher call                                         vitest/valid-expect
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe-only.test.tsx
+  3:4  error  Focused tests are not allowed  vitest/no-focused-tests
+
+✖ 4 problems (4 errors, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ pnpm exec vitest list --filesOnly
+packages/clock/src/domain/kst-date.test.ts
+packages/twin/src/domain/preset-twin-key.test.ts
+packages/twin/src/domain/probe-cond.test.ts
+packages/twin/src/domain/probe-only.test.tsx
+exit=0
+
+
+## 3. 계층 밖 폴더 우회(경계-1), src 밖 시험 파일(설정-6)
+
+$ cat packages/twin/src/infra/x.ts packages/twin/src/application/y.ts packages/twin/test/x.test.ts
+import { createServer } from "node:http";
+
+export const server = createServer();
+export const now = Date.now();
+import { now } from "../infra/x";
+
+export const later = now + 1;
+import { expect, it } from "vitest";
+
+it("src 밖 시험", () => {
+  expect(1).toBe(1);
+});
+exit=0
+
+$ pnpm depcruise
+$ depcruise packages --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+  error application-allowlist: packages/twin/src/application/y.ts → packages/twin/src/infra/x.ts
+    application 은 같은 패키지 domain, application 과 @nuno/clock, @nuno/ids,
+    @nuno/device-db 만 import 한다. 계층은 domain 과 application 둘뿐이다. 바깥 기능은 포트로 선언하고
+    apps/mobile/src/adapters 에서 구현한다.
+
+
+x 1 dependency violations (1 errors, 0 warnings). 18 modules, 19 dependencies cruised.
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ pnpm check:packages
+$ node scripts/check-packages.mjs
+packages/twin/src/infra/x.ts: src 아래 domain, application, testing, index.ts 밖에 있다. 계층은 domain 과 application 둘뿐이다. 바깥 기능은 포트로 선언하고 apps/mobile/src/adapters 에서 구현한다.
+packages/twin/test/x.test.ts: 시험 파일이 src 밖에 있어 vitest 가 돌리지 않는다. 시험하는 파일 옆 src 안으로 옮긴다.
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+
+## 4. 다른 패키지 export 를 지운 뒤 타입 검사와 린트(설정-1, 설정-2), 선언하지 않은 @nuno 의존(경계-8, 설정-5, AI-9)
+
+# 4-1. clock 공개 면에 PROBE_VALUE 를 더하고 twin 도메인이 쓴다. twin package.json 에는 @nuno/clock 이 없다.
+$ cat packages/clock/src/index.ts packages/twin/src/domain/probe-clock.ts; grep -c dependencies packages/twin/package.json
+export type { Clock } from "./domain/clock";
+export { toKstDateString } from "./domain/kst-date";
+export const PROBE_VALUE = 1;
+import { PROBE_VALUE } from "@nuno/clock";
+
+export const probe = PROBE_VALUE + 1;
+0
+exit=1
+
+$ pnpm typecheck
+$ node scripts/typecheck.mjs
+타입 검사: tsconfig 4개 통과.
+exit=0
+
+# 비교용: 예전 명령 tsc -b 로도 한 번 돌려 캐시를 만든다.
+$ pnpm exec tsc -b tsconfig.json packages/*/tsconfig.json
+exit=0
+
+$ pnpm check:packages
+$ node scripts/check-packages.mjs
+packages/twin/src/domain/probe-clock.ts: @nuno/clock 을 import 하는데 packages/twin/package.json dependencies 에 없다. "@nuno/clock": "workspace:*" 를 더하고 pnpm install 을 돈다.
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+# 4-2. clock 공개 면에서 PROBE_VALUE 를 지운다. twin 파일은 그대로 둔다.
+$ cat packages/clock/src/index.ts
+export type { Clock } from "./domain/clock";
+export { toKstDateString } from "./domain/kst-date";
+exit=0
+
+# 비교용: 예전 명령 tsc -b 는 twin 이 최신이라고 보고 통과한다(리뷰가 본 구멍).
+$ pnpm exec tsc -b tsconfig.json packages/*/tsconfig.json
+exit=0
+
+# 지금 명령
+$ pnpm typecheck
+$ node scripts/typecheck.mjs
+packages/twin/src/domain/probe-clock.ts(1,10): error TS2305: Module '"@nuno/clock"' has no exported member 'PROBE_VALUE'.
+타입 검사 실패: packages/twin/tsconfig.json
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ pnpm lint
+$ eslint --max-warnings 0 .
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe-clock.ts
+  3:14  error  Unsafe assignment of an error typed value  @typescript-eslint/no-unsafe-assignment
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+
+## 5. 룰 색인 검사: 하위 폴더 룰(설정-3), 들여쓰지 않은 목록, CRLF, 흐름 표기(설정-4)
+
+# 색인에 없는 하위 폴더 룰 하나와 paths 표기가 다른 룰 셋, paths 없는 룰 하나를 둔다.
+# 기대: 다섯 모두 「색인에 없다」, paths 없는 룰 하나만 「paths: 목록이 없다」.
+$ for f in .claude/rules/sub/nested.md .claude/rules/probe-indent0.md .claude/rules/probe-crlf.md .claude/rules/probe-flow.md .claude/rules/probe-nopaths.md; do echo "--- $f"; head -3 "$f" | cat -A 2>/dev/null || head -3 "$f" | od -c | head -3; done
+--- .claude/rules/sub/nested.md
+0000000    -   -   -  \n   p   a   t   h   s   :  \n           -       "
+0000020    p   a   c   k   a   g   e   s   /   *   *   "  \n            
+0000035
+--- .claude/rules/probe-indent0.md
+0000000    -   -   -  \n   p   a   t   h   s   :  \n   -       "   p   a
+0000020    c   k   a   g   e   s   /   *   *   "  \n                    
+0000033
+--- .claude/rules/probe-crlf.md
+0000000    -   -   -  \r  \n   p   a   t   h   s   :  \r  \n           -
+0000020        "   p   a   c   k   a   g   e   s   /   *   *   "  \r  \n
+0000040
+--- .claude/rules/probe-flow.md
+0000000    -   -   -  \n   p   a   t   h   s   :       [   "   p   a   c
+0000020    k   a   g   e   s   /   *   *   "   ,       "   a   p   p   s
+0000040    /   *   *   "   ]  \n   -   -   -  \n                        
+--- .claude/rules/probe-nopaths.md
+0000000    -   -   -  \n   d   e   s   c   r   i   p   t   i   o   n   :
+0000020        p   a   t   h   s     354 227 206 354 235 214  \n   -   -
+0000040    -  \n                                                        
+exit=0
+
+$ pnpm check:rules
+$ node scripts/check-rules-index.mjs
+.claude/rules/probe-crlf.md: AGENTS.md 룰 색인 표에 없다. 표에 한 줄 더한다.
+.claude/rules/probe-flow.md: AGENTS.md 룰 색인 표에 없다. 표에 한 줄 더한다.
+.claude/rules/probe-indent0.md: AGENTS.md 룰 색인 표에 없다. 표에 한 줄 더한다.
+.claude/rules/probe-nopaths.md: AGENTS.md 룰 색인 표에 없다. 표에 한 줄 더한다.
+.claude/rules/probe-nopaths.md: 머리에 paths: 목록이 없다. 파일 첫머리를 ---, paths:, 경로 목록, --- 차례로 쓴다.
+.claude/rules/sub/nested.md: AGENTS.md 룰 색인 표에 없다. 표에 한 줄 더한다.
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+
+## 6. 기존 증거 다시 돌리기: D1(새로 받은 저장소), D2, D3
+
+# D1: 커밋 6f87b8c 를 새로 받은 저장소(scratchpad 안 임시 복제)에서 돈다. 복제 경로는 <복제> 로 가렸다.
+$ git clone --branch t1/architecture <저장소> <복제> && cd <복제>
+$ pnpm install --frozen-lockfile
++ vitest 5.1.1
+
+Done in 137ms using pnpm v12.21.0
+exit=0  (출력은 끝 세 줄만 남겼다. 종료 코드는 같은 명령을 다시 돌려 확인했다)
+
+$ pnpm verify:fast
+$ pnpm typecheck && pnpm lint && pnpm depcruise && pnpm check:packages && pnpm test && pnpm check:rules
+$ node scripts/typecheck.mjs
+타입 검사: tsconfig 4개 통과.
+$ eslint --max-warnings 0 .
+$ depcruise packages --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+✔ no dependency violations found (14 modules, 16 dependencies cruised)
+
+$ node scripts/check-packages.mjs
+패키지 모양 확인: 계층 폴더, 시험 위치, @nuno 의존 선언이 모두 맞다.
+$ vitest run
+
+ RUN  v5.1.1 <복제>
+
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  06:45:18
+   Duration  143ms (transform 57%, import 23%, tests 10%, worker 9%)
+
+$ node scripts/check-rules-index.mjs
+룰 색인 확인: 3개 모두 색인에 있고 paths: 가 있다.
+exit=0
+
+
+# D2: twin 도메인 파일에 react-native import 를 넣고 pnpm depcruise
+$ cat packages/twin/src/domain/probe.ts
+import "react-native";
+
+export const probe = 1;
+exit=0
+
+$ pnpm depcruise
+$ depcruise packages --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+  error not-to-unresolvable: packages/twin/src/domain/probe.ts → react-native
+    import 한 모듈을 찾지 못했다. 패키지를 package.json 에 더하거나, 다른 패키지는 exports 에 있는 공개
+    면(@nuno/<이름>)으로 가져온다.
+
+  error domain-no-react-native: packages/twin/src/domain/probe.ts → react-native
+    도메인은 react-native 를 쓰지 않는다. 화면이 필요하면 apps/mobile 에서 이 도메인을 불러 쓴다.
+
+  error domain-allowlist: packages/twin/src/domain/probe.ts → react-native
+    도메인은 같은 패키지 domain 과 @nuno/clock 만 import 한다. 바깥 기능이 필요하면 application 에 포트를
+    선언하고 apps/mobile 에서 구현해 넘긴다.
+
+
+x 3 dependency violations (3 errors, 0 warnings). 16 modules, 17 dependencies cruised.
+
+[ELIFECYCLE] Command failed with exit code 3.
+exit=3
+
+
+# D3: 같은 파일에 Date.now(), Math.random(), fetch 를 하나씩 넣고 pnpm lint 세 번
+$ cat packages/twin/src/domain/probe.ts
+export const probe = Date.now();
+exit=0
+
+$ pnpm lint
+$ eslint --max-warnings 0 .
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe.ts
+  1:22  error  'Date.now' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다  no-restricted-properties
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ cat packages/twin/src/domain/probe.ts
+export const probe = Math.random();
+exit=0
+
+$ pnpm lint
+$ eslint --max-warnings 0 .
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe.ts
+  1:22  error  'Math.random' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다  no-restricted-properties
+
+✖ 1 problem (1 error, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+$ cat packages/twin/src/domain/probe.ts
+export const probe = (url: string) => fetch(url);
+exit=0
+
+$ pnpm lint
+$ eslint --max-warnings 0 .
+
+~/IdeaProjects/personal/NUNO/packages/twin/src/domain/probe.ts
+  1:39  error  Unexpected use of 'fetch'. 도메인은 네트워크를 부르지 않는다. application 에 포트를 두고 앱 어댑터가 구현한다  no-restricted-globals
+  1:39  error  Unsafe return of a value of type error                                           @typescript-eslint/no-unsafe-return
+  1:39  error  Unsafe call of a type that could not be resolved                                 @typescript-eslint/no-unsafe-call
+
+✖ 3 problems (3 errors, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+

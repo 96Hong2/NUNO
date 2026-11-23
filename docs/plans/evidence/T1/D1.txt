@@ -1,0 +1,52 @@
+# D1: 새로 받은 저장소에서 pnpm install && pnpm verify:fast
+# 날짜: 2026-11-24 06:21 KST, 커밋 bae1901, node v26.13.1, pnpm 12.21.0
+$ git clone --branch t1/architecture <저장소> && cd <저장소>
+$ pnpm install --frozen-lockfile
+Scope: all 4 workspace projects
+? Verifying lockfile against supply-chain policies (203 entries)...
+✓ Lockfile passes supply-chain policies (203 entries in 567ms)
+Lockfile is up to date, resolution step is skipped
+Packages are cloned from the content-addressable store to the virtual store.
+  Content-addressable store is at: ~/Library/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Packages: +172
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 172, reused 172, downloaded 0, added 172, done
+
+devDependencies:
++ @eslint/js 10.0.1
++ @types/node 26.6.6
++ @vitest/eslint-plugin 1.6.28
++ dependency-cruiser 18.9.0
++ eslint 10.15.0
++ globals 17.14.0
++ prettier 3.10.1
++ typescript 6.0.3
++ typescript-eslint 8.73.0
++ vite 8.3.8
++ vitest 5.1.1
+
+Done in 706ms using pnpm v12.21.0
+exit=0
+
+$ pnpm verify:fast
+$ pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm check:rules
+$ tsc -b tsconfig.json packages/*/tsconfig.json
+$ eslint --cache --cache-location node_modules/.cache/eslint/ --max-warnings 0 .
+$ depcruise packages --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+✔ no dependency violations found (14 modules, 16 dependencies cruised)
+
+$ vitest run
+
+ RUN  v5.1.1 <새로 받은 저장소>
+
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  06:21:39
+   Duration  144ms (transform 57%, import 23%, tests 10%, worker 9%)
+
+$ node scripts/check-rules-index.mjs
+룰 색인 확인: 3개 모두 색인에 있고 paths: 가 있다.
+exit=0
