@@ -1,0 +1,7 @@
+$ gh api repos/96Hong2/NUNO/branches/main/protection --jq ...
+{"a":true,"c":["verify"],"reviews":0}
+
+$ gh api repos/96Hong2/NUNO --jq 머지 방식
+{"merge":false,"rebase":false,"squash":true}
+
+판정: 통과. c 에 verify, a 가 true (2026-11-24, 기획자 허락 뒤 설정)

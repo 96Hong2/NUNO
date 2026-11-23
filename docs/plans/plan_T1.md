@@ -266,13 +266,13 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D3 | 통과 (세 번 모두 exit 1. 리뷰 반영 뒤 다시 통과) | `docs/plans/evidence/T1/D3.txt`, `review-fixes.txt` 6절 |
 | D4 | PR C 에서 판정 (`apps/mobile` 이 아직 없다) | |
 | D5 | 통과 (셋 다 exit 1, `--fix` 뒤에도 `.only` 남음) | `docs/plans/evidence/T1/D5.txt` |
-| D6 | 통과 (틀 다섯 파일 뒤 exit 0, twin import 는 exit 2) | `docs/plans/evidence/T1/D6.txt` |
+| D6 | 통과 (틀 다섯 파일 뒤 exit 0, twin import 는 exit 2). 리뷰 반영 뒤 새 틀로 다시 확인해 exit 0 | `docs/plans/evidence/T1/D6.txt` |
 | D7 | 통과 (두 경우 모두 exit 1, 파일 이름 출력) | `docs/plans/evidence/T1/D7.txt` |
 | D8 | | |
 | D9 | | |
 | D10 | | |
-| D11 | | |
-| D12 | | |
+| D11 | PR 1 머지로 판정. 결과는 PR B 에서 적는다 | |
+| D12 | 통과 (필수 검사 verify, 관리자 우회 금지, 승인 0명 PR 필수, squash 만 허용) | `docs/plans/evidence/T1/D12.txt` |
 | D13 | | |
 | D14 | | |
 | D15 | 일부 확인 (175자, CLAUDE.local.md 0. Stop 훅은 PR B 뒤 확인) | `docs/plans/evidence/T1/D15.txt` |
