@@ -137,4 +137,19 @@ export default defineConfig(
       ],
     },
   },
+
+  // Playwright e2e 도 모두 돈다. test.only, test.describe.skip, test.fixme 같은 꼴을 막는다.
+  {
+    files: ["e2e/**/*.spec.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "MemberExpression[property.name=/^(only|skip|fixme)$/]",
+          message:
+            "e2e 시험을 골라 돌리거나 건너뛰지 않는다. 실패하는 시험은 실패한 채로 두고 알린다.",
+        },
+      ],
+    },
+  },
 );
