@@ -291,7 +291,7 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D12 | 통과 (필수 검사 verify, 관리자 우회 금지, 승인 0명 PR 필수, squash 만 허용) | `docs/plans/evidence/T1/D12.txt` |
 | D13 | | |
 | D14 | | |
-| D15 | 일부 확인 (175자, CLAUDE.local.md 0. Stop 훅은 PR B 뒤 확인) | `docs/plans/evidence/T1/D15.txt` |
+| D15 | 통과 (175자, CLAUDE.local.md 0, `.claude/` 에 stop_hook_active 없음) | `docs/plans/evidence/T1/D15.txt` |
 | D16 | | |
 | D17 | | |
 | D18 | | |

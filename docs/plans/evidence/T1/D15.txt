@@ -1,5 +1,5 @@
-# D15 일부: CLAUDE.md 글자 수, CLAUDE.local.md 없음 (Stop 훅은 PR B 에서 생겨 그때 다시 본다)
-# 날짜: 2026-11-24 06:23 KST, 커밋 bae1901
+# D15: CLAUDE.md 글자 수, CLAUDE.local.md 없음, Stop 훅에 이미 막았는지 보는 확인 없음
+# 날짜: 2026-11-24 07:03 KST, 커밋 7276a7a 에 settings.json 등록을 더한 작업 트리
 $ LC_ALL=en_US.UTF-8 wc -m CLAUDE.md
      175 CLAUDE.md
 $ git ls-files | grep -c CLAUDE.local.md
@@ -7,6 +7,18 @@ $ git ls-files | grep -c CLAUDE.local.md
 $ find . -name CLAUDE.local.md -not -path "./node_modules/*"
 (출력 없음)
 $ grep -rn stop_hook_active .claude/
-exit=1 (1 이면 찾은 줄 없음. .claude/hooks 는 아직 없다)
-$ ls .claude
+(출력 없음)
+exit=1 (1 이면 찾은 줄 없음)
+$ ls .claude .claude/hooks
+.claude:
+hooks
 rules
+settings.json
+
+.claude/hooks:
+hook-input.mjs
+post-tool-use.mjs
+pre-tool-use.mjs
+stop.mjs
+
+판정: 통과. 175자(150~250), CLAUDE.local.md 0개, .claude/ 아래에 stop_hook_active 가 없다.
