@@ -66,10 +66,10 @@ NUNO/
 │       └── composition/   device-db.ts (어댑터를 만들어 화면에 넘김, 컨텍스트를 잇는 자리)
 ├── packages/
 │   ├── twin/              src/domain, src/application, src/index.ts
-│   ├── clock/             포트 타입, 한국 시간대 헬퍼, src/testing(고정 시계)
-│   ├── ids/               포트 타입, src/testing(순번 ID)
+│   ├── clock/             src/domain(포트 타입, 한국 시간대 헬퍼), src/testing(고정 시계)
+│   ├── ids/               src/domain(포트 타입), src/testing(순번 ID)
 │   └── device-db/         SqlDatabase 포트(비동기), 옮기기 실행기, src/testing(node:sqlite 어댑터)
-├── scripts/               new-context.mjs, check-rules-index.mjs
+├── scripts/               new-context.mjs, check-rules-index.mjs, check-packages.mjs, typecheck.mjs
 ├── e2e/                   Playwright
 ├── docs/                  roadmap.md, adr/, plans/
 └── .github/workflows/verify.yml
@@ -81,7 +81,7 @@ NUNO/
 | --- | --- | --- |
 | 저장소 형태 | pnpm 모노레포, `apps/mobile` 과 `packages/<컨텍스트>` | 앱 한 폴더 안 features: 경계를 기계로 막기 어렵다 |
 | 컨텍스트 안 계층 | `src/domain`(순수), `src/application`(유스케이스와 포트), `src/index.ts`(이름을 하나씩 적어 내보냄, `export *` 금지) | 처음부터 네 계층: 빈 폴더를 AI 가 채울 자리로 읽는다 |
-| 바깥 SDK | 쓰는 앱의 `src/adapters/` 에 둔다. 앱 둘 이상이 쓰게 되면 `packages/<컨텍스트>/src/adapters/<SDK>/` 로 옮긴다 | 패키지가 expo 를 의존: 도메인 시험이 Expo 없이 돌지 않는다 |
+| 바깥 SDK | 쓰는 앱의 `src/adapters/` 에 둔다. 앱 둘 이상이 쓰게 되면 그때 자리를 정하고 ADR 을 고친다 | 패키지가 expo 를 의존: 도메인 시험이 Expo 없이 돌지 않는다 |
 | 실제 시계와 UUID | `apps/mobile/src/adapters/` 에 둔다. `clock`, `ids` 는 포트 타입과 순수 함수, `./testing` 만 낸다 | 패키지에 실제 구현: 도메인이 패키지를 거쳐 시각과 난수를 부른다 |
 | 시험 대역 | `src/testing/index.ts` 에 두고 exports `./testing` 으로만 낸다. 시험과 e2e 에서만 import | 공개 면에 섞음: Metro 가 node:sqlite 를 번들에 넣으려 한다 |
 | 컨텍스트끼리 | 직접 import 금지. 필요한 쪽이 자기 application 에 포트를 선언하고, `apps/mobile/src/composition` 이 상대 공개 면으로 구현해 꽂는다. 공유 패키지는 `clock`, `ids`, `device-db` 셋이고 업무 로직을 두지 않는다 | 자유 참조: 경계가 무너진다 |
@@ -92,8 +92,8 @@ NUNO/
 | 화면 시험 | Playwright 로 Expo 웹(port 8090)을 띄운다 | Detox, Maestro: Xcode 가 없다 |
 | 단위 시험 | vitest 5 | node --test: `.only` 를 막는 린트 규칙이 없다 |
 | 훅 언어 | Node `.mjs` | 셸과 jq: jq 가 없을 수 있다 |
-| Stop 훅 | `stop_hook_active` 확인을 넣지 않는다(연속 상한 8회가 끊음). 바뀐 것이 없거나 docs 와 *.md 만 바뀌었으면 바로 통과. verify:fast 는 incremental 과 캐시로, timeout 180초 | 확인을 넣음: 한 턴에 한 번만 막는다(전역 규칙) |
-| PostToolUse | prettier 와 `eslint --cache` 로 고친 파일 하나만. 타입 정보 규칙은 verify:fast 에서만. timeout 30초 | 매 편집 전체 린트: 느려진다 |
+| Stop 훅 | `stop_hook_active` 확인을 넣지 않는다(연속 상한 8회가 끊음). 바뀐 것이 없거나 docs 와 *.md 만 바뀌었으면 바로 통과. typecheck 는 incremental, lint 는 캐시 없이 돈다. timeout 180초 | 확인을 넣음: 한 턴에 한 번만 막는다(전역 규칙) |
+| PostToolUse | prettier 와 `eslint --cache` 로 고친 파일 하나만. 린트 캐시는 여기서만 쓴다. 타입 정보 규칙은 verify:fast 에서만. timeout 30초 | 매 편집 전체 린트: 느려진다 |
 | PreToolUse | Bash 의 `git commit --no-verify`, `-n`, `git push --no-verify` 를 막는다. 보호 경로(`.claude/hooks/`, `.github/`)를 Edit, Write, Bash 쓰기로 고치면 막는다. `origin/main` 에 이미 있는 시험 파일 고치기를 막는다 | Edit, Write 만 봄: Bash 로 우회된다 |
 | CLAUDE.md | 200자 내외. 내용은 AGENTS.md 와 경로 룰로 | 긴 CLAUDE.md: 매 세션 로드 비용 |
 | Skia | 머지하지 않는 시험 브랜치에서 웹 빌드만 본다. 결과만 이 파일에 적고 main 에 넣지 않는다. 쓰는 Task(T9)에서 그때 판으로 설치 | main 에 설치: T2 부터 쓰지 않는 의존성을 진다 |
@@ -103,21 +103,24 @@ NUNO/
 options: `tsConfig`, `tsPreCompilationDeps: true`, `enhancedResolveOptions: { exportsFields: ["exports"], conditionNames: ["react-native", "import", "default"] }`. 풀리지 않는 import 는 `not-to-unresolvable` 로 실패한다.
 
 1. `packages/*/src/domain/**` 은 같은 패키지 domain 과 `@nuno/clock` 공개 면(순수 한국 시간대 헬퍼, 포트 타입)만 import 한다. 그 밖의 npm 패키지와 node 내장은 모두 실패한다(허용 목록). react, react-native, expo 에는 「도메인은 react-native 를 쓰지 않는다. 화면이 필요하면 apps/mobile 에서 이 도메인을 불러 쓴다.」 문구를 단 규칙을 따로 둔다.
-2. `packages/*/src/application/**` 은 같은 패키지와 `clock`, `ids`, `device-db` 공개 면만(허용 목록).
+2. `packages/*/src/application/**` 은 같은 패키지 domain, application 과 `clock`, `ids`, `device-db` 공개 면만(허용 목록).
 3. `packages/` 밖 파일은 `packages/[^/]+/src/` 안쪽을 import 하지 못한다. 허용은 `src/index.ts` 와 `src/testing/index.ts` 둘이다. 상대 경로, 별칭, `import type` 모두 풀린 경로로 판정한다.
 4. `^packages/([^/]+)/` 파일이 다른 `packages/` 파일을 import 하면 실패한다. 예외는 같은 패키지와 공유 패키지 `clock`, `ids`, `device-db`(group matching). 새 컨텍스트는 규칙을 고치지 않아도 막힌다.
 5. `@nuno/*/testing` 은 `*.test.ts` 와 `e2e/` 에서만 import 한다.
 6. 바깥 SDK(expo-*, react-native-* 중 앱 기능 SDK)는 `apps/*/src/adapters/**` 에서만, 어댑터는 `apps/*/src/composition/**` 에서만 import 한다. 문구: 「어댑터는 composition 에서 만들어 화면에 넘긴다.」
+7. `packages/*/src` 아래 domain, application, testing, index.ts 밖 파일은 `scripts/check-packages.mjs` 가 막는다. 같은 스크립트가 src 밖 시험 파일과 선언하지 않은 `@nuno/*` 의존도 막는다.
 
 ## 린트 규칙 (eslint.config.mjs)
 
-- 도메인(`packages/*/src/domain/**`): `Date.now`, 인자 없는 `new Date()`, `Math.random`, `crypto.randomUUID`, `performance.now`, `fetch` 금지.
-- 시험(`**/*.test.ts`): `@vitest/eslint-plugin` 의 `no-focused-tests`(자동 고침 끔), `no-disabled-tests`, `expect-expect` 를 error.
+- 도메인(`packages/*/src/domain/**/*.{ts,tsx,mts,cts}`): `Date.now`, 인자 없는 `new Date()`, `Date()`, 속성 접근 `new x.Date()`, `Math.random`, `fetch` 금지.
+- 도메인: 전역 `globalThis`, `self`, `window`, `crypto`, `performance` 금지. 인자 없는 `Intl.DateTimeFormat().format()` 금지.
+- 도메인과 application: 동적 `import()`(ImportExpression) 금지.
+- 시험(`**/*.test.{ts,tsx}`): `no-focused-tests`(자동 고침 끔), `no-disabled-tests`, `expect-expect`, `valid-expect` 를 error. `it`, `test`, `describe` 의 `skipIf`, `runIf` 금지. `todo` 는 막지 않는다.
 - `src/index.ts`: `export *` 금지.
 
 ## 명령과 판 고정
 
-- 루트 스크립트: `typecheck`(tsc -b, incremental), `lint`(eslint --cache), `depcruise`(--cache), `test`(vitest run), `check:rules`. `verify:fast` 는 다섯을 차례로. `verify` 는 PR A, B 에서 `verify:fast` 와 같고, PR C 에서 `verify:fast && pnpm e2e`.
+- 루트 스크립트: `typecheck`(`scripts/typecheck.mjs`, tsconfig 마다 `tsc -p --incremental`), `lint`(캐시 없음), `depcruise`(--cache), `check:packages`, `test`(vitest run), `check:rules`. `verify:fast` 는 여섯을 차례로. `verify` 는 PR A, B 에서 `verify:fast` 와 같고, PR C 에서 `verify:fast && pnpm e2e`.
 - `new:context`, `web`(`pnpm --filter mobile exec expo start --port 8090`), `e2e`.
 - `packageManager: pnpm@12.21.0`, `.nvmrc` 26. `pnpm-workspace.yaml` 에 `nodeLinker: hoisted`, `allowBuilds`, `catalog:`(typescript ~6.0.3, react, react-native).
 - tsconfig: `expo/tsconfig.base` 를 잇고 moduleResolution bundler. `@nuno/*` 를 `paths` 로 잇지 않고 `workspace:*` 로 잇는다.
@@ -133,6 +136,10 @@ options: `tsConfig`, `tsPreCompilationDeps: true`, `enhancedResolveOptions: { ex
    - 훅 스크립트는 예시 입력 JSON 을 파이프로 넣어 막기와 통과를 먼저 확인하고 settings.json 에 등록한다.
 3. PR C 「T1-5: Expo 웹 빈 셸, device-db, expo-sqlite 어댑터, 저장소 보기, e2e, launch.json」
    - CI 에 Playwright chromium 설치를 더하고 `verify` 에 e2e 를 붙인다.
+   - package.json 의 depcruise 를 `depcruise packages apps e2e` 로 바꾼다.
+   - 확인: apps/mobile 화면 파일에 expo-sqlite import 를 넣으면 sdk-only-in-adapters 로 실패.
+   - e2e 시험 파일 이름을 정하고, 그 glob 에 Playwright 용 `.only` 금지 린트를 건다.
+   - device-db 도 `src/domain`, `src/application`, `src/testing` 모양을 따른다(`pnpm check:packages`).
    - Skia 웹 확인은 머지하지 않는 브랜치 `t1/skia-probe` 에서 한다.
 
 ## 명령 DoD 확인 절차
@@ -144,7 +151,7 @@ options: `tsConfig`, `tsPreCompilationDeps: true`, `enhancedResolveOptions: { ex
 | D1 | A, C 에서 다시 | 새로 받은 저장소에서 `pnpm install && pnpm verify:fast` | 다섯 단계가 돌고 exit 0 |
 | D2 | A, C 에서 다시 | `packages/twin/src/domain/probe.ts` 에 `import 'react-native'`, `pnpm depcruise` | exit 1, 고치는 법 문장 출력 |
 | D3 | A | 같은 파일에 `Date.now()`, `Math.random()`, `fetch` 를 하나씩, `pnpm lint` 세 번 | 세 번 모두 exit 1 |
-| D4 | C | `apps/mobile` 임시 파일에서 값 import(`@nuno/twin/src/domain/…`) 한 번, 상대 경로 `import type` 한 번 | 두 번 모두 typecheck 나 depcruise 실패 |
+| D4 | C | `apps/mobile` 임시 파일에서 값 import(`@nuno/twin/src/domain/…`) 한 번, 상대 경로 `import type` 한 번. 화면 파일에 `expo-sqlite` import 한 번 | 셋 모두 typecheck 나 depcruise 실패. 셋째는 `sdk-only-in-adapters` |
 | D5 | A | 임시 시험 파일 셋(`.only`, `.skip`, 단언 없음), `pnpm lint` | 셋 다 exit 1 |
 | D6 | A | `pnpm new:context wardrobe && pnpm verify:fast`, wardrobe 도메인에서 `@nuno/twin` import 도 시험. 끝나면 `packages/wardrobe` 를 지우고 커밋하지 않음 | 첫째 exit 0, 둘째 실패 |
 | D7 | A | 색인에 없는 룰 파일, `paths:` 없는 룰 파일을 따로 두고 `pnpm verify:fast` | 두 번 다 exit 1, 파일 이름 출력 |
@@ -232,15 +239,31 @@ PR A (2026-11-24)
 - Actions 판은 조회한 최신 판인 checkout v7, setup-node v7, pnpm/action-setup v6 을 쓴다.
 - `.prettierignore` 에 `**/*.md` 를 넣었다. 한국어 표를 prettier 가 다시 정렬하지 않게 한다.
 
+PR 1 리뷰 반영 (2026-11-24, 증거 `docs/plans/evidence/T1/review-fixes.txt`)
+
+- application 허용 목록을 같은 패키지 domain, application 과 공유 패키지 공개 면으로 줄였다.
+- `scripts/check-packages.mjs` 를 더했다. src 아래 계층 밖 파일, src 밖 시험, 선언하지 않은 `@nuno/*` 를 막는다.
+- clock, ids 의 파일을 `src/domain` 으로 옮겼다. 계층 검사를 받고, 실제 시계를 몰래 둘 자리를 도메인 린트가 막는다.
+- 도메인 린트에 전역 다섯(globalThis, self, window, crypto, performance), `Date()`, `new x.Date()`, 인자 없는 Intl format 금지를 더했다.
+- 도메인과 application 에 동적 `import()` 금지를 더했다.
+- 도메인 린트와 TS 블록이 `.tsx`, `.mts`, `.cts` 도 본다. 시험 린트와 vitest include 는 `*.test.{ts,tsx}` 다.
+- 시험 린트에 `valid-expect` 와 `skipIf`, `runIf` 금지를 더했다.
+- `typecheck` 는 `tsc -b` 대신 `scripts/typecheck.mjs` 다. 빌드 정보는 `node_modules/.cache/tsc/<이름>.tsbuildinfo` 에 둔다.
+- `lint` 는 캐시 없이 돈다. 타입 정보 규칙이 다른 파일 타입에 기대서다. 캐시는 PR B 의 PostToolUse 한 파일 린트에서만 쓴다.
+- new:context 틀 package.json 에 빈 `dependencies` 를 둔다. twin 은 `@nuno/*` 를 쓰지 않아 더하지 않았다.
+- 룰 색인 검사는 하위 폴더까지 보고, CRLF 를 맞추고, 들여쓰지 않은 목록과 흐름 표기를 받는다. `.gitattributes` 를 더했다.
+- AGENTS.md 에 `packages/profile`, 옮기기 단계 소유, `FEATURE_SDKS` 줄을 더하고 「먼저 묻는다」 를 좁혔다.
+- 로드맵의 결정 번호는 「결정 D21」 로 적고, DoD 체크박스는 글머리표로 바꿨다. DoD 판정은 이 파일 표에만 적는다.
+
 ## DoD 판정
 
 D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료 판정에서 뺀다. `docs/roadmap.md` 의 「iOS 와 사람 확인 대기」 목록에 넣는다.
 
 | DoD | 판정 | 증거 |
 | --- | --- | --- |
-| D1 | 통과 (PR A, PR C 에서 다시) | `docs/plans/evidence/T1/D1.txt` |
-| D2 | 통과 (exit 3, 고치는 법 문장 출력. PR C 에서 다시) | `docs/plans/evidence/T1/D2.txt` |
-| D3 | 통과 (세 번 모두 exit 1) | `docs/plans/evidence/T1/D3.txt` |
+| D1 | 통과 (PR A, 리뷰 반영 뒤 다시 통과, PR C 에서 다시) | `docs/plans/evidence/T1/D1.txt`, `review-fixes.txt` 6절 |
+| D2 | 통과 (exit 3, 고치는 법 문장 출력. 리뷰 반영 뒤 다시 통과, PR C 에서 다시) | `docs/plans/evidence/T1/D2.txt`, `review-fixes.txt` 6절 |
+| D3 | 통과 (세 번 모두 exit 1. 리뷰 반영 뒤 다시 통과) | `docs/plans/evidence/T1/D3.txt`, `review-fixes.txt` 6절 |
 | D4 | PR C 에서 판정 (`apps/mobile` 이 아직 없다) | |
 | D5 | 통과 (셋 다 exit 1, `--fix` 뒤에도 `.only` 남음) | `docs/plans/evidence/T1/D5.txt` |
 | D6 | 통과 (틀 다섯 파일 뒤 exit 0, twin import 는 exit 2) | `docs/plans/evidence/T1/D6.txt` |
@@ -258,3 +281,40 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D18 | | |
 | D19 | | |
 | D20 | 환경 없음 | Xcode 없음 |
+
+## PR 1 리뷰 반영
+
+리뷰 원문 지적 30건을 반영했다. 재현 결과는 `docs/plans/evidence/T1/review-fixes.txt` 에 있다.
+
+| 지적 | 반영 | 까닭과 방법 |
+| --- | --- | --- |
+| 경계-1 계층 밖 폴더 우회 | 반영 | 허용 목록 축소, `check:packages` 계층 검사. clock, ids 도 `src/domain` 으로 옮김 |
+| 경계-2 globalThis 등 우회 | 반영 | 전역 다섯 금지, `Date()`, `new x.Date()`, 인자 없는 Intl format |
+| 경계-3 .tsx, .mts 도메인 | 반영 | 린트 files 를 `{ts,tsx,mts,cts}` 로 넓힘 |
+| 경계-4 tsconfig 에 기댄 막힘 | 반영 | 전역 crypto, performance 금지로 닫음 |
+| 경계-5 변수 동적 import | 반영 | 도메인과 application 에 ImportExpression 금지 |
+| 경계-6 skipIf, 매처 없는 expect | 반영 | `valid-expect`, `skipIf`, `runIf` 금지. todo 는 막지 않음 |
+| 경계-7 depcruise 범위 | 반영 | 순서 3 과 D4 절차에 적음. 앱이 생기는 PR C 에서 바꿈 |
+| 경계-8 선언 없는 의존 | 반영 | depcruise 규칙 대신 `check:packages` 로 비교 |
+| AI-1 ID 와 domain 허용 목록 | 반영 | domain.md 를 「ID 는 문자열 값」 으로 고침 |
+| AI-2 T2 소유 컨텍스트 | 반영 | `packages/profile`, 옮기기 단계 줄, ADR 결정 12, 13 |
+| AI-3 「먼저 묻는다」 범위 | 반영 | 네 경우로 좁힘 |
+| AI-4 T2-2 원본 그림 | 반영 | 로드맵 T2 에 [사람] 일과 물을 것 |
+| AI-5 기획 번호 원문 | 일부 | 위치 안내와 「결정 D」 표기. 결정 상태는 원문이 저장소 밖이라 옮기지 않음 |
+| AI-6 depcruise 범위 | 반영 | 경계-7 과 같음 |
+| AI-7 DoD 장부 둘 | 반영 | 판정은 plan 표에만, 로드맵 체크박스 없앰 |
+| AI-8 ADR 규칙 번호 | 반영 | 규칙 이름으로 적음 |
+| AI-9 workspace:* 없음 | 반영 | 틀에 빈 dependencies, 검사 추가. 쓰지 않는 의존은 미리 적지 않음 |
+| AI-10 포트 구현 위치 | 반영 | adapters 와 composition 으로 나눠 적음 |
+| AI-11 FEATURE_SDKS 기준 | 반영 | mobile-ui.md 와 AGENTS.md 표 |
+| AI-12 .test.tsx, e2e 린트 | 반영 | 단위 시험은 지금, e2e 린트는 PR C 순서에 적음 |
+| AI-13 용어집 T2 이름 | 반영 | T2 화면 이름, 「판」 세 뜻, `fitting/*` 경로 |
+| AI-14 날짜 문장 | 반영 | AGENTS.md 문장 분리, domain.md 달력 날짜 |
+| AI-15 긴 문장 | 반영 | ADR, AGENTS.md, 룰을 55자 안으로 나눔 |
+| 설정-1 tsc -b 최신 판단 | 반영 | `scripts/typecheck.mjs`, 재현에서 TS2305 로 실패 |
+| 설정-2 린트 캐시 | 반영 | verify:fast 린트는 캐시 없음 |
+| 설정-3 하위 폴더 룰 | 반영 | 재귀로 읽고 상대 경로로 비교 |
+| 설정-4 YAML 오탐, CRLF | 반영 | 줄끝 맞춤, 목록 표기 셋, `.gitattributes` |
+| 설정-5 선언 없는 workspace | 반영 | 경계-8 과 같음 |
+| 설정-6 src 밖 시험, .tsx | 반영 | vitest include 넓힘, src 밖 시험은 `check:packages` 가 막음 |
+| 설정-7 workspace 주석 | 반영 | 주석을 사실대로 고침 |
