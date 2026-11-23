@@ -1,0 +1,21 @@
+D14 [명령] 새 세션 /context 에 루트 CLAUDE.md 가 보이고, 하위 폴더 CLAUDE.md 가 실린다.
+확인일 2026-11-24. 저장소 폴더(브랜치 t1/app-shell)에서 새 claude 세션을 띄웠다. 개인 경로는 ~ 로 줄였다.
+
+1) cd <저장소> && claude -p "/context" 의 Memory Files 표
+
+| Type | Path |
+|------|------|
+| User | (전역 설정 파일 4개, 생략) |
+| Project | ~/IdeaProjects/personal/NUNO/CLAUDE.md |
+| Project | ~/IdeaProjects/personal/NUNO/AGENTS.md |
+
+2) 같은 폴더에서 claude -p "apps/mobile/app/_layout.tsx 를 Read 도구로 읽어줘 …"
+   그 세션 트랜스크립트(~/.claude/projects/-…-NUNO/<세션>.jsonl)의 첨부 기록.
+   터미널의 「Loaded …」 줄은 이 nested_memory 첨부를 화면에 보인 것이다.
+
+"type":"nested_memory","path":"~/IdeaProjects/personal/NUNO/apps/mobile/CLAUDE.md","type":"Project"
+"type":"nested_memory","path":"~/IdeaProjects/personal/NUNO/apps/mobile/AGENTS.md","type":"Project"
+"type":"nested_memory","path":"~/IdeaProjects/personal/NUNO/.claude/rules/mobile-ui.md","type":"Project"
+
+판정: 통과. 루트 CLAUDE.md 와 @AGENTS.md 가 시작할 때 실리고,
+apps/mobile 아래 파일을 읽으면 apps/mobile/CLAUDE.md, 그 @AGENTS.md, paths 가 맞는 mobile-ui.md 룰이 실린다.

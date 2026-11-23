@@ -15,6 +15,8 @@
 | 트윈 | `fitting/twin` | 피팅룸 칸. 트윈 꾸미기를 연다. 인물 `twin` 과 경로로 구분한다 |
 | 룩북 | `fitting/lookbook` | 피팅룸 칸. 저장한 룩을 책장으로 보인다 |
 | 「저장소 보기」 | `dev/storage` | 개발 빌드에서만 여는 기기 저장소 확인 화면 |
+| 「시험 값 쓰기」 | `writeDevProbe` | 「저장소 보기」 단추. 개발용 표 `dev_probe` 에 한 줄을 쓴다 |
+| 「제약 확인」 | `checkDevProbeConstraints` | 「저장소 보기」 단추. 같은 키 두 번과 NULL 이 막히는지 본다 |
 | 홈 무대 | `homeStage` | 홈에서 고른 트윈이 기본 코디 사진으로 서는 자리 |
 | 홈 시트 | `homeSheet` | 홈 무대 아래 시트. 탭이 둘 있다 |
 | 「최근 저장한 룩」 | `recentLooks` | 홈 시트 첫 탭 |

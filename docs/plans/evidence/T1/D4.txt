@@ -1,0 +1,74 @@
+# D4: 앱 코드가 twin 의 src/domain 안쪽 경로를 import 하면 타입 검사나 경계 검사가 실패한다
+# 날짜: 2026-11-24 07:46 KST, 커밋 85df5f3, node v26.13.1, pnpm 12.21.0
+
+## 1. apps/mobile 임시 파일에서 패키지 이름으로 안쪽 경로 값 import
+$ cat apps/mobile/src/ui/d4-probe.ts
+import { isPresetTwinKey } from "@nuno/twin/src/domain/preset-twin-key";
+
+export const probe = isPresetTwinKey("yuna");
+exit=0
+$ pnpm typecheck
+$ node scripts/typecheck.mjs
+apps/mobile/src/ui/d4-probe.ts(1,33): error TS2307: Cannot find module '@nuno/twin/src/domain/preset-twin-key' or its corresponding type declarations.
+타입 검사 실패: apps/mobile/tsconfig.json
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+$ pnpm depcruise
+$ depcruise packages apps e2e --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+  error not-to-unresolvable: apps/mobile/src/ui/d4-probe.ts → @nuno/twin/src/domain/preset-twin-key
+    import 한 모듈을 찾지 못했다. 패키지를 package.json 에 더하거나, 다른 패키지는 exports 에 있는 공개
+    면(@nuno/<이름>)으로 가져온다.
+
+
+x 1 dependency violations (1 errors, 0 warnings). 58 modules, 75 dependencies cruised.
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+## 2. apps/mobile 임시 파일에서 상대 경로 import type
+$ cat apps/mobile/src/ui/d4-probe.ts
+import type { PresetTwinKey } from "../../../../packages/twin/src/domain/preset-twin-key";
+
+export type Probe = PresetTwinKey;
+exit=0
+$ pnpm typecheck
+$ node scripts/typecheck.mjs
+타입 검사: tsconfig 6개 통과.
+exit=0
+$ pnpm depcruise
+$ depcruise packages apps e2e --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+  error outside-only-public-entry: apps/mobile/src/ui/d4-probe.ts → packages/twin/src/domain/preset-twin-key.ts
+    패키지 안쪽 경로를 import 하지 않는다. @nuno/<이름> 이나 @nuno/<이름>/testing 으로 가져오고, 없는 이름은
+    그 패키지 src/index.ts 에서 내보낸다.
+
+
+x 1 dependency violations (1 errors, 0 warnings). 57 modules, 75 dependencies cruised.
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1
+
+## 3. 앱 화면 파일에서 expo-sqlite 직접 import
+$ cat apps/mobile/app/d4-probe.tsx
+import { openDatabaseAsync } from "expo-sqlite";
+import { Text } from "react-native";
+
+export const probe = openDatabaseAsync;
+
+export default function D4ProbeScreen() {
+  return <Text>probe</Text>;
+}
+exit=0
+$ pnpm depcruise
+$ depcruise packages apps e2e --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long
+
+  error sdk-only-in-adapters: apps/mobile/app/d4-probe.tsx → node_modules/expo-sqlite/build/index.js
+    바깥 SDK 는 apps/<앱>/src/adapters/ 에서만 import 한다. 어댑터는 composition 에서 만들어 화면에
+    넘긴다.
+
+
+x 1 dependency violations (1 errors, 0 warnings). 57 modules, 76 dependencies cruised.
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1

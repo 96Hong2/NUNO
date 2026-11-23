@@ -7,5 +7,8 @@ packages:
 # 빌드 스크립트가 있는 의존성이 생기면 allowBuilds 를 여기에 더한다.
 nodeLinker: hoisted
 
+# react, react-native 판은 Expo SDK 58 bundledNativeModules 와 같다.
 catalog:
   typescript: ~6.0.3
+  react: 19.3.0
+  react-native: 0.88.1

@@ -15,6 +15,8 @@ paths:
 - 업무 규칙의 시험은 같은 폴더 `*.test.ts` 에 둔다. 시계와 ID 대역은 `@nuno/<패키지>/testing` 에서 가져온다.
 - application 에는 유스케이스 함수와 포트(바깥에 맡길 일의 타입)를 둔다.
 - 바깥 SDK 포트 구현은 `apps/mobile/src/adapters` 에 둔다.
+- 자기 표의 옮기기 단계와 `SqlDatabase` 로 쓰는 저장소 구현은 application 에 두고 `@nuno/device-db/testing` 으로 시험한다.
+- `transaction` 의 work 안에서는 받은 `tx` 만 쓴다. 저장소 함수는 `SqlExecutor` 를 인자로 받는다.
 - 다른 컨텍스트 공개 면으로 만드는 포트 구현은 `apps/mobile/src/composition` 에 둔다.
 - application 은 같은 패키지 domain, application 과 공유 패키지 공개 면만 import 한다.
 - 공유 패키지는 `@nuno/clock`, `@nuno/ids`, `@nuno/device-db` 셋이다. 다른 컨텍스트가 필요하면 포트를 선언한다.

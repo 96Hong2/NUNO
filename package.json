@@ -16,16 +16,19 @@
   "scripts": {
     "typecheck": "node scripts/typecheck.mjs",
     "lint": "eslint --max-warnings 0 .",
-    "depcruise": "depcruise packages --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long",
+    "depcruise": "depcruise packages apps e2e --config .dependency-cruiser.cjs --cache node_modules/.cache/dependency-cruiser --cache-strategy content --output-type err-long",
     "check:packages": "node scripts/check-packages.mjs",
     "test": "vitest run",
     "check:rules": "node scripts/check-rules-index.mjs",
     "verify:fast": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm check:packages && pnpm test && pnpm check:rules",
-    "verify": "pnpm verify:fast",
-    "new:context": "node scripts/new-context.mjs"
+    "verify": "pnpm verify:fast && pnpm e2e",
+    "new:context": "node scripts/new-context.mjs",
+    "web": "pnpm --filter mobile exec expo start --port 8090",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "~1.65.1",
     "@types/node": "^26.6.6",
     "@vitest/eslint-plugin": "^1.6.28",
     "dependency-cruiser": "^18.9.0",

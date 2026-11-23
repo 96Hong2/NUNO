@@ -1,0 +1,92 @@
+# D19: 기술 검토 결과 (expo-sqlite 웹, 교차 출처 격리, Skia 와 Reanimated 웹)
+# 날짜: 2026-11-24 07:53 KST, 커밋 85df5f3, node v26.13.1, pnpm 12.21.0
+
+## 1. expo-sqlite 웹 읽기 쓰기, 새로고침 뒤 남는지, 제약 (e2e/dev-storage.spec.ts)
+$ pnpm exec playwright test e2e/dev-storage.spec.ts
+[WebServer] $ pnpm --filter mobile exec expo start --port 8090
+
+Running 2 tests using 1 worker
+
+crossOriginIsolated 쓰기 때=false 새로고침 뒤=true
+새로고침 뒤 남은 값: probe-2026-11-23T22:53:49.332Z = 시험 값
+  ✓  1 [chromium] › e2e/dev-storage.spec.ts:9:1 › 「저장소 보기」 에서 「시험 값 쓰기」 로 쓴 값이 새로고침 뒤에도 남는다 (894ms)
+같은 키 두 번: 막힘 (Error finalizing statement)
+value 에 NULL: 막힘 (Error finalizing statement)
+  ✓  2 [chromium] › e2e/dev-storage.spec.ts:41:1 › 웹 기기 DB 도 같은 키 두 번과 value 의 NULL 을 막는다 (433ms)
+
+  2 passed (3.0s)
+exit=0
+
+## 2. 개발 서버가 HTML 에 격리 헤더를 붙이는지 (pnpm web 을 띄우고 curl)
+$ curl -s -D - -o /dev/null -H 'Accept: text/html' http://localhost:8090/ | grep -i cross-origin
+(격리 헤더 없음)
+$ curl -s -D - -o /dev/null -H 'Accept: text/html' http://localhost:8090/home | grep -i cross-origin
+Cross-Origin-Embedder-Policy: credentialless
+Cross-Origin-Opener-Policy: same-origin
+$ curl -s -D - -o /dev/null -H 'Accept: text/html' http://localhost:8090/dev/storage | grep -i cross-origin
+Cross-Origin-Embedder-Policy: credentialless
+Cross-Origin-Opener-Policy: same-origin
+풀이: / 는 Expo CLI 의 ManifestMiddleware 가 Metro 미들웨어보다 먼저 HTML 을 낸다.
+metro.config.js 의 enhanceMiddleware 헤더는 Metro 뒤 미들웨어(번들, 자산, /home 같은 경로의 HTML)에만 붙는다.
+app.json expo-router 플러그인 headers 는 server 출력용이라 single 출력의 개발 서버에는 쓰이지 않는다.
+expo-sqlite 비동기 API 는 SharedArrayBuffer 를 쓰지 않아 격리 없이도 읽고 쓴다. sync API 만 격리가 필요하다.
+
+## 3. Skia 와 Reanimated 웹 (브랜치 t1/skia-probe, 커밋 72be347, push 하지 않음)
+설치: pnpm --filter mobile exec expo install @shopify/react-native-skia react-native-reanimated react-native-worklets
+  → @shopify/react-native-skia 2.14.0, react-native-reanimated 4.7.1, react-native-worklets 0.13.0
+canvaskit.wasm: pnpm --filter mobile exec setup-skia-web 로 apps/mobile/public 에 복사
+화면: app/dev/skia.tsx. WithSkiaWeb 로 Canvas(원 하나)를 늦게 불러오고, Reanimated 로 글자 투명도 0.2→1
+
+### expo export -p web: exit 0
+Web Bundled 341ms node_modules/expo-router/entry.js (1526 modules)
+../../node_modules/expo-sqlite/web/wa-sqlite/wa-sqlite.5e61fe84c4a4f49e0b1a33661b45c791.wasm (641KB)
+› web bundles (18):
+_expo/static/js/web/__common-85b225aa1f6f78fc19bc90e3071a8083.js (794KB)
+_expo/static/js/web/__expo-metro-runtime-8c088df87a31e4e6accd81c554ec290d.js (3.8KB)
+_expo/static/js/web/_layout-bc0ece3e5e76859102408447984a779d.js (509B)
+_expo/static/js/web/_layout-cab8c8d7cf1bc512ef5e86c9b40258b1.js (1.4KB)
+_expo/static/js/web/_layout-f842eddfab781c8cda12c441a0d3ab11.js (503B)
+_expo/static/js/web/closet-8fe30747fdfa19b1ddff6b609fde26ee.js (272B)
+_expo/static/js/web/coordi-168be6ce6f9fa5bc9663a0951ecb2c3f.js (272B)
+_expo/static/js/web/entry-06eb6c71e120d447d89d847245a61257.js (1.1MB)
+_expo/static/js/web/home-4366491cb090ec5b9d176e5ebcecb568.js (266B)
+_expo/static/js/web/index-4332a59e8139e6f44525fc2cf630ce9a.js (261B)
+_expo/static/js/web/index-bbdee86f0c492d14931e0943251f655c.js (271B)
+_expo/static/js/web/lookbook-8a30fda4086d8b219cfd8f1e1cd47f5a.js (272B)
+_expo/static/js/web/my-711f0a99ff6bb559a49736f4f237183c.js (563B)
+_expo/static/js/web/skia-canvas-75451e955feeca17ac3781b52723dbd8.js (433KB)
+_expo/static/js/web/skia-f5b7e5ee9aacd96b23e6b423d97cac4b.js (124KB)
+_expo/static/js/web/storage-be3484d7e4ff039bfc9ebdf315033598.js (73KB)
+_expo/static/js/web/twin-05d64d7f3b130ba1c8f78e1eafb856be.js (272B)
+_expo/static/js/web/worker-34a7da12d2c4e1e0aefadd38ee26ef0a.js (138KB)
+Exported: dist
+public/canvaskit.wasm 8,076,553 B (gzip 3,247,881 B)
+JS 합계: Skia 넣음 2,693,025 B (gzip 645,049 B), 기준(t1/app-shell) 1,359,656 B (gzip 354,005 B)
+늘어난 몫: __common 19KB→794KB(Reanimated, Worklets), skia-canvas 433KB 와 skia 124KB 는 그 화면을 열 때만 받는다
+
+### 브라우저(Playwright chromium)에서 /dev/skia, export 결과(node 정적 서버, COOP/COEP)와 개발 서버 두 곳
+## export http://localhost:8091/dev/skia
+crossOriginIsolated=true
+canvas 200x200, 가운데 픽셀 rgba(0,0,0,0)
+reanimated 글자를 감싼 View 의 opacity(0.2 에서 1 로 움직임)=1, 「Skia 여는 중」 남음=0
+콘솔:
+  warning: [.WebGL-0x10c00840200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  warning: [.WebGL-0x10c00840200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  warning: [.WebGL-0x10c00840200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+## dev http://localhost:8090/dev/skia
+crossOriginIsolated=true
+canvas 200x200, 가운데 픽셀 rgba(0,0,0,0)
+reanimated 글자를 감싼 View 의 opacity(0.2 에서 1 로 움직임)=1, 「Skia 여는 중」 남음=0
+콘솔:
+  info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+  warning: [.WebGL-0x11c0083f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  warning: [.WebGL-0x11c0083f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+  warning: [.WebGL-0x11c0083f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+스크린숏으로 흰 칸 안 초록 원을 두 곳 모두 확인했다(픽셀 읽기는 WebGL 버퍼라 0 이 나옴).
+GPU stall 경고는 확인 스크립트의 픽셀 읽기(drawImage)가 낸 것이다.
+
+### 처음 시도에서 난 오류 (WithSkiaWeb 기본 설정)
+  error: wasm streaming compile failed: TypeError: Failed to execute 'compile' on 'WebAssembly': Incorrect response MIME type. Expected 'application/wasm'.
+  pageerror: Aborted(CompileError: WebAssembly.instantiate(): expected magic word 00 61 73 6d, found 3c 21 64 6f @+0)
+  까닭: canvaskit 이 지금 주소 기준 상대 경로(/dev/canvaskit.wasm)로 wasm 을 찾아 index.html 을 받았다.
+  고침: WithSkiaWeb opts={{ locateFile: (file) => `/${file}` }}

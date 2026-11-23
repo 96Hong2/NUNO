@@ -30,4 +30,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # pnpm verify 의 e2e 가 Expo 웹을 Playwright chromium 으로 연다.
+      - run: pnpm exec playwright install --with-deps chromium
+
       - run: pnpm verify
