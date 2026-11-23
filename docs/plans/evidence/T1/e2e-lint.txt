@@ -1,0 +1,27 @@
+# e2e 린트: e2e/**/*.spec.ts 에 test.only, test.describe.skip, test.fixme 를 넣고 pnpm lint (새 검사 한 번 확인)
+# 날짜: 2026-11-24 07:47 KST, 커밋 85df5f3, node v26.13.1, pnpm 12.21.0
+$ cat e2e/probe.spec.ts
+import { expect, test } from "@playwright/test";
+
+test.only("골라 돌리기", async ({ page }) => {
+  await expect(page).toHaveURL("/");
+});
+
+test.describe.skip("건너뛰기", () => {
+  test("안", () => expect(1).toBe(1));
+});
+
+test.fixme("고칠 것", () => expect(1).toBe(1));
+exit=0
+$ pnpm lint
+$ eslint --max-warnings 0 .
+
+~/IdeaProjects/personal/NUNO/e2e/probe.spec.ts
+   3:1  error  e2e 시험을 골라 돌리거나 건너뛰지 않는다. 실패하는 시험은 실패한 채로 두고 알린다  no-restricted-syntax
+   7:1  error  e2e 시험을 골라 돌리거나 건너뛰지 않는다. 실패하는 시험은 실패한 채로 두고 알린다  no-restricted-syntax
+  11:1  error  e2e 시험을 골라 돌리거나 건너뛰지 않는다. 실패하는 시험은 실패한 채로 두고 알린다  no-restricted-syntax
+
+✖ 3 problems (3 errors, 0 warnings)
+
+[ELIFECYCLE] Command failed with exit code 1.
+exit=1

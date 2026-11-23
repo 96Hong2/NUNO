@@ -1,0 +1,40 @@
+# D13 e2e: pnpm e2e (Playwright 가 pnpm web 으로 서버를 띄움). 브라우저 창 판정은 메인 세션
+# 날짜: 2026-11-24 07:47 KST, 커밋 85df5f3, node v26.13.1, pnpm 12.21.0
+$ pnpm e2e
+$ playwright test
+[WebServer] $ pnpm --filter mobile exec expo start --port 8090
+
+Running 5 tests using 1 worker
+
+crossOriginIsolated 쓰기 때=false 새로고침 뒤=true
+새로고침 뒤 남은 값: probe-2026-11-23T22:47:19.218Z = 시험 값
+  ✓  1 [chromium] › e2e/dev-storage.spec.ts:9:1 › 「저장소 보기」 에서 「시험 값 쓰기」 로 쓴 값이 새로고침 뒤에도 남는다 (901ms)
+같은 키 두 번: 막힘 (Error finalizing statement)
+value 에 NULL: 막힘 (Error finalizing statement)
+  ✓  2 [chromium] › e2e/dev-storage.spec.ts:41:1 › 웹 기기 DB 도 같은 키 두 번과 value 의 NULL 을 막는다 (397ms)
+  ✓  3 [chromium] › e2e/tabs.spec.ts:19:1 › 하단 탭 「홈」, 「피팅룸」, 「마이」 를 누르면 머리글에 그 탭 이름이 보인다 (480ms)
+  ✓  4 [chromium] › e2e/tabs.spec.ts:29:1 › 하단에 「탐색」 과 「찜」 탭이 없고 탭은 셋뿐이다 (314ms)
+  ✓  5 [chromium] › e2e/tabs.spec.ts:37:1 › 「피팅룸」 위쪽 네 칸을 누르면 그 칸의 빈 화면이 열리고 「스토어」 칸은 없다 (617ms)
+
+  5 passed (5.5s)
+exit=0
+
+# CI 와 같은 조건(CI=1: 떠 있는 서버를 다시 쓰지 않고 forbidOnly)
+$ CI=1 pnpm e2e
+$ playwright test
+[WebServer] $ pnpm --filter mobile exec expo start --port 8090
+
+Running 5 tests using 1 worker
+
+crossOriginIsolated 쓰기 때=false 새로고침 뒤=true
+새로고침 뒤 남은 값: probe-2026-11-23T22:47:24.051Z = 시험 값
+  ✓  1 [chromium] › e2e/dev-storage.spec.ts:9:1 › 「저장소 보기」 에서 「시험 값 쓰기」 로 쓴 값이 새로고침 뒤에도 남는다 (899ms)
+같은 키 두 번: 막힘 (Error finalizing statement)
+value 에 NULL: 막힘 (Error finalizing statement)
+  ✓  2 [chromium] › e2e/dev-storage.spec.ts:41:1 › 웹 기기 DB 도 같은 키 두 번과 value 의 NULL 을 막는다 (431ms)
+  ✓  3 [chromium] › e2e/tabs.spec.ts:19:1 › 하단 탭 「홈」, 「피팅룸」, 「마이」 를 누르면 머리글에 그 탭 이름이 보인다 (480ms)
+  ✓  4 [chromium] › e2e/tabs.spec.ts:29:1 › 하단에 「탐색」 과 「찜」 탭이 없고 탭은 셋뿐이다 (314ms)
+  ✓  5 [chromium] › e2e/tabs.spec.ts:37:1 › 「피팅룸」 위쪽 네 칸을 누르면 그 칸의 빈 화면이 열리고 「스토어」 칸은 없다 (618ms)
+
+  5 passed (4.5s)
+exit=0

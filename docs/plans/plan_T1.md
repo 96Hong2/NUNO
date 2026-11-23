@@ -210,12 +210,12 @@ options: `tsConfig`, `tsPreCompilationDeps: true`, `enhancedResolveOptions: { ex
 
 | 확인 | 방법 | 결과 |
 | --- | --- | --- |
-| expo-sqlite 웹 읽기와 쓰기(2시간 상한) | 「저장소 보기」 에서 쓰고 새로고침 | |
-| 웹에서 고유 색인과 검사 제약 | `dev_probe` 에 같은 key 두 번, CHECK 어기는 값 | |
-| crossOriginIsolated | 브라우저 콘솔 | |
-| 고른 웹 어댑터 | | |
-| Skia 웹 빌드 | `t1/skia-probe` 에서 `expo export -p web` 와 `WithSkiaWeb` 화면 | |
-| Reanimated 웹 빌드 | 같은 export 와 콘솔 | |
+| expo-sqlite 웹 읽기와 쓰기(2시간 상한) | 「저장소 보기」 에서 쓰고 새로고침 | 됨. 첫 시도에 읽고 쓰고, 새로고침 뒤에도 값이 남음(OPFS). `e2e/dev-storage.spec.ts` |
+| 웹에서 고유 색인과 검사 제약 | `dev_probe` 에 같은 key 두 번, NOT NULL 어기는 값 | 둘 다 막힘. 웹 오류 문구는 `Error finalizing statement` 로 뭉뚱그려 나옴 |
+| crossOriginIsolated | 브라우저 콘솔 | `/` 로 열면 false, `/home` 같은 경로로 열거나 새로고침하면 true. 개발 서버 `/` HTML 에만 헤더가 없다 |
+| 고른 웹 어댑터 | | expo-sqlite(안에서 wa-sqlite 로 OPFS 저장). 비동기 API 만 쓴다. 따로 wa-sqlite 어댑터는 만들지 않음 |
+| Skia 웹 빌드 | `t1/skia-probe` 에서 `expo export -p web` 와 `WithSkiaWeb` 화면 | 됨. export exit 0, export 와 개발 서버 모두 원이 그려지고 콘솔 오류 0. `locateFile` 로 wasm 경로를 `/` 기준으로 줘야 함 |
+| Reanimated 웹 빌드 | 같은 export 와 콘솔 | 됨. 투명도 0.2→1 이 웹에서 돎. JS 합계 1.36MB→2.69MB(gzip 354KB→645KB), canvaskit.wasm 8.1MB 따로 |
 
 ## 구현 중 바뀐 것
 
@@ -273,16 +273,52 @@ PR B (2026-11-24, 증거 `docs/plans/evidence/T1/hooks-pipe.txt`)
 - PostToolUse 는 eslint 경고도 알린다. prettier 대상은 ts, js 무리와 json, yml, css 다.
 - task-dod-loop 스킬이 부르는 `verify:fast` 는 저장소 명령과 같다. 스킬의 `pnpm --filter mobile web` 은 예시라서 PR C 의 `pnpm web` 과 달라도 고치지 않는다.
 
+PR C (2026-11-24, 증거 `docs/plans/evidence/T1/D1-prC.txt`, `D2-prC.txt`, `D4.txt`, `D13-e2e.txt`, `D19.txt`, `e2e-lint.txt`)
+
+- 옮기기 실행기 `runMigrations` 는 device-db `src/application` 에 둔다. 도메인은 DB 를 부르지 않는다는 룰 때문이다.
+- device-db `src/domain` 에는 포트 타입, 판 사슬 검사, 작업 줄 세우기 `createSerialQueue` 를 둔다.
+- `createSerialQueue` 는 공개 면으로 낸다. expo-sqlite 어댑터와 node:sqlite 대역이 같은 순서 보장을 쓴다.
+- 판 번호 표는 `version`, `name` 두 열이다. 적용 시각은 적지 않는다. 필요하면 T2-1 에서 시각을 인자로 받아 더한다.
+- device-db tsconfig 는 node 타입을 열지 않는다. node:sqlite 대역 파일만 `/// <reference types="node" />` 를 쓴다.
+- `src/adapters/uuid.ts` 는 만들지 않았다. 쓰는 곳이 없고, `dev_probe` 키는 `probe-<ISO 시각>` 이다.
+- `dev_probe` 읽기 쓰기는 `src/composition/dev-storage.ts` 에 둔다. 화면에 SQL 을 두지 않으려고 그렇게 했다.
+- 「저장소 보기」 에 「제약 확인」 단추를 더했다. 웹에서 같은 키 두 번과 NULL 이 막히는지 D19 로 본다.
+- D19 의 검사 제약은 CHECK 대신 NOT NULL 로 봤다. `dev_probe` 모양에 CHECK 가 없다.
+- 두 단추 이름 「시험 값 쓰기」, 「제약 확인」 을 GLOSSARY.md 에 더했다.
+- 여러 화면이 쓰는 빈 화면 부품은 `apps/mobile/src/ui/empty-screen.tsx` 에 둔다.
+- Expo Router 58 은 탭 내비게이션을 안에 품고 있다. 탭 패키지를 따로 들이지 않았다.
+- 탭 아이콘이 아직 없어 `tabBarIcon: () => null` 이다. 비우지 않으면 빈 아이콘 글자 ⏷ 가 탭 이름에 붙는다.
+- 피팅룸을 열면 첫 칸 「코디」(`/fitting/coordi`)로 보낸다. 네 칸은 `Link` 와 `Slot` 이다.
+- `Link asChild` 자식에 스타일 배열을 주면 Expo Router 가 던진다. `StyleSheet.flatten` 으로 넘긴다.
+- `web` 명령은 `--web` 없이 `expo start --port 8090` 이다. Metro 가 같은 포트로 웹을 내고 브라우저를 열지 않는다.
+- launch.json 의 `runtimeArgs` 는 `["web"]` 이다. 명령 정본은 루트 `web` 스크립트 하나다.
+- 개발 서버 `/` 의 HTML 에는 COOP, COEP 헤더가 붙지 않는다. Expo CLI 가 Metro 앞에서 `/` 를 낸다.
+- 그래서 `/` 로 연 문서는 crossOriginIsolated 가 false 다. 비동기 API 는 그래도 저장하므로 막지 않았다.
+- app.json expo-router `headers` 는 server 출력에서 쓰인다. single 출력 개발 서버에는 쓰이지 않지만 계획대로 둔다.
+- 지나간 탭 화면은 inert 로 뒤에 남아 h1 이 둘 보인다. e2e 는 `h1:not([inert] *)` 로 보이는 머리글만 찾는다.
+- e2e 린트는 플러그인 없이 `no-restricted-syntax` 로 `only`, `skip`, `fixme` 를 막는다. 새 의존성을 들이지 않았다.
+- e2e 에 `dev-storage.spec.ts` 를 더했다. D18 의 쓰기와 새로고침을 자동으로 보고, D19 측정값을 출력한다.
+- Playwright 는 workers 1 이다. 같은 기기 DB(OPFS)를 탭 둘이 열면 잠긴다.
+- 루트 tsconfig 가 `playwright.config.ts` 와 `e2e` 를 타입 검사한다. ESLint 타입 정보 규칙도 이 범위를 쓴다.
+- 빌드 스크립트로 install 이 멈춘 패키지가 없어 `allowBuilds` 는 두지 않았다.
+- pnpm 이 선택 peer `react-native-worklets` 0.14.0 을 설치한다(expo-modules-core 쪽). 지금 앱은 쓰지 않는다.
+- `.github/workflows/verify.yml` 에 chromium 설치 단계를 더했다. job id 와 name 은 verify 그대로다.
+- Skia 확인 브랜치 `t1/skia-probe` 는 로컬 커밋 72be347 로만 남겼다. push 하지 않는다.
+- Skia 웹은 `WithSkiaWeb` 의 `opts.locateFile` 이 `/canvaskit.wasm` 처럼 `/` 기준 경로를 내야 한다. T9 에서 쓴다.
+- 기본값은 지금 주소 기준 상대 경로라, `/dev/skia` 에서 `/dev/canvaskit.wasm` 을 찾다가 index.html 을 받는다.
+- D1, D2 다시 확인은 새 파일 `D1-prC.txt`, `D2-prC.txt` 에 두었다. PR A 증거는 그대로 둔다.
+- D2 는 react-native 가 설치된 뒤라 `not-to-unresolvable` 없이 domain 규칙 둘로 막힌다(exit 2).
+
 ## DoD 판정
 
 D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료 판정에서 뺀다. `docs/roadmap.md` 의 「iOS 와 사람 확인 대기」 목록에 넣는다.
 
 | DoD | 판정 | 증거 |
 | --- | --- | --- |
-| D1 | 통과 (PR A, 리뷰 반영 뒤 다시 통과, PR C 에서 다시) | `docs/plans/evidence/T1/D1.txt`, `review-fixes.txt` 6절 |
-| D2 | 통과 (exit 3, 고치는 법 문장 출력. 리뷰 반영 뒤 다시 통과, PR C 에서 다시) | `docs/plans/evidence/T1/D2.txt`, `review-fixes.txt` 6절 |
+| D1 | 통과 (PR A, 리뷰 반영 뒤 다시 통과, PR C 에서 다시 통과: 6단계 exit 0) | `docs/plans/evidence/T1/D1.txt`, `review-fixes.txt` 6절, `D1-prC.txt` |
+| D2 | 통과 (exit 3, 고치는 법 문장 출력. 리뷰 반영 뒤 다시 통과, PR C 에서 다시 통과: exit 2) | `docs/plans/evidence/T1/D2.txt`, `review-fixes.txt` 6절, `D2-prC.txt` |
 | D3 | 통과 (세 번 모두 exit 1. 리뷰 반영 뒤 다시 통과) | `docs/plans/evidence/T1/D3.txt`, `review-fixes.txt` 6절 |
-| D4 | PR C 에서 판정 (`apps/mobile` 이 아직 없다) | |
+| D4 | 통과. 패키지 이름 안쪽 경로는 tsc TS2307 과 depcruise 둘 다, 상대 경로 import type 은 depcruise `outside-only-public-entry`, 화면 파일 expo-sqlite 는 `sdk-only-in-adapters` 로 실패 | `docs/plans/evidence/T1/D4.txt` |
 | D5 | 통과 (셋 다 exit 1, `--fix` 뒤에도 `.only` 남음) | `docs/plans/evidence/T1/D5.txt` |
 | D6 | 통과 (틀 다섯 파일 뒤 exit 0, twin import 는 exit 2). 리뷰 반영 뒤 새 틀로 다시 확인해 exit 0 | `docs/plans/evidence/T1/D6.txt` |
 | D7 | 통과 (두 경우 모두 exit 1, 파일 이름 출력) | `docs/plans/evidence/T1/D7.txt` |
@@ -291,13 +327,13 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | D10 | 통과. 새 세션에서 PreToolUse 훅이 고치는 법 문장과 함께 막았고 커밋이 생기지 않음 | `docs/plans/evidence/T1/D10.txt`, `hooks-pipe.txt` 1절 |
 | D11 | 통과 | `docs/plans/evidence/T1/D11.txt` |
 | D12 | 통과 (필수 검사 verify, 관리자 우회 금지, 승인 0명 PR 필수, squash 만 허용) | `docs/plans/evidence/T1/D12.txt` |
-| D13 | | |
+| D13 | e2e 통과(5개, `CI=1` 에서도 통과). 브라우저 창 판정은 메인 세션 | `docs/plans/evidence/T1/D13-e2e.txt` |
 | D14 | | |
 | D15 | 통과 (175자, CLAUDE.local.md 0, `.claude/` 에 stop_hook_active 없음) | `docs/plans/evidence/T1/D15.txt` |
 | D16 | | |
 | D17 | | |
 | D18 | | |
-| D19 | | |
+| D19 | 통과. 「기술 검토 결과」 여섯 칸을 채움. 고른 웹 어댑터는 expo-sqlite | `docs/plans/evidence/T1/D19.txt` |
 | D20 | 환경 없음 | Xcode 없음 |
 
 ## PR 1 리뷰 반영
