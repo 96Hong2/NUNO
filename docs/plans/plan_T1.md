@@ -336,3 +336,40 @@ D20 은 이 Mac 에 Xcode 가 없어 「환경 없음」 으로 적고 T1 완료
 | 설정-5 선언 없는 workspace | 반영 | 경계-8 과 같음 |
 | 설정-6 src 밖 시험, .tsx | 반영 | vitest include 넓힘, src 밖 시험은 `check:packages` 가 막음 |
 | 설정-7 workspace 주석 | 반영 | 주석을 사실대로 고침 |
+
+## PR 2 리뷰 반영
+
+리뷰 원문 지적 25건을 판정했다. 재현 결과는 `docs/plans/evidence/T1/hooks-pipe.txt` 「리뷰 반영 뒤」 절에 있다.
+기준: 훅은 AI 실수를 막는 장치다. main 의 최종 강제는 CI `verify` 와 브랜치 보호가 맡는다.
+그래서 AI 가 실수로 할 만한 길과 정상 개발을 잘못 막는 곳은 고친다.
+셸 문법을 일부러 꼬아야 생기는 길은 막지 않는다. 훅이 커지면 그 자체가 유지보수 부담이다.
+
+| 지적 | 반영 | 까닭과 방법 |
+| --- | --- | --- |
+| 막아-1 Bash 로 main 시험 고치기 | 반영 | 판정 함수 `guardPath` 하나가 보호 경로와 main 시험을 함께 본다 |
+| 막아-2 .claude 룰 md 를 문서로 침 | 반영 | `.claude/` 아래, AGENTS.md, CLAUDE.md 는 문서로 치지 않음 |
+| 막아-3 커밋한 깨진 코드 | 반영 | merge-base 에서 HEAD 까지 바뀐 경로도 판정. origin/main 없으면 넘어감 |
+| 막아-4 cwd 가 저장소 밖 | 반영 | git 옵션 판정은 루트 없이 돈다. 경로는 cwd, 프로젝트 폴더 두 루트로 봄 |
+| 막아-5 git 전역 옵션 값 | 일부 | 값을 띄어 받는 옵션 다섯은 건너뜀. git 별칭 풀이는 하지 않음 |
+| 막아-6 GIT_CONFIG_* 환경 변수 | 반영 | 대입과 export 의 이름, 값의 hookspath 를 봄 |
+| 막아-7 $'…', 변수에 감춘 옵션 | 안 함 | 일부러 꼬아야 생기는 길이다 |
+| 막아-8 감싸는 명령 | 일부 | timeout, nice 와 그 값만 더함. 표준 입력 셸, xargs, find -exec 는 안 함 |
+| 막아-9 인터프리터 한 줄 코드 | 일부 | -pe 같은 묶음과 --eval= 을 읽음. heredoc 본문 해석은 안 함 |
+| 막아-10 다른 쓰기 명령 | 안 함 | find -delete, patch, git apply, tar 등은 실수로 보호 경로에 닿기 어렵다 |
+| 막아-11 macOS 대소문자 | 반영 | 있는 가장 가까운 상위 폴더를 `realpathSync.native` 로 풀어 비교 |
+| 막아-12 심볼릭 링크 | 안 함 | 같은 명령 안에서 만든 링크 추적은 일부러 꼬는 길이다 |
+| 막아-13 pushd, cd -, ${VAR:-} | 안 함 | 작업 폴더 추적을 더 넓히면 훅이 셸 해석기가 된다 |
+| 막아-14 NotebookEdit, 사용자 설정 | 일부 | matcher 와 분기에 NotebookEdit 을 더함. ~/.claude 설정 쓰기는 저장소 밖이라 안 함 |
+| 막아-15 통과 해시, .git/config | 일부 | git-path 의 config, hooks, 통과 해시 자리를 보호. HMAC 서명은 안 함 |
+| 막아-16 Stop 이 프로젝트 폴더를 안 봄 | 보류 | 반영 목록 밖이다. 세션은 저장소에서 시작하고 CI 가 최종 판정한다 |
+| 개발-1 셸 주석 | 반영 | 단어 시작 자리의 `#` 부터 줄 끝까지 무시. `$( )` 안도 같다 |
+| 개발-2 cp, rsync 원본 | 반영 | cp, ln, install 은 대상만. rsync 는 `--remove-source-files` 일 때만 원본 |
+| 개발-3 한 줄 코드 읽기 | 반영 | 쓰기 API 이름과 보호 경로가 함께 있을 때만 막음 |
+| 개발-4 perl -M 의 i | 반영 | perl 은 -M, -I 로 시작한 묶음의 i 를 보지 않음 |
+| 개발-5 서브셸 cd | 반영 | `( )` 가 끝나면 작업 폴더를 되돌림 |
+| 개발-6 거꾸로 된 글롭 | 반영 | 정규식이 안 되면 글자 그대로 비교. 따옴표 표시는 안 함 |
+| 개발-7 다른 저장소 PostToolUse | 반영 | 파일 최상위가 cwd 나 프로젝트 폴더의 최상위와 같을 때만 돈다 |
+| 개발-8 룰 md 만 바뀜 | 반영 | 막아-2 와 같음 |
+| 개발-9 pnpm 없음 | 반영 | 막지 않고 systemMessage 와 stderr 로 알림. AGENTS.md 에 PATH 줄 |
+
+main 시험 판정은 `git cat-file -e` 대신 `git ls-tree origin/main` 목록과 비교한다. 글롭과 대소문자를 함께 보려고 그렇게 했다.

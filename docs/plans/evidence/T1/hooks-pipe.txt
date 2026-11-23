@@ -205,3 +205,286 @@ git status --porcelain: ?? docs/plans/evidence/T1/D11.txt ?? docs/plans/evidence
 - PreToolUse 42건 모두 기대대로다. 필수 9건: --no-verify, -nm, push --no-verify, .claude/hooks 로 리디렉션, .github 편집, main 에 있는 시험 편집, 깨진 JSON 은 막고, 보통 commit 과 새 시험 Write 는 통과.
 - PostToolUse: 고친 파일만 prettier 로 맞추고, 도메인 Date.now 린트 오류를 reason 으로 알렸다. 깨끗한 파일, .md, 깨진 JSON 은 출력 없음.
 - Stop: 바뀐 것 없음과 docs 만 바뀜은 0초 통과. 타입 오류 파일이 있으면 pnpm typecheck 단계와 TS2322 줄로 막았다. 지운 뒤 통과. 같은 상태의 둘째 Stop 은 통과 해시로 약 0.1초.
+
+## 리뷰 반영 뒤 (PR 2 리뷰, 2026-11-24 07:27 KST, 브랜치 t1/hooks, 커밋 전 작업 트리)
+PreToolUse, PostToolUse 는 원래 저장소의 새 훅에 파이프로 넣었다. 사례 앞 숫자는 반영 항목 번호다.
+CLAUDE_PROJECT_DIR=저장소가 기본이고, cwd 가 다른 사례는 이름에 적었다. 다른 git 저장소는 <scratchpad>/other-repo 다.
+
+### 리뷰 재현 명령 (반영 1, 4, 5, 6, 7, 9)
+[1 Bash 로 main 시험 고치기] sed -i '' 's/toBe/toEqual/' packages/clock/src/domain/kst-date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] echo x >> packages/clock/src/domain/kst-date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] rm packages/clock/src/domain/kst-date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] git rm packages/clock/src/domain/kst-date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] git mv packages/clock/src/domain/kst-date.test.ts x.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] cp /dev/null packages/clock/src/domain/kst-date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] perl -pi -e 's/a/b/' packages/clock/src/domain/kst-date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] git checkout origin/main -- packages/clock/src/domain/kst-date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] rm packages/clock/src/domain/*.test.ts (글롭)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[1] echo x > packages/clock/src/domain/new.test.ts (main 에 없음)
+  기대 통과 / 실제 통과 / exit 0 OK
+[1] cat packages/clock/src/domain/kst-date.test.ts
+  기대 통과 / 실제 통과 / exit 0 OK
+[1] cp packages/clock/src/domain/kst-date.test.ts /private/tmp/x.ts (원본으로 읽기)
+  기대 통과 / 실제 통과 / exit 0 OK
+[4 저장소 밖 cwd] cwd=/private/tmp: git -C <저장소> commit --no-verify -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[4] cwd=/private/tmp: rm -rf <저장소>/.claude/hooks
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[4] cwd=/private/tmp, CLAUDE_PROJECT_DIR 없음: git commit -n -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[4] cwd=다른 git 저장소: rm -rf <저장소>/.claude/hooks
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[4] cwd=다른 git 저장소: rm -rf .claude/hooks (그 저장소 것도 막음)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[4] cwd=다른 git 저장소: rm x.json
+  기대 통과 / 실제 통과 / exit 0 OK
+[5 셸 주석] git commit -m x  # -n 은 쓰지 않는다
+  기대 통과 / 실제 통과 / exit 0 OK
+[5] git push origin t1/hooks  # --no-verify 없이 올린다
+  기대 통과 / 실제 통과 / exit 0 OK
+[5] rm -rf dist  # .claude 는 지우지 않는다
+  기대 통과 / 실제 통과 / exit 0 OK
+[5] git commit -n -m x # 메모
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[5] echo $(ls # rm .claude/hooks
+) (괄호 안 주석)
+  기대 통과 / 실제 통과 / exit 0 OK
+[5] echo $(rm -rf .claude/hooks # 메모
+)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[5] git commit -m 'a#b' -n (따옴표 안 #)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[6 잘못 막던 것] cp .claude/settings.json /private/tmp/settings-backup.json
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] cp .github/workflows/verify.yml /private/tmp/
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] cp -r .claude/hooks /private/tmp/x/
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] rsync -a --exclude node_modules ./ /private/tmp/nuno-copy/
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] ln -s ~/…/.claude/settings.json /private/tmp/s
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] rsync --remove-source-files .claude/hooks/stop.mjs /private/tmp/
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] mv .claude/hooks/stop.mjs /private/tmp/ (mv 는 원본도)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] cp x .claude/hooks/stop.mjs (대상)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] node -e 읽기 readFileSync('.claude/settings.json')
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] python3 -c json.load(open('.claude/settings.json'))
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] node -e writeFileSync('.claude/settings.json')
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/settings.json 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] python3 -c open('.claude/settings.json','w')
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/settings.json 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] python3 -c shutil.rmtree('.claude/hooks')
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] node -pe 묶음 옵션 rmSync('.claude/hooks')
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] perl -Mstrict -ne 'print if /hook/' .claude/hooks/stop.mjs
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] perl -pi -e s/a/b/ .claude/hooks/stop.mjs
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] (cd .claude) ; rm -rf hooks
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] (cd .claude && rm -rf hooks) (서브셸 안)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[6] rm -rf .[z-a]x
+  기대 통과 / 실제 통과 / exit 0 OK
+[6] rm -f '.[z-a]'
+  기대 통과 / 실제 통과 / exit 0 OK
+[9 대소문자] echo x > .CLAUDE/hooks/stop.mjs
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] rm -rf .Claude/Hooks
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] echo x > .GitHub/workflows/verify.yml
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .github 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] Edit .Claude/settings.json
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/settings.json 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] Write .GITHUB/workflows/verify.yml
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .github 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] Edit packages/clock/src/domain/Kst-Date.test.ts
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: packages/clock/src/domain/kst-date.test.ts 는 main 에 이미 있는 시험이라 고치지 않는다. 새 시험 파일을 더하거나, 꼭 고쳐야 하면 기획자에게 묻는다.
+[9] Edit ~/IdeaProjects/personal/nuno/.claude/hooks/stop.mjs
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9 환경 변수] GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: GIT_CONFIG_* 환경 변수로 git 설정을 넣지 않는다. git 훅을 끌 수 있어서다. 필요한 설정은 git -c 로 넣는다.
+[9] export GIT_CONFIG_COUNT=1 …; git commit -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: GIT_CONFIG_* 환경 변수로 git 설정을 넣지 않는다. git 훅을 끌 수 있어서다. 필요한 설정은 git -c 로 넣는다.
+[9] GIT_CONFIG_PARAMETERS="'core.hooksPath'='/dev/null'" git commit -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: GIT_CONFIG_* 환경 변수로 git 설정을 넣지 않는다. git 훅을 끌 수 있어서다. 필요한 설정은 git -c 로 넣는다.
+[9] env HP=core.hooksPath git commit -m x (값에 hookspath)
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: core.hooksPath 를 바꿔 git 훅을 끄지 않는다. 그 설정을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] FORCE_COLOR=0 git commit -m x
+  기대 통과 / 실제 통과 / exit 0 OK
+[9] export NODE_ENV=test
+  기대 통과 / 실제 통과 / exit 0 OK
+[9 git 전역 옵션] git --config-env core.hooksPath=HP commit -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: core.hooksPath 를 바꿔 git 훅을 끄지 않는다. 그 설정을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] git --git-dir .git commit --no-verify -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] git --work-tree . commit -n -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] git --namespace ns commit -n -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] git --git-dir .git log -n 3
+  기대 통과 / 실제 통과 / exit 0 OK
+[9 감싸는 명령] timeout 30 git commit --no-verify -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] nice git commit -n -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] nice -n 5 git commit -n -m x
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: git 훅을 건너뛰는 --no-verify(commit 의 -n)는 쓰지 않는다. 옵션을 빼고 다시 실행하고, 훅이 막으면 그 오류를 고친다.
+[9] timeout -k 5 30 rm -rf .claude/hooks
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] timeout 120 pnpm verify:fast
+  기대 통과 / 실제 통과 / exit 0 OK
+[9 NotebookEdit] NotebookEdit <저장소>/.claude/hooks/x.ipynb
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .claude/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] NotebookEdit <저장소>/docs/x.ipynb
+  기대 통과 / 실제 통과 / exit 0 OK
+[9] NotebookEdit notebook_path 없음
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: 훅 입력을 읽지 못해 이 도구 호출을 막았다. 같은 호출을 다시 하고, 계속 막히면 기획자에게 알린다.
+[9 .git 쪽 보호] echo '[core]' >> .git/config
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .git/config 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] Edit .git/config
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .git/config 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] echo x > .git/hooks/pre-commit
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .git/hooks 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] echo abc > .git/nuno-verify-ok
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: .git/nuno-verify-ok 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] echo abc > "$(git rev-parse --git-path nuno-verify-ok)"
+  기대 막힘 / 실제 막힘 / exit 0 OK
+  사유: nuno-verify-ok 는 훅과 CI 설정이라 고치지 않는다. 바꿔야 하면 무엇을 왜 바꿀지 기획자에게 묻는다.
+[9] cat .git/config
+  기대 통과 / 실제 통과 / exit 0 OK
+[9] git config user.name x
+  기대 통과 / 실제 통과 / exit 0 OK
+
+PreToolUse 78건, 어긋남 0건
+
+[7 PostToolUse] cwd=저장소, Edit 다른 git 저장소의 x.json (node_modules 없음)
+  기대 출력 없음 / 실제 출력 없음 / exit 0 OK
+[7] cwd=/private/tmp, CLAUDE_PROJECT_DIR=저장소, Edit 다른 저장소의 x.json
+  기대 출력 없음 / 실제 출력 없음 / exit 0 OK
+
+### 기존 42건 다시 돌림 (위 1절과 같은 입력)
+PreToolUse 42건, 어긋남 0건
+
+### Stop 과 PostToolUse: /private/tmp/nuno-stop-wt worktree (반영 2, 3, 7, 8)
+HEAD 로 --detach worktree 를 만들고 pnpm install --offline 을 돌렸다. 「옛 Stop」 은 worktree 안 HEAD 판 stop.mjs, 「새 Stop」 은 고친 판이다.
+A 의 첫 번은 verify:fast 를 돌아 6초 걸려 통과했다. 아래는 같은 상태의 둘째 번이라 통과 해시로 0초다.
+
+### A. 깨끗한 worktree (HEAD=ffcffed, origin/main 뒤 커밋에 훅 파일이 있음)
+git status --porcelain: []
+git diff --name-only $(git merge-base HEAD origin/main) HEAD: 13개 파일
+$ 새 Stop
+stdout: (출력 없음)
+exit=0, 0초
+
+### B. .claude/rules 에 paths 없는 md 하나 더하기
+git status --porcelain: [?? .claude/rules/probe.md ]
+$ 옛 Stop (HEAD 의 stop.mjs)
+stdout: (출력 없음)
+exit=0, 0초
+$ 새 Stop
+stdout: {"decision":"block","reason":"verify:fast 실패: pnpm check:rules 단계.\n.claude/rules/probe.md: AGENTS.md 룰 색인 표에 없다. 표에 한 줄 더한다.\n.claude/rules/probe.md: 머리에 paths: 목록이 없다. 파일 첫머리를 ---, paths:, 경로 목록, --- 차례로 쓴다.\n고친 뒤 끝낸다."}
+exit=0, 3초
+
+### C. 타입 오류를 커밋한 뒤 (작업 트리는 깨끗)
+git status --porcelain: [], HEAD=0ab2096
+$ 옛 Stop (HEAD 의 stop.mjs)
+stdout: (출력 없음)
+exit=0, 0초
+$ 새 Stop
+stdout: {"decision":"block","reason":"verify:fast 실패: pnpm typecheck 단계.\npackages/twin/src/domain/probe.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.\n타입 검사 실패: packages/twin/tsconfig.json\n고친 뒤 끝낸다."}
+exit=0, 2초
+
+### D. 같은 상태에서 PATH 에서 pnpm 을 뺐을 때 (PATH=/usr/bin:/bin, node 는 절대 경로로 띄움)
+$ 옛 Stop
+stdout: (출력 없음)
+exit=0, 0초
+$ 새 Stop
+stdout: {"systemMessage":"PATH 에서 pnpm 이나 node 를 찾지 못해 verify:fast 를 돌리지 못했다. CI 가 최종 판정한다. 사람에게 알린다."}
+stderr: PATH 에서 pnpm 이나 node 를 찾지 못해 verify:fast 를 돌리지 못했다. CI 가 최종 판정한다. 사람에게 알린다.
+exit=0, 0초
+
+### E. PostToolUse: worktree 파일을 고쳤을 때 루트 비교
+$ cwd=worktree, CLAUDE_PROJECT_DIR=worktree (같은 저장소)
+{"decision":"block","reason":"eslint 가 packages/twin/src/domain/probe-post.ts 에서 1건을 찾았다:\npackages/twin/src/domain/probe-post.ts:1:23 오류 'Date.now' is restricted from being used. 도메인은 이 값을 직접 만들지 않는다. application 에서 Clock, IdGenerator 같은 포트 값을 인자로 넘긴다. (no-restricted-properties)\n이 파일을 고친다. 끝났다는 판정은 pnpm verify:fast 로 한다."}exit=0
+훅 뒤 파일 내용: export const probe2 = Date.now();
+$ cwd=원래 저장소, CLAUDE_PROJECT_DIR=원래 저장소 (다른 최상위)
+exit=0
+훅 뒤 파일 내용(그대로): export const   probe2 = Date.now( );
+
+확인 뒤 git worktree remove --force 로 worktree 를 치웠다. C 의 확인용 커밋은 그 worktree 의 detached HEAD 에만 있었다.
+
+### 반영 8 의 AGENTS.md 줄과 pnpm verify:fast
+AGENTS.md 「늘 한다」 에 훅이 PATH 의 node 와 pnpm 을 쓴다는 줄을 더했다.
+pnpm verify:fast: 통과 (check:rules 「3개 모두 색인에 있고 paths: 가 있다」)
+
+## 리뷰 반영 뒤 요약
+- 재현 PreToolUse 78건, PostToolUse 2건 모두 기대대로다. 기존 42건도 어긋남 0건이다.
+- Stop: paths 없는 룰 md 와 커밋한 타입 오류를 옛 훅은 통과시켰고 새 훅은 막았다. pnpm 이 없으면 막지 않고 systemMessage 로 알렸다.
+- PostToolUse: 세션 저장소가 아닌 파일은 손대지 않았고, 같은 저장소 파일은 전처럼 맞추고 린트했다.
