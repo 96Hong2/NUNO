@@ -3,6 +3,9 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 
+// Stop 이 verify:fast 통과 해시를 적는 파일. 자리는 git rev-parse --git-path 로 찾는다.
+export const VERIFY_OK_FILE = "nuno-verify-ok";
+
 // stdin 의 JSON 을 읽는다. 읽지 못하거나 객체가 아니면 input 은 null 이다.
 export function readHookInput() {
   try {

@@ -66,6 +66,11 @@ function main() {
 
   const root = gitTopLevel(dirname(filePath));
   if (root === null) return;
+  // 이 세션의 저장소 파일만 본다. 다른 저장소는 그쪽 설정과 의존성을 모르니 손대지 않는다.
+  const sessionRoots = [cwd, process.env.CLAUDE_PROJECT_DIR]
+    .filter((dir) => typeof dir === "string" && dir !== "")
+    .map((dir) => gitTopLevel(dir));
+  if (!sessionRoots.includes(root)) return;
   const rel = relative(root, filePath);
   if (rel.startsWith(`..${sep}`) || isAbsolute(rel) || rel.split(sep).includes("node_modules"))
     return;

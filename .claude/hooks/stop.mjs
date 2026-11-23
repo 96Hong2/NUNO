@@ -1,14 +1,14 @@
-// Stop: 작업 트리가 바뀌었으면 pnpm verify:fast 를 돌리고, 실패하면 decision block 으로 턴을 이어 가게 한다.
+// Stop: 작업 트리나 origin/main 뒤 커밋이 바뀌었으면 pnpm verify:fast 를 돌리고,
+// 실패하면 decision block 으로 턴을 이어 가게 한다.
 // 이미 한 번 막았는지는 보지 않는다. 고칠 때까지 막고, 연속 차단 상한이 고리를 끊는다.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { gitTopLevel, readHookInput, runGit } from "./hook-input.mjs";
+import { VERIFY_OK_FILE, gitTopLevel, readHookInput, runGit } from "./hook-input.mjs";
 
 const VERIFY_TIMEOUT_MS = 170_000;
 const MAX_LINES = 20;
-const OK_FILE = "nuno-verify-ok";
 const ANSI_COLOR = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 
 function block(reason) {
@@ -36,8 +36,26 @@ function parseStatus(text) {
   return { paths, untracked };
 }
 
+// .claude/ 아래 파일과 AGENTS.md, CLAUDE.md 는 check:rules 가 보므로 문서로 치지 않는다.
 function isDocsOnly(path) {
+  const name = path.split("/").at(-1);
+  if (path.startsWith(".claude/") || name === "AGENTS.md" || name === "CLAUDE.md") return false;
   return path.startsWith("docs/") || path.toLowerCase().endsWith(".md");
+}
+
+// 커밋했지만 origin/main 에 아직 없는 변경. origin/main 이 없으면 빈 목록이다.
+function committedPaths(root) {
+  const base = runGit(root, ["merge-base", "HEAD", "origin/main"]);
+  if (base.status !== 0) return [];
+  const diff = runGit(root, ["diff", "--name-only", "-z", base.stdout.trim(), "HEAD"]);
+  return diff.status === 0 ? diff.stdout.split("\0").filter(Boolean) : [];
+}
+
+// 검사를 돌리지 못했을 때는 막지 않는다. Claude 가 고칠 수 없는 환경 문제라서다.
+function notify(message) {
+  process.stderr.write(`${message}\n`);
+  process.stdout.write(JSON.stringify({ systemMessage: message }));
+  process.exit(0);
 }
 
 function failedStep(output, root) {
@@ -75,7 +93,8 @@ function main() {
   const status = runGit(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
   if (status.status !== 0)
     block(`git status 가 실패했다: ${status.stderr.trim()}. 저장소 상태를 확인한다.`);
-  const { paths, untracked } = parseStatus(status.stdout);
+  const { paths: changed, untracked } = parseStatus(status.stdout);
+  const paths = [...changed, ...committedPaths(root)];
   if (paths.length === 0 || paths.every(isDocsOnly)) return;
 
   const head = runGit(root, ["rev-parse", "--verify", "-q", "HEAD"]).stdout.trim();
@@ -90,8 +109,8 @@ function main() {
   }
   const digest = hash.digest("hex");
 
-  const gitPath = runGit(root, ["rev-parse", "--git-path", OK_FILE]).stdout.trim();
-  const okFile = resolve(root, gitPath || join(".git", OK_FILE));
+  const gitPath = runGit(root, ["rev-parse", "--git-path", VERIFY_OK_FILE]).stdout.trim();
+  const okFile = resolve(root, gitPath || join(".git", VERIFY_OK_FILE));
   if (existsSync(okFile) && readFileSync(okFile, "utf8").trim() === digest) return;
 
   // 단계 머리줄과 오류 순서를 지키려고 stderr 를 stdout 에 합친다.
@@ -104,8 +123,8 @@ function main() {
   });
 
   if (result.status === 127) {
-    block(
-      "pnpm 을 찾지 못해 verify:fast 를 돌리지 못했다. pnpm 을 설치하거나 PATH 를 확인한 뒤 끝낸다.",
+    notify(
+      "PATH 에서 pnpm 이나 node 를 찾지 못해 verify:fast 를 돌리지 못했다. CI 가 최종 판정한다. 사람에게 알린다.",
     );
   }
   if (result.error || result.signal) {
