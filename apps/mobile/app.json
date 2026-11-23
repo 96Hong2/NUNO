@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "NUNO",
+    "slug": "nuno",
+    "scheme": "nuno",
+    "version": "0.0.0",
+    "web": {
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "headers": {
+            "Cross-Origin-Embedder-Policy": "credentialless",
+            "Cross-Origin-Opener-Policy": "same-origin"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
