@@ -1,5 +1,6 @@
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import type { SqlClient } from "../db/sql-client.ts";
+import { badRequest, readJsonObject, text } from "../http/request-body.ts";
 import type { AppleAuth } from "./apple.ts";
 import { CONSENT_KIND, CONSENT_TEXT_VERSION, consentProvider, consentState } from "./consent.ts";
 import { requireUser, type AuthEnv } from "./require-user.ts";
@@ -13,19 +14,6 @@ export interface AccountDeps {
 }
 
 const PLATFORMS = new Set(["ios", "android"]);
-
-/** 본문이 JSON 객체가 아니면 null. */
-async function readJsonObject(c: Context): Promise<Record<string, unknown> | null> {
-  const body: unknown = await c.req.json().catch(() => null);
-  return typeof body === "object" && body !== null && !Array.isArray(body)
-    ? (body as Record<string, unknown>)
-    : null;
-}
-
-const text = (value: unknown, max: number): string | null =>
-  typeof value === "string" && value.length > 0 && value.length <= max ? value : null;
-
-const badRequest = (c: Context, error: string) => c.json({ error }, 400);
 
 /** 로그인, 로그아웃, 내 정보, 동의, 푸시 기기 주소. */
 export function accountRoutes({ db, now, apple }: AccountDeps): Hono<AuthEnv> {

@@ -3,7 +3,8 @@
 //   node scripts/e2e-api.mjs        nuno_e2e DB 를 지우고 새로 만든다. playwright.config.ts 가 부른다.
 //   node scripts/e2e-api.mjs --dev  nuno_dev DB 를 없을 때만 만든다(`pnpm api:dev`). 웹은 pnpm web(8090).
 // 두 경우 모두 역할 설정, 판 옮기기, 시험용 준비(generate_look 켜기, 가짜 공급사 줄)를 한 뒤
-// 개발 전용 주소를 켠 API 를 띄운다. 운영 DB 의 스위치는 운영자 몫이라 이 스크립트가 닿지 않는다.
+// 개발 전용 주소를 켠 API 와 작업 worker 를 같은 환경으로 띄운다. 둘 중 하나가 죽으면 다른 것도 내린다.
+// 운영 DB 의 스위치는 운영자 몫이라 이 스크립트가 닿지 않는다.
 // 비밀번호는 docker-compose.yml 과 scripts/test-db.mjs 의 로컬 전용 값이다.
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -16,14 +17,26 @@ const API_PASSWORD = "nuno-api-local";
 const DB_PORT = Number(process.env.NUNO_DB_PORT ?? 54329);
 const dev = process.argv.includes("--dev");
 
+// 결과 사진 서명 주소 키. 이 스크립트로 띄우는 로컬 서버에서만 쓰는 값이다.
+const FILE_URL_SECRET = "nuno-local-file-url-secret";
+// 가짜 공급사가 결과로 주는 그림: 하린 온보딩 착장 사진 한 장.
+const FAKE_RESULT_IMAGE = join(root, "apps/mobile/assets/onboarding-looks/harin_w18_w14.webp");
+
 const target = dev
-  ? { db: "nuno_dev", port: 8787, origins: "http://localhost:8090", fresh: false }
+  ? {
+      db: "nuno_dev",
+      port: 8787,
+      origins: "http://localhost:8090",
+      fresh: false,
+      resultDir: join(root, "apps/api/.local-results/dev"),
+    }
   : {
       db: "nuno_e2e",
       port: Number(process.env.NUNO_E2E_API_PORT ?? 8877),
       origins:
         process.env.NUNO_WEB_ORIGINS ?? `http://localhost:${process.env.NUNO_E2E_PORT ?? 8091}`,
       fresh: true,
+      resultDir: join(root, "apps/api/.local-results/e2e"),
     };
 
 function run(command, args, options = {}) {
@@ -97,10 +110,17 @@ const serverEnv = {
   NUNO_DEV_ROUTES: "1",
   NUNO_WEB_ORIGINS: target.origins,
   PORT: String(target.port),
+  NUNO_PUBLIC_API_URL: `http://localhost:${target.port}`,
+  NUNO_RESULT_DIR: target.resultDir,
+  NUNO_FILE_URL_SECRET: FILE_URL_SECRET,
+  NUNO_FAKE_RESULT_IMAGE: FAKE_RESULT_IMAGE,
 };
 
-// 함께 띄우는 프로세스. 작업을 돌리는 worker 도 같은 DB 와 환경으로 여기에 더한다.
-const processes = [["api", ["apps/api/src/composition/main.ts"]]].map(([name, args]) => {
+// 함께 띄우는 프로세스. API 와 worker 는 같은 DB, 결과 폴더, 서명 키를 쓴다.
+const processes = [
+  ["api", ["apps/api/src/composition/main.ts"]],
+  ["worker", ["apps/api/src/composition/worker.ts"]],
+].map(([name, args]) => {
   const child = spawn(process.execPath, args, { cwd: root, env: serverEnv, stdio: "inherit" });
   child.on("exit", (code, signal) => {
     console.error(`${name} 가 끝났다(코드 ${code}, 신호 ${signal}). 나머지도 내린다`);
@@ -116,4 +136,6 @@ function stopAll(code) {
 process.on("SIGINT", () => stopAll(0));
 process.on("SIGTERM", () => stopAll(0));
 
-console.log(`DB ${target.db}, API http://localhost:${target.port}, 웹 출처 ${target.origins}`);
+console.log(
+  `DB ${target.db}, API http://localhost:${target.port}, worker, 웹 출처 ${target.origins}, 결과 폴더 ${target.resultDir}`,
+);
