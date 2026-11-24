@@ -2,6 +2,7 @@
 export {
   createProfileTable,
   finishOnboarding,
+  markTourSeen,
   readProfile,
   saveBirthDate,
   saveDisplayName,

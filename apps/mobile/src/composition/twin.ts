@@ -20,6 +20,12 @@ export async function skipTwinPick(): Promise<void> {
   });
 }
 
+/** 홈 「트윈 바꾸기」 시트에서 다른 프리셋을 고를 때. */
+export async function switchTwin(key: PresetTwinKey): Promise<void> {
+  const { db } = await getDeviceDb();
+  await chooseTwin(db, key);
+}
+
 export async function loadCurrentTwin(): Promise<PresetTwinKey> {
   const { db } = await getDeviceDb();
   return currentTwin(db);

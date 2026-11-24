@@ -74,3 +74,8 @@ export async function saveStyleTags(db: SqlExecutor, tags: readonly string[]): P
   }
   await db.run("UPDATE profile SET style_tags = ? WHERE id = 1", [JSON.stringify(tags)]);
 }
+
+/** 처음 둘러보기를 끝까지 넘기거나 닫았다고 적는다. 다음부터 홈에서 다시 뜨지 않는다. */
+export async function markTourSeen(db: SqlExecutor): Promise<void> {
+  await db.run("UPDATE profile SET tour_seen = 1 WHERE id = 1");
+}
