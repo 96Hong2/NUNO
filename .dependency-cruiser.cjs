@@ -10,6 +10,7 @@ const FEATURE_SDKS = [
   "expo-crypto",
   "expo-file-system",
   "expo-asset",
+  "pg",
   "expo-image-picker",
   "expo-camera",
   "expo-media-library",

@@ -1,0 +1,139 @@
+# plan_T6: 서버 틀, 생성 공급사 어댑터, 원가와 품질 시험
+
+> 로드맵: `docs/roadmap.md` 「T6」 · 작성 2026-11-25 · 상태: 진행 중(혼자 할 수 있는 몫)
+
+## 목표
+
+서버 틀을 세우고, 생성 모델이 정상 사진당 원가 200원 이하를 내는지 앱과 같은 어댑터로 잰다.
+
+## DoD (로드맵 원문, 번호는 이 파일에서 붙임)
+
+- [x] D1 [명령] 로컬 Postgres 를 띄운 뒤 `pnpm verify` 가 실제 DB 에 붙는 시험까지 돌고 통과한다.
+- [x] D2 [DB] 로컬 API 의 기능 스위치 조회 주소를 부르면 `feature_switches` 행이 온다. 스위치를 바꾸는 공개 API 는 없다. API 접속 역할 `nuno_api` 로 직접 `update` 하면 권한 오류가 난다.
+- [x] D3 [명령] 가짜 공급사 시험에서 결과, 거절, 150초 무응답 세 경우가 정한 대로 나온다.
+- [ ] D4 [명령] 실제 공급사 요청 한 건이 결과 사진을 받는다. 채점 CSV 에 청구액, 응답 시간, 차단 여부가 한 줄 남는다.
+- [ ] D5 [명령] 채점 폴더의 사진은 이름이 무작위이고 메타데이터가 없다. 모델 대응표는 다른 파일에 있다.
+- [ ] D6 [명령] 호출 스크립트는 모델별 상한에 닿으면 멈춘다. 세 모델 합은 422건을 넘지 않는다.
+- [ ] D7 [명령] 채점 CSV 에서 모델마다 선택 세트 60장의 정상 수, 청구액, 차단 수를 조회할 수 있다. (G1-1)
+- [ ] D8 [명령] 같은 CSV 에서 트윈 종류별, 옷 사진 출처별, 품목 수별 정상 수를 따로 조회할 수 있다. (G1-2)
+- [ ] D9 [명령] 관문 기록표에 모델마다 정상 사진당 원가, 응답 시간 p95, 확인 세트 판정이 적혀 있다. (G1-3, G1-4, G1-6)
+- [x] D10 [명령] 로컬 DB 를 `pg_dump` 로 떠서 빈 Postgres 에 넣으면 DB 시험이 그대로 통과한다.
+- [ ] D11 [명령] 개발 서버에 올린 API 의 상태 확인 주소가 200 을 준다. 그 DB 의 판 번호가 로컬과 같다.
+
+## 이번에 하는 몫과 기다리는 몫
+
+| 몫 | DoD | 누가, 무엇이 필요 |
+| --- | --- | --- |
+| 이번 PR: 서버 틀, 로컬 Postgres, 판 옮기기, DB 역할, 기능 스위치 조회, 가짜 공급사, 덤프 복원 시험 | D1, D2, D3, D10 | 혼자 한다 |
+| 다음 PR(키 전에): 가짜 공급사로 도는 호출 스크립트, 무작위 이름과 메타데이터 지우기, 대응표 분리, 모델별 상한 멈춤, 채점 CSV 열 | D5, D6 의 장치 | 혼자 한다. 상한 값은 결정 D3 승인 전까지 코드 상수 자리로 둔다. 돈이 드는 첫 실행이 상한 멈춤의 첫 시험이 되지 않게 키보다 먼저 만든다 |
+| 실제 공급사 어댑터와 실제 실행 판정 | D4~D8 | 기획자: 공급사 API 키(Seedream 5.5, GPT-Image-2.6, 조건부 셋째 모델 FASHN 이나 Qwen 도 422건 합에 든다), 시험 숫자 승인(결정 D3), 돈이 드는 첫 호출 |
+| 채점과 관문 기록 | D9 | 기획자와 바깥 평가자 2명 |
+| 개발 서버 배포 | D11 | 기획자: 빌린 AWS 계정 접근, DB 주소와 비밀번호 |
+| R2 비공개 버킷 | 없음(T6-1 문장) | 기획자: Cloudflare 계정과 키. T7-4 착수 전 조건이라 plan_T7 첫 subtask 에서 확인한다 |
+| CI 에서 DB 시험 | D1 | `.github` 는 고치지 않고 `pnpm verify` 가 컨테이너를 띄운다. 서버 DB 검토 v1 의 기획자 질문 3 과 닿아 PR 에 알린다. 원치 않으면 `verify` 에서 `test:db` 를 빼면 된다 |
+
+실제 공급사 어댑터는 키가 생긴 날의 공식 문서로 쓴다. 지금 쓰면 시험할 수 없는 코드가 된다.
+
+## 확인한 사실 (2026-11-25)
+
+- 서버 DB 검토 v1 은 Hono, Drizzle, Better Auth 를 제안했고, 로드맵과 아키텍처 점검 v1 은 「T6, T7 plan 에서 확정한다」 고 했다.
+- 로드맵 v3: 로컬은 docker compose Postgres, 개발 서버는 빌린 AWS, 출시용은 따로. 앱은 API 주소만 알고 DB 에 닿지 않는다. 확장과 호스팅 전용 기능을 쓰지 않아 `pg_dump` 로 옮긴다.
+- 스키마 v1: `feature_switches`(key, enabled, reason, updated_at, updated_by), `provider_configs`(id, provider, model, model_version, mode, priority, country, subprocessor_countries, max_concurrency, price_usd, enabled, updated_at). 앱 사용자는 스위치 읽기만, 공급사 설정은 접근 없음.
+- 서버 검토 v1: 역할은 `nuno_owner`, `nuno_api`, `nuno_ops` 셋. CI 에 Postgres 서비스를 더하는 `.github` 수정은 기획자 허락이 필요하다.
+- 이 Mac 에 Docker Desktop 이 있다(29.9.3). GitHub Actions 의 ubuntu 러너에도 Docker 가 있어, 시험 명령이 스스로 컨테이너를 띄우면 `.github` 를 고치지 않아도 CI 에서 DB 시험이 돈다.
+
+## 바꿀 것
+
+| 파일 또는 폴더 | 무엇을 | 왜 |
+| --- | --- | --- |
+| `apps/api` (새) | Hono 서버: `GET /v1/health`(판 번호), `GET /v1/feature-switches`(이름과 켜짐만). 바꾸는 주소는 없다 | D2, D11 |
+| `apps/api/src/composition/` (새) | `main.ts`(nuno_api 로 서버 띄우기), `run-migrations.ts`(관리자로 판 옮기기). 어댑터는 여기서만 연다 | 경계 규칙 |
+| `apps/api/db/setup.sql` (새) | 역할 둘(`nuno_owner`, `nuno_api`)을 없을 때만 만들고 스키마 권한을 준다. 비밀번호는 넣지 않는다 | 역할은 DB 밖(클러스터) 것이라 판 옮기기에 넣지 않는다 |
+| `apps/api/db/migrations/0001_*.sql` (새) | `feature_switches`, `provider_configs`, GRANT, 함수 실행 기본 권한 거두기, 「이대로 입히기」 스위치 `generate_look` 꺼짐 한 줄 | D2 |
+| `apps/api/src/db/migrate.ts` (새) | 판 옮기기 실행기. `schema_migrations`(nuno_api 읽기)에 판 번호와 이름을 남긴다. SQL 포트만 받는다 | D10, D11 판 번호 비교 |
+| `apps/api/src/adapters/postgres.ts` (새) | `pg` 연결 | SDK 는 어댑터에만 |
+| `apps/api/src/generation/` (새) | 생성 공급사 포트, 150초 시한, 결과, 거절, 무응답 결과 꼴 | D3 |
+| `apps/api/src/adapters/fake-provider.ts` (새) | 정한 대로 결과, 거절, 무응답을 내는 가짜 | D3 |
+| `docker-compose.yml` (새) | `postgres:17.12-alpine`(digest 고정). 로컬 개발 `postgres`(127.0.0.1:54329), 시험용 `test-a`, `test-b`. 로컬 전용 비밀번호 | D1 |
+| `scripts/test-db.mjs` (새) | `test:db`: test-a 에 역할과 판을 적용해 DB 시험, test-a 덤프를 역할만 만든 test-b 에 넣어 판 옮기기 없이 다시 시험, 판 번호 비교, 끝나면 지움. `db:local`: 로컬 개발 DB 준비 | D1, D10 |
+| `vitest.config.ts`, `vitest.db.config.ts` | `*.db.test.ts` 는 DB 시험 설정에서만 돈다 | `pnpm test` 는 DB 없이 돈다 |
+| `package.json` | `test:db`, `verify` 에 `test:db` 를 넣는다 | D1 |
+| `.dependency-cruiser.cjs` | `FEATURE_SDKS` 에 `pg` | DB SDK 는 어댑터에만 |
+| `apps/api/AGENTS.md`, `CLAUDE.md`, 루트 `AGENTS.md` 표 | 서버 명령과 「무엇을 바꾸려면 어디를」 | 지시 파일 규칙 |
+| `docs/gates.md` | T6 원가와 품질 칸(빈 줄) | D9 자리 |
+
+새 의존성: `hono` 4.13.18, `@hono/node-server` 2.1.8, `pg` 8.23.1, `@types/pg` 8.23.1. 나온 지 두 주가 넘은 판으로 고정한다.
+
+## 설계 결정
+
+| 결정 | 고른 안 | 버린 안과 까닭 |
+| --- | --- | --- |
+| API 틀 | Hono(Node 서버). `app.request` 로 서버를 띄우지 않고 시험한다 | Fastify, Express: 둘 다 되지만 Hono 가 작고 같은 코드가 Cloud Run, AWS 어디서나 돈다. 서버 검토 v1 의 제안과 같다 |
+| DB 접근 | `pg` 와 손으로 쓴 SQL, 판 옮기기는 SQL 파일 | Drizzle: 표 둘에 생성기를 들이면 설정이 더 크다. 역할, GRANT, DB 함수(T7 골드)는 어차피 SQL 로 쓴다. 표가 늘어 타입 손질이 무거워지는 T7 에서 다시 본다 |
+| 역할 | `nuno_owner`(판 옮기기, 표 주인, 로그인 안 함), `nuno_api`(API 접속: 스위치 이름과 켜짐, 공급사 설정, 판 번호 읽기만). 로컬 비밀번호는 시험 스크립트 한 곳에 둔다 | Postgres 기본 사용자 하나: D2 의 권한 오류를 시험할 수 없다. 운영자 역할 `nuno_ops`: 이번 DoD 에 쓰는 곳이 없어 운영 방식을 정하는 Task 에서 새 판으로 더한다 |
+| 접속 정보 | 판 옮기기는 따로 도는 명령이고 관리자 주소(`DATABASE_ADMIN_URL`)만 읽는다. API 는 nuno_api 주소(`DATABASE_URL`)만 읽고 켜질 때 판을 옮기지 않는다. 변수가 없으면 켜지지 않는다. 로컬이 아닌 DB 에는 주소에 `sslmode=require` 를 붙인다 | 변수 하나: 서버 API 가 표 주인으로 돌아 D2 의 권한이 서버에서 지켜지지 않는다 |
+| 표를 둘 스키마 | `public` | 서버 검토 v1 의 `app`, `ops` 스키마: 표가 둘인 지금 나눌 까닭이 없다. 운영 표가 생기면 그 판에서 정한다 |
+| 함수 실행 권한 | 판 1 에서 nuno_owner 가 만드는 함수의 기본 실행 권한을 거둔다. T7 골드 함수는 nuno_api 에 하나씩 준다 | 함수마다 거두기: 빠뜨리면 누구나 골드 함수를 부른다 |
+| 서버 실행 | Node 26 이 TypeScript 를 그대로 돌린다. `apps/api` 상대 import 에 `.ts` 를 붙이고 `allowImportingTsExtensions` 를 켠다 | tsx 같은 실행기: 의존성이 하나 는다. `@nuno/*` 를 쓰게 되는 T7 에서 다시 본다 |
+| DB 시험을 CI 에서 | `scripts/test-db.mjs` 가 docker compose 로 Postgres 를 띄운다. `.github` 를 고치지 않는다 | CI 서비스 컨테이너: `.github` 수정이라 기획자 허락이 필요하다. DB 가 없을 때 시험을 건너뛰기: 시험을 건너뛰지 않는다는 규칙에 걸린다 |
+| 덤프 복원 | 역할만 만든 다른 컨테이너(test-b)에 test-a 의 `pg_dump` 를 `ON_ERROR_STOP` 으로 넣고, 판 옮기기 없이 같은 DB 시험을 돈다. 두 판 번호를 비교한다. `pg_dump` 와 `psql` 은 컨테이너 안 것을 쓴다 | 같은 컨테이너의 새 DB: 역할이 이미 있어 다른 Postgres 로 옮길 때 역할 파일을 빠뜨리는 실수를 잡지 못한다. 다른 Postgres 판: 이번 범위를 넘는다 |
+| DB 접근 도구 | Drizzle 을 들이더라도 판 옮기기는 SQL 파일과 지금 실행기 하나로 두고, Drizzle 은 조회와 타입에만 쓴다. 정하는 것은 T7 plan 이다 | 판 옮기기 둘(drizzle-kit 과 SQL): 판 번호가 둘로 갈린다 |
+| 생성 공급사 포트 | `apps/api/src/generation` 에 포트와 시한 감싸기. 결과는 `succeeded`(그림), `refused`(차단 사유), `timed_out` 셋 | 패키지로 빼기: 생성 작업 컨텍스트는 T7 에서 생긴다. 쓰는 곳이 서버 하나라 지금은 앱 안에 둔다 |
+| 시한 | 공급사 한 번 부르기에 150초. 넘으면 `timed_out` 이고 공급사 요청은 끊는다(AbortSignal) | 시한 없이: 무응답이 작업을 붙잡는다 |
+
+## subtask 순서와 PR
+
+1. PR A: 서버 틀, docker compose, 역할과 판 1, 기능 스위치 조회, DB 시험과 덤프 복원, 가짜 공급사와 시한. 300줄 안팎이 목표다.
+2. 기다림: 실제 공급사 어댑터, 호출 스크립트, 채점(D4~D9), 개발 서버(D11). 기획자 키와 승인 뒤 같은 plan 으로 이어 간다.
+
+## 화면 테스트 시나리오
+
+T6 는 화면이 없다. 판정은 명령으로 한다.
+
+| DoD | 어떻게 본다 |
+| --- | --- |
+| D1 | `pnpm verify` 가 `test:db` 를 지나 통과한다. 출력에 DB 시험 수가 보인다 |
+| D2 | `pnpm db:local` 뒤 `pnpm --filter api start` 로 띄워 `curl /v1/feature-switches` 가 행을 준다. `curl -X PATCH` 는 404 다. `psql` 로 `nuno_api` 가 `update` 하면 `permission denied` |
+| D3 | 가짜 공급사 시험 세 건: 그림을 받음, 차단 사유를 받음, 가짜 타이머로 149.999초에는 끝나지 않고 150초에 `timed_out`. 공급사 오류(HTTP 오류)는 D3 밖이고 실제 어댑터 때 정한다 |
+| D10 | `test:db` 출력의 둘째 돌기(복원한 DB)도 같은 수로 통과한다 |
+
+## 위험과 되돌리는 법
+
+- `pnpm verify` 가 Docker 를 요구한다. Docker 가 없으면 `test:db` 가 「Docker 를 켜 주세요」 로 멈춘다. 건너뛰지 않는다.
+- 로컬 비밀번호는 로컬 전용 값이라 저장소에 둔다. 개발 서버와 출시용 비밀번호는 관리자가 `\password` 로 넣고 저장소에 두지 않는다. Postgres 포트는 127.0.0.1 에만 연다.
+- CI 시간이 Postgres 그림 받기(약 30초)만큼 는다.
+
+## DoD 판정 (2026-11-25)
+
+| DoD | 판정 | 증거 |
+| --- | --- | --- |
+| D1 | 통과 | `pnpm verify`: 빠른 검사, 단위 시험 51건, DB 시험 5건 두 번(test-a, test-b), e2e 8건. Docker 를 끄면 「Docker 가 꺼져 있다」 로 멈춘다 |
+| D2 | 통과 | `pnpm db:local` 뒤 API 를 띄워 `/v1/health` 200(판 1), `/v1/feature-switches` 가 `generate_look` 꺼짐 행, `PATCH` 404, `nuno_api` 의 `UPDATE` 는 `permission denied for table feature_switches`. DB 시험도 같은 것을 본다 |
+| D3 | 통과 | `apps/api/src/generation/provider.test.ts` 세 건(결과, 거절, 150초 무응답) |
+| D10 | 통과 | `test:db` 둘째 돌기: 역할만 만든 test-b 에 덤프를 넣고 판 옮기기 없이 5건 통과, 판 번호 1 = 1 |
+| D4~D9, D11 | 기다림 | 「이번에 하는 몫과 기다리는 몫」 표 |
+
+새 검증 장치라 한 번 일부러 깨뜨렸다: `nuno_api` 에 UPDATE 권한을 주면 DB 시험 「직접 update 하면 권한 오류」 가 실패했고, 되돌렸다.
+
+## 리뷰 반영
+
+세 관점(DoD 와 범위, 아키텍처와 보안, 단순함) 리뷰에서 지적 26건이 나왔다.
+
+| 지적 | 판정 | 한 일 |
+| --- | --- | --- |
+| P1 같은 클러스터의 새 DB 로는 역할을 빠뜨린 옮기기를 잡지 못한다 | 반영 | 역할만 만든 다른 컨테이너에 넣는다 |
+| P1 둘째 돌기가 판을 다시 옮기면 덤프를 시험하지 않는다, ON_ERROR_STOP | 반영 | 판 옮기기 없이 돌고 판 번호를 비교한다 |
+| P1 composition 자리가 없어 경계 검사에 걸린다 | 반영 | `src/composition/` |
+| P1 역할 파일의 비밀번호가 개발 서버에 들어간다 | 반영 | 비밀번호는 시험 스크립트와 관리자 `\password` |
+| P1 판 옮기기와 API 접속 정보를 나눈다 | 반영 | 설계 결정 「접속 정보」 |
+| P1 Postgres 포트를 모든 주소에 연다 | 반영 | 127.0.0.1 만 |
+| P1 상한 멈춤은 돈이 드는 첫 호출 전에 가짜로 | 반영 | 다음 PR 로 몫을 나눴다 |
+| P1 CI 에서 docker compose 는 기획자 질문 3 과 닿는다 | 일부 반영 | `.github` 는 고치지 않아 규칙에는 걸리지 않는다. PR 과 인계에 알리고, 그림은 판과 digest 로 고정했다 |
+| P1 import 확장자, 150초 시험 방법, 로컬 DB 준비 명령 | 반영 | 설계 결정, 판정 표, `pnpm db:local` |
+| P2 함수 실행 기본 권한, 권한 표 시험 | 반영 | 판 1 에 한 줄, 권한 기대표 시험 하나 |
+| P2 스위치 조회가 끈 까닭과 바꾼 사람을 낸다 | 반영 | 이름과 켜짐만, 열 권한도 그 둘 |
+| P2 nuno_ops 를 쓰는 곳이 없다 | 반영 | 뺐다 |
+| P2 시험이 로컬 개발 DB 를 덮는다 | 반영 | 시험은 nuno-test 프로젝트의 컨테이너 둘을 쓰고 지운다 |
+| P2 스키마, Drizzle, R2, 셋째 모델 | 반영 | 설계 결정과 기다리는 몫 표 |
+| P2 PR 을 둘로(서버 틀, 생성 포트) | 반영 안 함 | 생성 포트와 가짜는 약 100줄이고 시험 하나로 묶여 함께 낸다 |
+| P2 `pg` 를 앱마다 따로 막는 규칙 | 반영 안 함 | 모바일 어댑터에서 `pg` 를 쓸 까닭이 없고, 규칙을 늘리지 않는다 |

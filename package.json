@@ -21,10 +21,12 @@
     "test": "vitest run",
     "check:rules": "node scripts/check-rules-index.mjs",
     "verify:fast": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm check:packages && pnpm test && pnpm check:rules",
-    "verify": "pnpm verify:fast && pnpm e2e",
+    "verify": "pnpm verify:fast && pnpm test:db && pnpm e2e",
     "new:context": "node scripts/new-context.mjs",
     "web": "pnpm --filter mobile exec expo start --port 8090",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "test:db": "node scripts/test-db.mjs",
+    "db:local": "node scripts/test-db.mjs --local"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
