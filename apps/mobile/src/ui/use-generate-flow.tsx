@@ -19,7 +19,12 @@ import {
   onAccountChange,
   type AccountState,
 } from "../composition/account";
-import { findUnsavedJob, hasPersonPhoto, submitGeneration } from "../composition/generation";
+import {
+  findUnsavedJob,
+  hasPersonPhoto,
+  onGenerationFinished,
+  submitGeneration,
+} from "../composition/generation";
 import { useAppToast } from "./app-toast";
 import type { CatalogItem } from "./coordi-catalog";
 import { GENERATE_CHERRY, GoldConfirmSheet, JoinSheet, MakeLookSheet } from "./generate-sheets";
@@ -28,8 +33,6 @@ import { GENERATE_CHERRY, GoldConfirmSheet, JoinSheet, MakeLookSheet } from "./g
 const freeLooksOf = (state: AccountState): number =>
   state.gold ? freeLooksNow(state.gold.trialCount, state.gold.trialUsableToday) : 0;
 
-/** 시트가 열려 있으면 알림을 무대 위쪽에 띄운다 */
-const TOAST_OVER_SHEET = 560;
 const PERSON_PHOTO_MESSAGE = "사람이 함께 찍힌 옷 사진은 완성 룩으로 만들 수 없어요";
 
 type FlowSheet = "join" | "make" | "gold" | null;
@@ -61,16 +64,21 @@ export function useGenerateFlow(
   const [unsavedJob, setUnsavedJob] = useState<string | null>(null);
 
   const reload = useCallback(() => loadAccount().then((next) => (setAccount(next), next)), []);
+  const reloadUnsaved = useCallback(
+    () => void findUnsavedJob().then(setUnsavedJob, () => setUnsavedJob(null)),
+    [],
+  );
   useFocusEffect(
     useCallback(() => {
       void reload();
-      void findUnsavedJob().then(setUnsavedJob, () => setUnsavedJob(null));
-    }, [reload]),
+      reloadUnsaved();
+    }, [reload, reloadUnsaved]),
   );
   useEffect(() => onAccountChange(() => void reload()), [reload]);
+  // 무대에 머문 채로 작업이 끝나도 알약이 바로 뜨게, 작업 감시가 끝난 작업을 적을 때 다시 읽는다.
+  useEffect(() => onGenerationFinished(reloadUnsaved), [reloadUnsaved]);
 
-  const notify = (message: string) =>
-    toast.show(message, undefined, sheet ? { bottom: TOAST_OVER_SHEET } : undefined);
+  const notify = (message: string) => toast.show(message);
 
   const items: ManifestGarment[] = outfit.flatMap((piece) => {
     const item = catalog.get(refKey(piece.ref));

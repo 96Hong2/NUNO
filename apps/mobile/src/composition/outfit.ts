@@ -4,6 +4,7 @@ import {
   deleteSavedOutfit,
   EMPTY_HISTORY,
   firstFreeSlot,
+  isSampleGarmentKey,
   isWorn,
   listRecentOutfits,
   listSavedOutfits,
@@ -266,4 +267,35 @@ export function wearSamples(keys: readonly string[]): Promise<Outfit | null> {
       return isWorn(outfit, piece.ref) ? outfit : toggleGarment(outfit, piece);
     }, current),
   );
+}
+
+/**
+ * 룩북 크게 보기 「트윈에 입혀 보기」 와 입은 옷 시트: 룩 옷 키(`s:<견본 키>`, `g:<옷 ID>`)의 옷을 지금 코디 위에 입힌다.
+ * 옷장 옷은 「내 옷」 칸에 남아 있을 때만 입힌다. 같은 종류는 바뀌고 되돌리기 기록에 쌓인다. 입힌 벌 수를 돌려준다.
+ */
+export async function wearLookItems(keys: readonly string[]): Promise<number> {
+  const { db } = await getDeviceDb();
+  const pieces: OutfitPiece[] = [];
+  for (const key of keys) {
+    const id = key.slice(2);
+    if (key.startsWith("s:") && isSampleGarmentKey(id)) {
+      pieces.push(samplePiece(id));
+    } else if (key.startsWith("g:")) {
+      const garment = await readGarment(db, id);
+      if (garment?.closet !== "mine") continue;
+      pieces.push({
+        ref: { kind: "garment", id },
+        category: garment.category,
+        slot: slotOf(garment.category),
+      });
+    }
+  }
+  if (pieces.length === 0) return 0;
+  await changeOutfit((current) =>
+    pieces.reduce<Outfit>(
+      (outfit, piece) => (isWorn(outfit, piece.ref) ? outfit : toggleGarment(outfit, piece)),
+      current,
+    ),
+  );
+  return pieces.length;
 }

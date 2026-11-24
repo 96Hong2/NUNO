@@ -10,6 +10,7 @@ const POLL_MS = 2000;
 /**
  * 작업 감시: 앱 최상위 한 곳에서 기기 생성 요청 가운데 끝나지 않은 작업을 2초마다 묻는다.
  * 그 작업 화면을 보고 있지 않을 때 끝나면 알림과 「보기」 를 띄우고, 한 번 띄운 작업은 다시 띄우지 않는다.
+ * 봤다고 적으면 markJobSeen 이 끝남 이벤트를 내고, 무대가 「다 된 완성 룩 보기」 를 다시 읽는다.
  */
 export function GenerationWatcher() {
   const router = useRouter();

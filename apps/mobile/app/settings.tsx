@@ -14,8 +14,6 @@ import { ConfirmSheet } from "../src/ui/generate-sheets";
 
 const INK = "#151314";
 const SUB = "#76736C";
-/** 확인 시트가 열린 채 띄우는 실패 알림은 시트 위쪽에 둔다 */
-const TOAST_OVER_SHEET = 320;
 
 // 설정: 「개인정보와 안전」 의 완성 룩 만들기 동의, 「계정」 의 로그아웃. 가입 전에는 두 칸 모두 숨긴다.
 export default function SettingsScreen() {
@@ -45,7 +43,7 @@ export default function SettingsScreen() {
       setBusy(false);
     }
     if (!done) {
-      toast.show(fail, undefined, { bottom: TOAST_OVER_SHEET });
+      toast.show(fail);
       return;
     }
     setSheet(null);

@@ -196,10 +196,19 @@ export async function loadJobItems(
   return { twinKey: request?.manifest.twin.preset ?? null, items: request?.manifest.items ?? [] };
 }
 
-/** 끝난 작업을 봤다고 적는다(작업 감시가 다시 알리지 않는다) */
+const finishedListeners = new Set<() => void>();
+
+/** 끝난 작업을 봤다고 적은 뒤 부른다. 무대가 「다 된 완성 룩 보기」 를 다시 읽는다 */
+export function onGenerationFinished(listener: () => void): () => void {
+  finishedListeners.add(listener);
+  return () => finishedListeners.delete(listener);
+}
+
+/** 끝난 작업을 봤다고 적는다(작업 감시가 다시 알리지 않는다). 적은 뒤 끝남 이벤트를 낸다 */
 export async function markJobSeen(jobId: string): Promise<void> {
   const { db } = await getDeviceDb();
   await markGenerationSeen(db, jobId);
+  for (const listener of finishedListeners) listener();
 }
 
 /** 「나가기」: 결과를 지운다. 지운 뒤에는 적어 둔 서명 주소도 열리지 않는다 */
