@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { canGenerateLooks } from "../../../src/composition/account";
 import { createLookbook, loadShelf, type ShelfView } from "../../../src/composition/lookbook";
 import { useAppToast } from "../../../src/ui/app-toast";
 import { BookCover } from "../../../src/ui/book-cover";
@@ -17,6 +18,10 @@ export default function LookbookScreen() {
   const overSheet = { bottom: useWindowDimensions().height - TOAST_FROM_TOP };
   const [shelf, setShelf] = useState<ShelfView | null>(null);
   const [creating, setCreating] = useState(false);
+  const [generateOn, setGenerateOn] = useState(false);
+  useEffect(() => {
+    void canGenerateLooks().then(setGenerateOn, () => setGenerateOn(false));
+  }, []);
 
   const reload = useCallback(() => void loadShelf().then(setShelf), []);
   useFocusEffect(reload);
@@ -44,7 +49,11 @@ export default function LookbookScreen() {
         {shelf === null ? null : empty ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>아직 저장한 룩이 없어요</Text>
-            <Text style={styles.emptyBody}>코디는 피팅룸 「코디」 의 「내 코디」 에 저장해요</Text>
+            <Text style={styles.emptyBody}>
+              {generateOn
+                ? "코디를 입혀 보고 「이대로 입히기」 로 만든 룩을 룩북에 저장하면 여기에 보여요"
+                : "코디는 피팅룸 「코디」 의 「내 코디」 에 저장해요"}
+            </Text>
             <Pressable
               role="button"
               onPress={() => router.navigate("/fitting/coordi")}

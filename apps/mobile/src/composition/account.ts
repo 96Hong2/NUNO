@@ -79,6 +79,11 @@ async function generateSwitchOn(): Promise<boolean> {
   );
 }
 
+/** 「이대로 입히기」 로 룩을 만들어 룩북에 저장할 수 있는지. 무대 단추를 보이는 조건과 같다 */
+export async function canGenerateLooks(): Promise<boolean> {
+  return hasApiServer() && (await generateSwitchOn());
+}
+
 /** 무대 단추, 마이, 설정이 쓰는 계정 값. 서버가 없으면 모두 빈 값이다. */
 export async function loadAccount(): Promise<AccountState> {
   if (!hasApiServer()) return SIGNED_OUT;
