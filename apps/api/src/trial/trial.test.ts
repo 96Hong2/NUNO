@@ -5,7 +5,7 @@ import { checkScoringFolder } from "./check-scoring.ts";
 import { parseCsv } from "./csv.ts";
 import { buildReport, finalJudgement, outsideAgreement } from "./report.ts";
 import { runTrial, type TrialIo, type TrialRequest } from "./run-trial.ts";
-import { stripMetadata } from "./strip-metadata.ts";
+import { metadataLeft, stripMetadata } from "./strip-metadata.ts";
 
 /** 메모리 파일 시스템. 무작위 이름은 차례 번호, 섞기는 고정 수열이다 */
 function memoryIo() {
@@ -25,6 +25,11 @@ function memoryIo() {
       files.delete(from);
       files.set(to, bytes);
       return Promise.resolve(true);
+    },
+    exists: (path) => Promise.resolve(files.has(path)),
+    writeText: (path, text) => {
+      files.set(path, text);
+      return Promise.resolve();
     },
     appendText: (path, text) => {
       files.set(path, ((files.get(path) as string | undefined) ?? "") + text);
@@ -160,7 +165,8 @@ describe("반증 실험 호출 스크립트", () => {
   });
 
   it("JPEG 은 색 프로파일(APP2)을 남기고, PNG 는 글 덩어리를 뺀다", () => {
-    const icc = [0xff, 0xe2, 0x00, 0x04, 0x01, 0x02];
+    const iccId = [..."ICC_PROFILE\0"].map((c) => c.charCodeAt(0));
+    const icc = [0xff, 0xe2, 0x00, 2 + iccId.length + 2, ...iccId, 0x01, 0x01];
     const jpeg = Uint8Array.from([0xff, 0xd8, ...icc, 0xff, 0xda, 0x00, 0x02, 0x11, 0xff, 0xd9]);
     expect([...stripMetadata(jpeg).bytes]).toEqual([...jpeg]);
 
@@ -235,6 +241,109 @@ describe("반증 실험 호출 스크립트: 장부가 어긋나는 장면", () 
       "out/scoring/r002.jpg",
     ]);
     expect(parseCsv(files.get("out/scoring/scoring.csv") as string)).toHaveLength(2);
+  });
+
+  it("MPF APP2, 스캔 사이 COM, EOI 뒤에 덧붙은 둘째 그림의 EXIF 까지 지우고, 검사는 남은 것을 찾는다", () => {
+    const text = (value: string) => [...value].map((c) => c.charCodeAt(0));
+    const segment = (marker: number, body: number[]) => [
+      0xff,
+      marker,
+      0x00,
+      body.length + 2,
+      ...body,
+    ];
+    const mpf = segment(0xe2, text("MPF\0xx"));
+    const scan = [...segment(0xda, [0x11]), 0x12, 0xff, 0x00, 0x13, 0xff, 0xd0, 0x14];
+    const comment = segment(0xfe, text("made by sunburst"));
+    const second = [0xff, 0xd8, ...segment(0xe1, text("Exif\0\0Model=Seedream")), 0xff, 0xd9];
+    const jpeg = Uint8Array.from([
+      0xff,
+      0xd8,
+      ...mpf,
+      ...scan,
+      ...comment,
+      ...scan,
+      0xff,
+      0xd9,
+      ...second,
+    ]);
+    expect(metadataLeft(jpeg)).toEqual(["APP2", "COM", "EOI 뒤 데이터"]);
+    const clean = stripMetadata(jpeg).bytes;
+    expect([...clean]).toEqual([0xff, 0xd8, ...scan, ...scan, 0xff, 0xd9]);
+    expect(metadataLeft(clean)).toEqual([]);
+  });
+
+  it("스프레드시트가 끝 줄바꿈 없이 저장한 장부와 채점 CSV 에도 줄이 붙지 않고, 채운 칸은 남는다", async () => {
+    const { io, files } = memoryIo();
+    await runTrial([request("a", "seedream")], providers, paths, io);
+    const scoring = (files.get("out/scoring/scoring.csv") as string)
+      .trimEnd()
+      .replace("in-a,select", "in-a,select");
+    files.set("out/scoring/scoring.csv", scoring.replace(/,1,,/, ",1,y,"));
+    files.set("ledger/calls.csv", (files.get("ledger/calls.csv") as string).trimEnd());
+    await runTrial([request("b", "seedream")], providers, paths, io);
+    const rows = parseCsv(files.get("out/scoring/scoring.csv") as string);
+    expect(rows.map((row) => row.file).sort()).toEqual(["r001.jpg", "r002.jpg"]);
+    expect(rows.find((row) => row.file === "r001.jpg")?.normal).toBe("y");
+    const ledger = parseCsv(files.get("ledger/calls.csv") as string);
+    expect(ledger.filter((row) => row.status === "succeeded").map((row) => row.request_id)).toEqual(
+      ["a", "b"],
+    );
+  });
+
+  it("채점 폴더로 옮긴 직후 죽어 줄이 없는 그림은 다음 실행이 줄을 더하고, 어디에도 없는 그림은 알린다", async () => {
+    const { io, files } = memoryIo();
+    await runTrial([request("a", "seedream"), request("b", "seedream")], providers, paths, io);
+    files.set("out/scoring/scoring.csv", "file\n");
+    files.delete("out/scoring/r002.jpg");
+    const result = await runTrial([], providers, paths, io);
+    expect(parseCsv(files.get("out/scoring/scoring.csv") as string).map((row) => row.file)).toEqual(
+      ["r001.jpg"],
+    );
+    expect(result.missing).toEqual(["r002.jpg"]);
+  });
+
+  it("멈춤 요청이 오면 지금 호출을 마치고 끝내며, 받은 그림은 채점 폴더로 옮기고 잠금을 푼다", async () => {
+    const { io, files } = memoryIo();
+    let calls = 0;
+    const counting: GenerationProvider = {
+      name: "counting",
+      generate: (request, signal) => {
+        calls += 1;
+        return exifProvider(0.03).generate(request, signal);
+      },
+    };
+    const result = await runTrial(
+      [request("a", "seedream"), request("b", "seedream")],
+      { ...providers, seedream: counting },
+      { ...paths, shouldStop: () => calls >= 1 },
+      io,
+    );
+    expect(result).toMatchObject({ called: 1, stopped: true });
+    expect(parseCsv(files.get("out/scoring/scoring.csv") as string)).toHaveLength(1);
+    expect(files.has("ledger/calls.csv.lock")).toBe(false);
+  });
+
+  it("두 번에 나눠 돌린 그림 줄도 채점 CSV 에서 섞여, 앞줄과 뒷줄로 실행 묶음이 갈리지 않는다", async () => {
+    const { io, files } = memoryIo();
+    const first = Array.from({ length: 6 }, (_, i) => request(`s${i}`, "seedream"));
+    const second = Array.from({ length: 6 }, (_, i) => request(`u${i}`, "flare"));
+    await runTrial(
+      first,
+      providers,
+      { ...paths, caps: { seedream: 10, sunburst: 10, flare: 10 } },
+      io,
+    );
+    await runTrial(
+      second,
+      providers,
+      { ...paths, caps: { seedream: 10, sunburst: 10, flare: 10 } },
+      io,
+    );
+    const order = parseCsv(files.get("out/scoring/scoring.csv") as string).map(
+      (row) => row.input?.[3],
+    );
+    expect(order.slice(0, 6).every((key) => key === "s")).toBe(false);
   });
 
   it("D5 검사는 점 파일을 건너뛰고, 화상 데이터 안의 우연한 글자는 메타데이터로 보지 않는다", () => {

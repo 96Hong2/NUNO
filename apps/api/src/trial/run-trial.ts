@@ -53,8 +53,14 @@ export interface TrialIo {
   readText(path: string): Promise<string | null>;
   /** 그림을 쓴다. 파일 시각(mtime)은 모두 같은 값으로 맞춘다(시각으로 모델이 갈리지 않게) */
   writeFile(path: string, bytes: Uint8Array): Promise<void>;
-  /** 대기 폴더의 그림을 채점 폴더로 옮긴다. 없으면 false */
+  /**
+   * 대기 폴더의 그림을 채점 폴더로 옮긴다(새로 복사한 뒤 원본을 지운다: inode 도 섞인 차례로 생긴다).
+   * 원본이 없을 때만 false, 다른 오류는 던진다.
+   */
   moveFile(from: string, to: string): Promise<boolean>;
+  exists(path: string): Promise<boolean>;
+  /** 글 파일을 통째로 다시 쓴다(채점 CSV 를 섞어 다시 쓸 때) */
+  writeText(path: string, text: string): Promise<void>;
   appendText(path: string, text: string): Promise<void>;
   /** 잠금 파일을 만든다. 이미 있으면 던진다. 돌려준 함수로 푼다 */
   lock(path: string): Promise<() => Promise<void>>;
@@ -99,11 +105,30 @@ export const CALL_COLUMNS = [
   "called_at",
 ] as const;
 
+export interface TrialOptions {
+  ledgerPath: string;
+  scoringDir: string;
+  caps?: Record<TrialModel, number>;
+  /** 참이면 지금 호출을 마친 뒤 더 부르지 않고 끝낸다(Ctrl-C). 그림 옮기기와 잠금 풀기는 돈다 */
+  shouldStop?: () => boolean;
+}
+
+/** 줄바꿈 없이 끝난 파일(스프레드시트가 다시 저장한 장부)에 덧붙이면 앞 줄과 붙는다. 먼저 줄바꿈을 맞춘다 */
+async function appendLine(io: TrialIo, path: string, line: string): Promise<void> {
+  const text = await io.readText(path);
+  const gap = text && !/[\r\n]$/.test(text) ? "\n" : "";
+  await io.appendText(path, gap + line);
+}
+
 export interface TrialResult {
   called: number;
   skipped: number;
   /** 부르기 전 줄만 있고 결과 줄이 없는 요청. 다시 부르지 않고 알린다(공급사가 청구했을 수 있다) */
   interrupted: string[];
+  /** 장부에는 성공으로 적혔는데 대기 폴더에도 채점 폴더에도 없는 그림(청구됐는데 잃었다) */
+  missing: string[];
+  /** 멈춤 요청(Ctrl-C)으로 지금 호출을 마치고 끝냈는지 */
+  stopped: boolean;
   /** 상한에 닿아 부르지 않은 모델과 그 요청 수 */
   capped: Partial<Record<TrialModel, number>>;
 }
@@ -164,7 +189,7 @@ function validate(requests: readonly TrialRequest[], caps: Record<TrialModel, nu
 export async function runTrial(
   requests: readonly TrialRequest[],
   providers: Partial<Record<TrialModel, GenerationProvider>>,
-  options: { ledgerPath: string; scoringDir: string; caps?: Record<TrialModel, number> },
+  options: TrialOptions,
   io: TrialIo,
 ): Promise<TrialResult> {
   const caps = options.caps ?? MODEL_CALL_CAPS;
@@ -196,38 +221,49 @@ function checkLedgerHeader(text: string | null): void {
 }
 
 /**
- * 장부에는 있는데 채점 CSV 에 아직 없는 그림을 섞은 차례로 대기 폴더에서 채점 폴더로 옮긴다.
- * 한꺼번에 옮겨서 파일 시각(ctime)으로 호출 차례와 응답 시간이 드러나지 않는다.
- * 실행이 도중에 죽어 남은 그림도 다음 실행 처음에 이 함수가 옮긴다.
+ * 장부에는 성공으로 있는데 채점 CSV 에 아직 없는 그림을 채점 폴더로 옮기고, 채점 CSV 를 통째로 섞어 다시 쓴다.
+ * - 한꺼번에 옮기고 줄을 모두 섞어서, 파일 시각(ctime), inode, 줄 순서로 호출 차례나 실행 묶음이 드러나지 않는다.
+ * - 기획자가 채운 칸은 그대로 둔다. 옮긴 직후 죽어 줄이 없는 그림은 채점 폴더에서 찾아 줄만 더한다.
+ * - 실행이 도중에 죽어 남은 그림도 다음 실행 처음에 이 함수가 옮긴다. 어디에도 없는 그림은 돌려준다.
  */
-async function flushStaged(ledgerPath: string, scoringDir: string, io: TrialIo): Promise<void> {
+async function flushStaged(ledgerPath: string, scoringDir: string, io: TrialIo): Promise<string[]> {
   const scoringPath = `${scoringDir}/scoring.csv`;
-  const scored = new Set(parseCsv((await io.readText(scoringPath)) ?? "").map((row) => row.file));
+  const rows = parseCsv((await io.readText(scoringPath)) ?? "");
+  const scored = new Set(rows.map((row) => row.file));
   const pending = parseCsv((await io.readText(ledgerPath)) ?? "").filter(
     (row) => row.status === "succeeded" && row.file && !scored.has(row.file),
   );
+  const missing: string[] = [];
+  const added: CsvRow[] = [];
   for (const row of shuffled(pending, () => io.random())) {
     const file = row.file ?? "";
-    if (!(await io.moveFile(`${ledgerPath}.staging/${file}`, `${scoringDir}/${file}`))) continue;
-    await io.appendText(scoringPath, csvLine(SCORING_COLUMNS, row));
+    const target = `${scoringDir}/${file}`;
+    const moved = await io.moveFile(`${ledgerPath}.staging/${file}`, target);
+    if (moved || (await io.exists(target))) added.push(row);
+    else missing.push(file);
   }
+  if (added.length > 0 || !(await io.readText(scoringPath))) {
+    const all = shuffled([...rows, ...added], () => io.random());
+    await io.writeText(
+      scoringPath,
+      csvHeader(SCORING_COLUMNS) + all.map((row) => csvLine(SCORING_COLUMNS, row)).join(""),
+    );
+  }
+  return missing;
 }
 
 async function runLocked(
   requests: readonly TrialRequest[],
   providers: Partial<Record<TrialModel, GenerationProvider>>,
-  { ledgerPath, scoringDir }: { ledgerPath: string; scoringDir: string },
+  { ledgerPath, scoringDir, shouldStop }: TrialOptions,
   caps: Record<TrialModel, number>,
   io: TrialIo,
 ): Promise<TrialResult> {
-  const scoringPath = `${scoringDir}/scoring.csv`;
   const ledgerText = await io.readText(ledgerPath);
   checkLedgerHeader(ledgerText);
   const calls = parseCsv(ledgerText ?? "");
   if (!ledgerText) await io.appendText(ledgerPath, csvHeader(CALL_COLUMNS));
-  if (!(await io.readText(scoringPath)))
-    await io.appendText(scoringPath, csvHeader(SCORING_COLUMNS));
-  await flushStaged(ledgerPath, scoringDir, io);
+  const missingBefore = await flushStaged(ledgerPath, scoringDir, io);
   // 한 채점 폴더의 그림은 한 형식이어야 한다. 확장자로 모델이 갈리지 않게. 장부의 성공 줄로 정한다.
   const firstFile = calls.find((row) => row.status === "succeeded" && row.file)?.file;
   let folderKind: ImageKind | null = firstFile
@@ -241,10 +277,21 @@ async function runLocked(
     .filter(([, status]) => status === "calling")
     .map(([id]) => id);
   const counts = countCalls(calls);
-  const result: TrialResult = { called: 0, skipped: 0, interrupted, capped: {} };
+  const result: TrialResult = {
+    called: 0,
+    skipped: 0,
+    interrupted,
+    missing: [],
+    stopped: false,
+    capped: {},
+  };
 
   try {
     for (const request of shuffled(requests, () => io.random())) {
+      if (shouldStop?.()) {
+        result.stopped = true;
+        break;
+      }
       if (lastStatus.has(request.id)) {
         result.skipped += 1;
         continue;
@@ -272,7 +319,8 @@ async function runLocked(
         attempt: String(request.attempt),
       };
       // 부르기 전에 남긴다. 도중에 죽으면 이 줄만 남고, 다시 돌려도 그 요청은 부르지 않으며 상한에 센다.
-      await io.appendText(
+      await appendLine(
+        io,
         ledgerPath,
         csvLine(CALL_COLUMNS, {
           ...base,
@@ -287,7 +335,8 @@ async function runLocked(
       );
       const { status, reason, cost } = statusOf(outcome);
       const record = (extra: CsvRow) =>
-        io.appendText(
+        appendLine(
+          io,
           ledgerPath,
           csvLine(CALL_COLUMNS, {
             ...base,
@@ -319,12 +368,15 @@ async function runLocked(
         throw error;
       }
       const file = `${io.randomName()}.${clean.kind === "jpeg" ? "jpg" : "png"}`;
-      // 장부 결과 줄(파일 이름 포함)을 먼저 쓰고 대기 폴더에 그림을 둔다. 채점 폴더로는 끝날 때 섞어 옮긴다.
-      await record({ file });
+      // 대기 폴더에 그림을 먼저 쓰고 장부 결과 줄을 쓴다. 그 사이에 죽으면 calling 만 남아 「끊긴 호출」 로 알려진다.
+      // 채점 폴더로는 끝날 때 섞어 옮긴다.
       await io.writeFile(`${ledgerPath}.staging/${file}`, clean.bytes);
+      await record({ file });
     }
   } finally {
-    await flushStaged(ledgerPath, scoringDir, io);
+    // 처음과 끝 두 번 옮기므로 같은 그림이 두 번 나올 수 있다. 한 번만 알린다.
+    const missingAfter = await flushStaged(ledgerPath, scoringDir, io);
+    result.missing = [...new Set([...missingBefore, ...missingAfter])];
   }
   return result;
 }

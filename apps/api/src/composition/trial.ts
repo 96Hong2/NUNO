@@ -6,14 +6,15 @@
 import { randomUUID } from "node:crypto";
 import {
   appendFile,
+  copyFile,
   mkdir,
   open,
   readdir,
   readFile,
-  rename,
   rm,
   utimes,
   writeFile,
+  stat,
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createFakeProvider } from "../adapters/fake-provider.ts";
@@ -37,12 +38,25 @@ const io: TrialIo = {
   },
   moveFile: async (from, to) => {
     await mkdir(dirname(to), { recursive: true });
-    const moved = await rename(from, to).then(
+    try {
+      // rename 대신 새로 복사한다. inode 가 섞인 차례로 새로 생겨 호출 차례가 드러나지 않는다.
+      await copyFile(from, to);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+      throw error;
+    }
+    await utimes(to, FIXED_TIME, FIXED_TIME);
+    await rm(from);
+    return true;
+  },
+  exists: (path) =>
+    stat(path).then(
       () => true,
       () => false,
-    );
-    if (moved) await utimes(to, FIXED_TIME, FIXED_TIME);
-    return moved;
+    ),
+  writeText: async (path, text) => {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, text);
   },
   appendText: async (path, text) => {
     await mkdir(dirname(path), { recursive: true });
@@ -79,17 +93,40 @@ if (command === "run") {
   }
   const requests = JSON.parse(await readFile(planPath as string, "utf8")) as TrialRequest[];
   const fake = createFakeProvider("succeed");
+  // 첫 Ctrl-C 는 지금 호출을 마치고 끝낸다(그림 옮기기와 잠금 풀기를 돈다). 두 번째는 바로 끝낸다.
+  let stopRequested = false;
+  process.on("SIGINT", () => {
+    if (stopRequested) process.exit(130);
+    stopRequested = true;
+    console.error(
+      "멈춤 요청: 지금 호출을 마치고 그림을 채점 폴더로 옮긴 뒤 끝낸다. 바로 끝내려면 한 번 더 누른다",
+    );
+  });
   const result = await runTrial(
     requests,
     { seedream: fake, sunburst: fake, flare: fake },
-    { ledgerPath: ledgerPath as string, scoringDir: scoringDir as string },
+    {
+      ledgerPath: ledgerPath as string,
+      scoringDir: scoringDir as string,
+      shouldStop: () => stopRequested,
+    },
     io,
   );
   console.log(`이번에 ${result.called}건을 불렀고, 이미 부른 ${result.skipped}건은 건너뛰었다`);
   if (result.interrupted.length > 0) {
     console.error(
-      `결과 없이 끊긴 호출 ${result.interrupted.length}건(다시 부르지 않음): ${result.interrupted.join(", ")}`,
+      `결과 없이 끊긴 호출 ${result.interrupted.length}건(다시 부르지 않음, 콘솔 청구액 확인): ${result.interrupted.join(", ")}`,
     );
+  }
+  if (result.missing.length > 0) {
+    console.error(
+      `장부에는 성공인데 그림을 찾지 못했다 ${result.missing.length}건: ${result.missing.join(", ")}`,
+    );
+    process.exitCode = 1;
+  }
+  if (result.stopped) {
+    console.error("멈춤 요청으로 끝냈다. 같은 명령을 다시 돌리면 남은 요청을 이어 부른다");
+    process.exit(130);
   }
   const capped = Object.entries(result.capped);
   if (capped.length > 0) {
