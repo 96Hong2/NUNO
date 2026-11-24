@@ -113,7 +113,7 @@ export default function GenerateJobScreen() {
 
   const back = () => (router.canGoBack() ? router.back() : router.replace("/fitting/coordi"));
   const toStage = () => {
-    router.dismissAll();
+    if (router.canDismiss()) router.dismissAll();
     router.navigate("/fitting/coordi");
   };
 

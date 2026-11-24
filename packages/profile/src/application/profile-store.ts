@@ -9,7 +9,7 @@ import {
 
 /**
  * profile 표를 만드는 옮기기 단계. 판 번호는 앱 composition 의 판 순서가 붙인다.
- * 첫 판에서 T2 가 쓸 칸을 모두 만든다. 칸을 나중에 더하면 판이 늘어난다.
+ * 첫 판에서 프로필 화면이 쓸 칸을 모두 만든다. 칸을 나중에 더하면 판이 늘어난다.
  */
 export const createProfileTable: Omit<Migration, "version"> = {
   name: "create-profile",

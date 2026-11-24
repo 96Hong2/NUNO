@@ -60,7 +60,7 @@ export default function LookScreen() {
     void wearSamples(keys).then(() => {
       setSheet(false);
       setPicked([]);
-      router.dismissAll();
+      if (router.canDismiss()) router.dismissAll();
       router.navigate("/fitting/coordi");
       toast.show(message);
     });
@@ -86,7 +86,7 @@ export default function LookScreen() {
           label: "옷장에서 보기",
           onPress: () => {
             setSheet(false);
-            router.dismissAll();
+            if (router.canDismiss()) router.dismissAll();
             router.navigate({ pathname: "/fitting/closet", params: { closet: "wanted" } });
           },
         },

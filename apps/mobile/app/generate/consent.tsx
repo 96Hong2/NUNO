@@ -70,7 +70,7 @@ export default function ConsentScreen() {
       toast.show("동의했어요");
       back();
     } else if (result === "agreed") {
-      router.dismissAll();
+      if (router.canDismiss()) router.dismissAll();
       router.navigate({ pathname: "/fitting/coordi", params: { make: "1" } });
     } else if (result === "outdated") {
       toast.show("앱을 업데이트해 주세요");

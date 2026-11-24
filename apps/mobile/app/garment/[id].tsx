@@ -185,7 +185,7 @@ export default function GarmentDetailScreen() {
               role="button"
               onPress={() =>
                 void wearGarment(garment.id).then(() => {
-                  router.dismissAll();
+                  if (router.canDismiss()) router.dismissAll();
                   router.navigate("/fitting/coordi");
                 })
               }

@@ -265,7 +265,7 @@ export default function LookbookBookScreen() {
         return;
       }
       setSheet(null);
-      router.dismissAll();
+      if (router.canDismiss()) router.dismissAll();
       router.navigate("/fitting/coordi");
       toast.show(message(count));
     } catch {
@@ -309,7 +309,7 @@ export default function LookbookBookScreen() {
           label: "옷장에서 보기",
           onPress: () => {
             setSheet(null);
-            router.dismissAll();
+            if (router.canDismiss()) router.dismissAll();
             router.navigate({ pathname: "/fitting/closet", params: { closet: "wanted" } });
           },
         },
@@ -322,7 +322,7 @@ export default function LookbookBookScreen() {
   };
 
   const toShelf = () => {
-    router.dismissAll();
+    if (router.canDismiss()) router.dismissAll();
     router.navigate("/fitting/lookbook");
   };
 

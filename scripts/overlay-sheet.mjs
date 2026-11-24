@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// `pnpm overlay:sheet`: 겹쳐 보기 20장 시험(plan_T4 D16)에 쓸 무대 사진을 만든다.
+// `pnpm overlay:sheet`: 평가자에게 보일 겹쳐 보기 20장에 쓸 무대 사진을 만든다.
 // 웹 견본 옷 10벌을 옷 넣기 네 단계로 넣고, 하린과 세린에게 한 벌씩 입혀 무대를 찍는다(10벌 x 2트윈).
 // 개발 서버(`pnpm web`)가 떠 있어야 한다. 주소는 OVERLAY_URL(기본 http://localhost:8090).
 // 결과: docs/plans/evidence/T4/overlay-20/<번호>-<트윈>-<견본 파일>.jpg. 평가자 판정은 사람이 한다.
@@ -12,7 +12,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.env.OVERLAY_URL ?? "http://localhost:8090";
 const FIXTURES = join(root, "e2e/fixtures/garments");
 const OUT = join(root, "docs/plans/evidence/T4/overlay-20");
-/** 견본 파일과 3/4 에서 고를 종류. 액세서리는 두르는 자리 값이 없어 무대에 그리지 않는다(plan_T4 결정 2). */
+/** 견본 파일과 3/4 에서 고를 종류. 액세서리는 두르는 자리 값이 없어 무대에 그리지 않는다. */
 const GARMENTS = [
   ["beads-beanie.jpg", "액세서리"],
   ["highneck-knit.jpg", "상의"],
