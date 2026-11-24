@@ -1,5 +1,13 @@
+import { nextOnboardingStep } from "@nuno/profile";
 import { Redirect } from "expo-router";
+import { useProfile } from "../src/ui/profile-gate";
+
+const FIRST_ROUTE = {
+  birthDate: "/onboarding/birthDate",
+  done: "/home",
+} as const;
 
 export default function Index() {
-  return <Redirect href="/home" />;
+  const { profile } = useProfile();
+  return <Redirect href={FIRST_ROUTE[nextOnboardingStep(profile)]} />;
 }

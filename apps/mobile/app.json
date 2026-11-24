@@ -17,7 +17,8 @@
             "Cross-Origin-Opener-Policy": "same-origin"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false

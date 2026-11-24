@@ -1,3 +1,4 @@
+import { readProfile } from "@nuno/profile";
 import { systemClock } from "../adapters/system-clock";
 import { getDeviceDb } from "./device-db";
 
@@ -17,14 +18,24 @@ export interface TableRowCount {
   rows: number;
 }
 
+/** 「저장소 보기」 의 「저장한 값」 한 줄. 값이 없으면 null. */
+export interface SavedValue {
+  label: string;
+  value: string | null;
+}
+
 export interface DevStorageSnapshot {
   adapterName: string;
+  schemaVersion: number;
+  saved: SavedValue[];
   probes: DevProbeRow[];
   tables: TableRowCount[];
 }
 
 export async function readDevStorage(): Promise<DevStorageSnapshot> {
-  const { adapterName, db } = await getDeviceDb();
+  const { adapterName, db, schemaVersion } = await getDeviceDb();
+  const profile = await readProfile(db);
+  const saved: SavedValue[] = [{ label: "생년월일", value: profile.birthDate }];
   const tables = await db.all<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
   );
@@ -37,7 +48,7 @@ export async function readDevStorage(): Promise<DevStorageSnapshot> {
   const probes = hasProbe
     ? await db.all<DevProbeRow>("SELECT key, value, written_at FROM dev_probe ORDER BY written_at")
     : [];
-  return { adapterName, probes, tables: counts };
+  return { adapterName, schemaVersion, saved, probes, tables: counts };
 }
 
 /** 「시험 값 쓰기」: dev_probe 에 지금 시각을 키로 한 줄을 쓴다. */

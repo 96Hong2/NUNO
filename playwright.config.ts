@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { ONBOARDED_STATE } from "./e2e/storage-state";
 
 // 개발 서버(pnpm web, 8090)와 다른 포트에 이 체크아웃의 서버를 따로 띄운다.
 // 떠 있는 서버를 다시 쓰면 다른 작업 트리의 코드를 시험할 수 있다. worktree 둘이 함께 돌면 포트를 바꾼다.
@@ -20,7 +21,20 @@ export default defineConfig({
     baseURL: WEB_URL,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // setup 이 온보딩을 마친 기기 저장소를 만들고, chromium 의 시험은 그 상태로 열린다.
+  // 빈 저장소가 필요한 시험은 그 파일에서 storageState 를 비운다.
+  projects: [
+    {
+      name: "setup",
+      testMatch: "**/onboarding.setup.ts",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "chromium",
+      dependencies: ["setup"],
+      use: { ...devices["Desktop Chrome"], storageState: ONBOARDED_STATE },
+    },
+  ],
   webServer: {
     command: `pnpm --filter mobile exec expo start --port ${PORT}`,
     url: WEB_URL,

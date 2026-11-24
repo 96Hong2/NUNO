@@ -52,6 +52,18 @@ function DevStorage() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.row}>어댑터: {snapshot?.adapterName ?? "여는 중"}</Text>
+      <Text style={styles.row}>판 번호: {snapshot?.schemaVersion ?? "여는 중"}</Text>
+
+      <Text role="heading" aria-level={2} style={styles.heading}>
+        저장한 값
+      </Text>
+      <View aria-label="저장한 값" style={styles.section}>
+        {snapshot?.saved.map((item) => (
+          <Text key={item.label} style={styles.row}>
+            {item.label}: {item.value ?? "없음"}
+          </Text>
+        ))}
+      </View>
 
       <View style={styles.actions}>
         <Pressable role="button" style={styles.button} onPress={() => void write()}>
