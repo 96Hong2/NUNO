@@ -248,3 +248,31 @@ PR 은 차례로 쌓는다. 앞 PR 이 머지되기 전이면 다음 브랜치�
 - 로드맵 v4 의 새 DoD 6줄을 저장소에 옮길지.
 - 서버 업무 코드를 `packages/gold`, `packages/account` 대신 `apps/api/src/<컨텍스트>/` 에 두는 것(ADR 0002)을 받을지.
 - PR E(환경이 오면): 푸시 권한 묻기, Expo 푸시 어댑터, Apple 단추, R2 어댑터, 올리기와 입력 검사, 실기기 D16.
+
+## DoD 판정 (2026-11-25, Expo 웹 390x844, 개발 API 와 worker, 앱 브라우저 창에서 사용자처럼 누름)
+
+증거 폴더는 `docs/plans/evidence/T7/` 다. 명령 판정은 그 폴더의 `commands.md` 다.
+
+| DoD | 판정 | 증거 |
+| --- | --- | --- |
+| D1 | 통과 | `d01-join-sheet.jpg`, `d01-closed-stage-kept.jpg`. 닫은 뒤 무대 옷 그대로 |
+| D2 | 통과 | 가입 뒤 사용자 3행, 로그아웃과 재가입 뒤에도 3행. 그 사용자 세션 2개 중 1개 철회 |
+| D3 | 통과 | `d03-consent-first.jpg`. 가입 직후 「완성 룩 만들기」 시트보다 동의 화면이 먼저 |
+| D4 | 통과 | `consents` 새 행 `text_version` 1, `agreed_at` 채워짐 |
+| D5 | 통과 | `d05-make-sheet-free2.jpg`, `d05-stage-free1.jpg`. 「무료 2장 남음」 → 「무료 1장 남음」 |
+| D6 | 통과 | `d06-making-step2.jpg`. 진행 막대, 「앞모습을 그리고 있어요」, 맨 아래 문장 |
+| D7 | 통과 | `d07-result-ai-badge.jpg`, `d07-saved-toast.jpg` |
+| D8 | 통과 | `d08-leave-sheet.jpg` |
+| D9 | 통과 | `commands.md`. 나가기 전 200, 뒤 404 |
+| D10 | 통과 | `d10-failed-free.jpg`, `d10-my-gold-0.jpg`. 무료 장 1 로 돌아오고 골드 0 그대로 |
+| D11 | 통과 | `d11-gold-confirm.jpg`, `d11-failed-gold.jpg`, `d11-gold-history-refund.jpg`. 잔액 20, 「완성 룩 환불 +4골드」 |
+| D12 | 통과 | `pnpm test:db` 의 `gold.db.test.ts`(같은 요청 ID 동시 10건, 직접 INSERT 42501) |
+| D13 | 통과 | `d13-star-on.jpg`, `d13-fav-only-last.jpg` |
+| D14 | 통과 | `d14-new-book-selected.jpg`, `d14-copied-toast.jpg`, `d14-shelf-two-books.jpg` |
+| D15 | 통과 | `d15-before-pick-grey.jpg`, `d15-move-before-pick-toast.jpg`, `d15-moved-undo-toast.jpg`, 되돌리기 뒤 「전체 1」 과 「「주말 데이트」로 되돌렸어요」 |
+| D16 | 환경 없음 | Xcode, Apple 개발자 계정, APNs 가 없다. 서버 `devices` 와 푸시 포트까지만 만들었다(PR E) |
+| D17 | 일부 | 실행 방식은 따로 도는 worker(설계 결정 7). 시험 1 통과(`commands.md`). 시험 2, 3 은 공급사 키 대기. 시험 4 는 동의 화면과 철회 줄을 그렸고, 받는 옷 수 초과 시트는 결정 D13 대기 |
+| D18 | 통과 | `commands.md`. 운영 설정 개발 전용 주소 셋 모두 404 |
+
+- 그 밖에 본 것: 작업 감시 알림 `watcher-toast.jpg`, 저장 안 한 결과 알약 `unsaved-result-chip.jpg`, 동의 철회 시트 `withdraw-sheet.jpg`.
+- 가짜 공급사는 늘 같은 그림(하린 온보딩 착장)을 돌려준다. 결과 사진이 코디와 달라 보이는 것은 그 때문이다.
