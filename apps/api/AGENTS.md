@@ -11,6 +11,7 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 | `pnpm --filter api migrate` | `DATABASE_ADMIN_URL`(관리자) 로 판을 옮긴다. API 는 켜질 때 판을 옮기지 않는다 |
 | `pnpm --filter api trial run <요청 목록.json> <호출 장부.csv> <채점 폴더> --provider fake` | 반증 실험 호출. 모델별 상한(`MODEL_CALL_CAPS`)에 닿으면 멈추고 종료 코드 2. `check`, `report` 는 plan_T6 참고 |
 | `pnpm --filter api start` | `DATABASE_URL`(nuno_api) 로 서버를 띄운다. 포트는 `PORT`, 없으면 8787 |
+| `pnpm api:dev` (루트) | 로컬 DB `nuno_dev` 에 판을 옮기고 개발 전용 주소를 켠 서버를 8787 에 띄운다. e2e 는 같은 스크립트가 `nuno_e2e` 로 띄운다 |
 
 ## 규칙
 
@@ -23,3 +24,21 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 - 공급사 시한(150초) 같은 시간은 vitest 가짜 타이머로 넘긴다. 이것은 목 금지(시험 규칙)에 걸리지 않는다.
 - 의존성은 `pnpm --filter api add --save-exact <이름>@<판>` 으로, 나온 지 두 주 넘은 판을 들인다.
 - DB 주소, 비밀번호, 공급사 키는 환경 변수로만 받는다. 로컬 값(docker-compose.yml, scripts/test-db.mjs) 말고는 저장소에 두지 않는다.
+- 서버 업무 코드는 `src/<컨텍스트>/` 에 둔다(`account`, `gold` 등, ADR 0002). 바깥 네트워크와 `pg` 는 `src/adapters/` 에서만 부른다.
+
+## 로그인과 세션
+
+- 세션 토큰은 32바이트 난수(base64url)이고 DB 에는 SHA-256 만 둔다. 만료는 `SESSION_DAYS`.
+- 요청은 `Authorization: Bearer <토큰>` 이다. 사용자 ID 는 `requireUser` 가 세션에서만 붙이고, 요청 본문에서 받지 않는다.
+- 동의 문구 판은 `CONSENT_TEXT_VERSION` 이다. 앱이 보낸 판이 다르면 409 `consent_text_outdated`.
+- 개발 전용 주소는 `/v1/dev` 아래에만 두고 `NUNO_DEV_ROUTES=1` 일 때만 단다. 값이 없으면 그 주소는 404 다.
+- `POST /v1/dev/login` 의 신원 provider 는 코드 상수 `dev` 다. 요청에서 받지 않는다.
+
+## 환경 변수
+
+| 이름 | 쓰임 |
+| --- | --- |
+| `DATABASE_URL`, `PORT` | nuno_api 접속 주소, 서버 포트 |
+| `NUNO_DEV_ROUTES` | `1` 이면 개발 전용 주소를 단다. 운영에서는 넣지 않는다 |
+| `NUNO_WEB_ORIGINS` | CORS 로 받을 웹 출처(쉼표 목록). 없으면 CORS 머리글을 내지 않는다 |
+| `APPLE_BUNDLE_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_TOKEN_ENC_KEY` | Apple 로그인. 하나라도 없으면 `/v1/auth/apple` 이 503 `apple_not_configured` |

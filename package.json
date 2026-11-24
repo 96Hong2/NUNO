@@ -27,6 +27,7 @@
     "e2e": "playwright test",
     "test:db": "node scripts/test-db.mjs",
     "db:local": "node scripts/test-db.mjs --local",
+    "api:dev": "node scripts/e2e-api.mjs --dev",
     "overlay:sheet": "node scripts/overlay-sheet.mjs"
   },
   "devDependencies": {

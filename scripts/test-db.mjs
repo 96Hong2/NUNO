@@ -73,7 +73,12 @@ const maxVersion = (service) =>
 function dbTests(service) {
   run("pnpm", ["exec", "vitest", "run", "-c", "vitest.db.config.ts"], {
     stdio: "inherit",
-    env: { ...process.env, TEST_DATABASE_API_URL: url(`nuno_api:${API_PASSWORD}`, service) },
+    env: {
+      ...process.env,
+      TEST_DATABASE_API_URL: url(`nuno_api:${API_PASSWORD}`, service),
+      // 시험이 행 수를 세고, 스위치와 공급사 줄을 넣었다 되돌릴 때 쓰는 관리자 주소.
+      TEST_DATABASE_ADMIN_URL: url(ADMIN, service),
+    },
   });
 }
 

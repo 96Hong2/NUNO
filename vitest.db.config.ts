@@ -4,5 +4,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["apps/*/src/**/*.db.test.ts"],
+    // 시험 파일들이 같은 DB 의 스위치와 공급사 줄을 바꾼다. 파일을 하나씩 돈다.
+    fileParallelism: false,
   },
 });
