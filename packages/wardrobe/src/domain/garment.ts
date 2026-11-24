@@ -95,15 +95,21 @@ export function cleanMeasurementText(text: string): string {
 }
 
 /**
- * 상품 링크 칸 값을 열 수 있는 주소로 바꾼다. 스킴이 없으면 https 를 붙이고, http 와 https 가 아니면 받지 않는다.
- * 비었거나 받을 수 없으면 null.
+ * 상품 링크 칸 값을 열 수 있는 주소로 바꾼다. 쇼핑앱 공유 문구처럼 앞뒤에 글이 붙어 있으면 그 안의 첫 주소를 쓴다.
+ * 스킴이 없으면 https 를 붙이고, http 와 https 가 아니면 받지 않는다. 비었거나 받을 수 없으면 null.
  */
 export function normalizeLinkUrl(text: string): string | null {
   const trimmed = text.trim();
   if (trimmed === "") return null;
-  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  if (!/^https?:\/\/[^\s/]+\.[^\s]+$/i.test(withScheme)) return null;
-  return withScheme;
+  const found = /https?:\/\/\S+/i.exec(trimmed)?.[0];
+  if (found) return found;
+  if (
+    /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ||
+    /^(javascript|data|mailto|tel|file):/i.test(trimmed)
+  )
+    return null;
+  const candidate = trimmed.split(/\s+/)[0] ?? "";
+  return /^[^\s/:]+\.[a-z]{2,}(:\d+)?([/?#]\S*)?$/i.test(candidate) ? `https://${candidate}` : null;
 }
 
 /** 「상품 보기」 옆에 붙이는 판매처 주소(예: monowhale.kr) */

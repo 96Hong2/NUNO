@@ -78,5 +78,9 @@ describe("상품 링크", () => {
     expect(normalizeLinkUrl("http://a.kr")).toBe("http://a.kr");
     expect(normalizeLinkUrl("javascript:alert(1)")).toBeNull();
     expect(normalizeLinkUrl("  ")).toBeNull();
+    expect(normalizeLinkUrl("무신사 스토어 https://www.musinsa.com/products/123")).toBe(
+      "https://www.musinsa.com/products/123",
+    );
+    expect(normalizeLinkUrl("monowhale.kr:8080/item/7")).toBe("https://monowhale.kr:8080/item/7");
   });
 });

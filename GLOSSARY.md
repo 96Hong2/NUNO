@@ -72,9 +72,32 @@
 | 즐겨찾기 | `isFavorite` | 칸마다 따로 집계한다 |
 | 「사진 찍기」, 「앨범에서 고르기」 | `camera`, `album` | 옷을 넣은 길. `garment_sources.method` 값 |
 | 누끼 | `cutout` | 배경을 지우고 옷만 따낸 그림 |
-| 마스크 | `mask` | 누끼에서 남길 자리를 적은 그림 |
+| 마스크 | `mask` | 누끼에서 남길 자리를 적은 그림. 아이폰 누끼를 붙일 때 쓴다. 웹은 따로 저장하지 않는다 |
+| 붓 자국 | `strokes` | 「지우기」 `erase`, 「되살리기」 `restore`, 「붓으로 가리기」 `cover` 자국. 「다음」 에서 그림에 굽는다 |
+| 누끼를 만든 곳 | `cutoutSource` | `vision`(아이폰), `fixture`(웹 견본), `simple`(웹 귀퉁이 색), `none`(못 지움) |
+| 종류 | `GarmentCategory` | 아우터 `outer`, 상의 `top`, 하의 `bottom`, 신발 `shoes`, 가방 `bag`, 액세서리 `acc` |
+| 색 칩 | `GarmentColor` | 블랙, 화이트, 그레이, 베이지, 브라운, 네이비, 레드, 그린 |
+| 색 미리 고르기 | `pickGarmentColor` | 누끼에서 가장 넓게 칠해진 색 칩을 3 / 4 에 골라 둔다 |
+| 기준 상자 | `referenceBox` | 트윈 몸 점으로 잡은, 종류별로 옷을 맞출 네모 |
+| 얼굴 판정 | `faceStillVisible` | 자른 네모 안에 가리지 않은 얼굴이 보이는지 |
+| 옷 그림 포트 | `GarmentMedia` | 누끼 만들기, 손본 값 굽기, 그림 저장. 웹과 아이폰 어댑터가 따로 있다 |
 | 배치 | `placement` | 기준 상자 대비 옷의 위치와 크기 비율 |
 | 견본 옷 | `sampleGarment` | 설치 파일에 든 옷. 키는 `sampleGarmentKey` |
+| 「옷 추가」 | `AddGarmentSheet` | 옷장 머리글, 점선 카드, 빈 상태 단추. 「옷을 어떻게 넣을까요?」 시트를 연다 |
+| 「옷을 어떻게 넣을까요?」 | `AddGarmentSheet` | 「사진 찍기」, 「앨범에서 고르기」 시트. 아래 줄에 「내 옷 N벌, 담은 옷 N벌」 |
+| 옷 넣기 네 단계 | `garment/new/*` | 1 / 4 `shoot`, 2 / 4 `cutout`, 3 / 4 `info`, 4 / 4 `fit`. 사람이 든 사진은 `crop` 을 먼저 거친다 |
+| 「옷을 펼쳐 놓고 찍어 주세요」 | `garment/new/shoot` | 1 / 4. 셔터를 누르면 기기 카메라가 열린다 |
+| 「옷만 보이도록 잘라 주세요」 | `garment/new/crop` | 사람이 든 사진. 얼굴이 보이면 넘어가지 못한다. 「붓으로 가리기」 는 `cover` 붓 |
+| 「배경을 지웠어요」, 「배경을 지우지 못했어요」 | `garment/new/cutout` | 2 / 4. 도구 「지우기」 `erase`, 「되살리기」 `restore`, 「자르기」 `crop`, 「돌리기」 `rotation` |
+| 「어떤 옷인가요?」 | `garment/new/info` | 3 / 4. 종류, 색, 계절, 이름, 「이 옷, 가지고 있나요?」, 브랜드와 가격과 링크 |
+| 「트윈에 맞춰 볼게요」, 「치수 고치기」 | `garment/new/fit` | 4 / 4. 크기와 위치(`placement`), 사이즈 표기, 옷 치수. 옷 상세 「고치기」 로 열면 「치수 고치기」 |
+| 「내 옷에 담기」, 「담은 옷에 담기」 | `saveDraft` | 4 / 4 마지막 단추. 「이 옷, 가지고 있나요?」 답에 따라 글자가 바뀐다 |
+| 손보기 초안 | `GarmentDraft` | 사진을 고른 뒤 담기 전까지의 옷. 기기에 저장하지 않는다 |
+| 옷 상세 | `garment/[id]` | 옷 카드를 누르면 열린다. 「가진 옷으로 옮기기」 또는 「내 옷에 있어요」, 「옷 지우기」 |
+| 「여러 벌 옮기기」 | `moveToCloset` | 「담은 옷」 칸에서 여러 벌을 골라 「내 옷」 으로 옮긴다. 「되돌리기」 도 같은 함수 |
+| 「옷 지우기」 | `removeGarment` | 옷 상세에서 확인 시트 「이 옷을 지울까요?」 를 거쳐 기록과 그림을 지운다 |
+| 「옷장에서 보기」 | 없음 | 알림 띠 단추. 그 옷이 든 칸으로 옷장을 연다 |
+| 알림 띠 | `AppToast` | 화면 아래에 잠깐 뜨는 알림. 단추를 붙일 수 있고 화면을 옮겨도 남는다 |
 | 지금 코디 | `currentOutfit` | 트윈이 지금 입은 조합. `outfits.kind = 'current'` |
 | 「내 코디」 | `savedOutfit` | 「내 코디」 칸에 저장한 코디. `outfits.kind = 'saved'` |
 | 「최근 입혀 본 코디」 | `recentOutfit` | 최근에 입혀 본 코디 기록. `outfits.kind = 'recent'` |

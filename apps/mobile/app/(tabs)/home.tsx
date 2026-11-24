@@ -1,16 +1,23 @@
 import { DEFAULT_PRESET_TWIN, presetTwin, type PresetTwinKey } from "@nuno/twin";
-import { Tabs } from "expo-router";
-import { useEffect, useState } from "react";
+import { categoryLabel } from "@nuno/wardrobe";
+import { Tabs, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { completeTour } from "../../src/composition/profile";
 import { loadCurrentTwin, switchTwin } from "../../src/composition/twin";
+import {
+  loadRecentGarments,
+  onClosetChange,
+  type ClosetView,
+} from "../../src/composition/wardrobe";
 import { FirstTour } from "../../src/ui/first-tour";
+import { GarmentCard } from "../../src/ui/garment-card";
 import { useProfile } from "../../src/ui/profile-gate";
-import { Toast, useToast } from "../../src/ui/toast";
+import { useAppToast } from "../../src/ui/app-toast";
 import { TWIN_ASSETS } from "../../src/ui/twin-assets";
 import { TwinSwitchSheet } from "../../src/ui/twin-switch-sheet";
 
-// 홈 시트 두 칸. 옷과 룩은 T3, T5 에서 생기고, 지금은 틀과 빈 상태만 있다.
+// 홈 시트 두 칸. 「최근 넣은 옷」 은 옷장 두 칸을 합쳐 마지막에 넣은 옷부터 12벌을 3열로 보인다. 룩은 T5 에서 생긴다.
 // 칸은 role tab 이 아니라 단추다. 하단 탭 셋만 tab 으로 센다.
 const CELLS = [
   {
@@ -26,11 +33,21 @@ type CellKey = (typeof CELLS)[number]["key"];
 // 홈 무대: 고른 트윈의 기본 코디 완성 사진이 흰 바탕 위에 선다. 꾸민 얼굴과 입힌 옷은 반영하지 않는다.
 export default function HomeScreen() {
   const { profile, refresh } = useProfile();
-  const toast = useToast();
+  const toast = useAppToast();
   const { show } = toast;
   const [twin, setTwin] = useState<PresetTwinKey | null>(null);
   const [switching, setSwitching] = useState(false);
   const [cell, setCell] = useState<CellKey>("recentLooks");
+  const [recent, setRecent] = useState<ClosetView | null>(null);
+  const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      const load = () => void loadRecentGarments().then(setRecent);
+      load();
+      return onClosetChange(load);
+    }, []),
+  );
 
   useEffect(() => {
     loadCurrentTwin().then(setTwin, (caught: unknown) => show(String(caught)));
@@ -103,7 +120,33 @@ export default function HomeScreen() {
               </Pressable>
             ))}
           </View>
-          <Text style={styles.empty}>{current.empty}</Text>
+          {current.key === "recentGarments" && recent && recent.garments.length > 0 ? (
+            <View style={styles.recent}>
+              <View style={styles.recentHead}>
+                <Text style={styles.recentCount}>
+                  내 옷 {recent.counts.mine}벌, 담은 옷 {recent.counts.wanted}벌
+                </Text>
+                <Pressable role="button" onPress={() => router.navigate("/fitting/closet")}>
+                  <Text style={styles.recentLink}>옷장 보기 ›</Text>
+                </Pressable>
+              </View>
+              <View style={styles.recentGrid}>
+                {recent.garments.map((garment) => (
+                  <View key={garment.id} style={styles.recentCell}>
+                    <GarmentCard
+                      name={garment.name}
+                      thumbUri={garment.thumbUri}
+                      subline={categoryLabel(garment.category)}
+                      wanted={garment.closet === "wanted"}
+                      onPress={() => router.push(`/garment/${garment.id}`)}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.empty}>{current.empty}</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -114,7 +157,6 @@ export default function HomeScreen() {
         onClose={() => setSwitching(false)}
       />
       <FirstTour visible={!profile.tourSeen} onDone={() => void finishTour()} />
-      <Toast message={toast.message} />
     </View>
   );
 }
@@ -150,4 +192,10 @@ const styles = StyleSheet.create({
   cellLabel: { fontSize: 15, color: "#888" },
   cellLabelOn: { color: "#111", fontWeight: "600" },
   empty: { fontSize: 14, color: "#777", lineHeight: 20 },
+  recent: { gap: 12 },
+  recentHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  recentCount: { fontSize: 14, color: "#76736C" },
+  recentLink: { fontSize: 14, fontWeight: "700", color: "#151314" },
+  recentGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -5, rowGap: 16 },
+  recentCell: { width: "33.333%", paddingHorizontal: 5 },
 });
