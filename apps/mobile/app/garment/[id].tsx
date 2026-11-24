@@ -14,18 +14,21 @@ import { useAppToast } from "../../src/ui/app-toast";
 import { CHERRY, formatPrice } from "../../src/ui/garment-card";
 import { withObject } from "../../src/ui/korean-particle";
 
-/** 상세 아래 단추 둘(왼쪽 단추, 「상품 보기」) 위로 알림을 띄운다. */
-const DETAIL_TOAST_BOTTOM = 160;
+/** 아래 단추 묶음을 재기 전에 쓰는 알림 높이. 단추 두 줄과 여백을 더한 값이다 */
+const FOOTER_FALLBACK = 150;
 
 // 옷 상세: 옷장 카드를 누르면 탭 위로 덮어 연다.
-// 아래 왼쪽 단추는 옷이 든 칸에 따라 「가진 옷으로 옮기기」(담은 옷)나 「내 옷에 있어요」(내 옷)다.
-// 「트윈에 입혀 보기」 는 코디 무대가 생기는 T4 에서 붙인다.
+// 아래 윗줄 왼쪽 단추는 옷이 든 칸에 따라 「가진 옷으로 옮기기」(담은 옷)나 「내 옷에 있어요」(내 옷)다.
+// 내 옷 칸 옷이면 그 오른쪽 「트윈에 입혀 보기」 로 지금 코디에 입히고 코디 화면을 연다. 「상품 보기」 는 아랫줄이다.
 export default function GarmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useAppToast();
   const [garment, setGarment] = useState<GarmentDetail | null | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(FOOTER_FALLBACK);
+  // 알림은 아래 단추 묶음 바로 위에 띄워 단추를 가리지 않는다.
+  const overFooter = { bottom: footerHeight + 8 };
 
   const reload = useCallback(async () => {
     setGarment(await loadGarment(id));
@@ -67,7 +70,7 @@ export default function GarmentDetailScreen() {
             router.navigate({ pathname: "/fitting/closet", params: { closet: "mine" } }),
         },
       ],
-      { bottom: DETAIL_TOAST_BOTTOM },
+      overFooter,
     );
   };
 
@@ -97,7 +100,7 @@ export default function GarmentDetailScreen() {
           <Text style={styles.back}>‹</Text>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={{ paddingBottom: footerHeight + 24 }}>
         <View style={styles.photo}>
           <Image source={{ uri: garment.cutoutUri }} resizeMode="contain" style={styles.image} />
         </View>
@@ -159,34 +162,39 @@ export default function GarmentDetailScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        {garment.closet === "mine" ? (
-          <Pressable
-            role="button"
-            onPress={() =>
-              void wearGarment(garment.id).then(() => {
-                router.dismissAll();
-                router.navigate("/fitting/coordi");
-              })
-            }
-            style={styles.wear}
-          >
-            <Text style={styles.wearLabel}>트윈에 입혀 보기</Text>
-          </Pressable>
-        ) : null}
-        {garment.closet === "mine" ? (
-          <Pressable
-            role="button"
-            onPress={() => toast.show("이미 내 옷에 있어요", [], { bottom: DETAIL_TOAST_BOTTOM })}
-            style={StyleSheet.flatten([styles.left, styles.leftDone])}
-          >
-            <Text style={[styles.leftLabel, styles.leftLabelDone]}>내 옷에 있어요</Text>
-          </Pressable>
-        ) : (
-          <Pressable role="button" onPress={() => void moveToMine()} style={styles.left}>
-            <Text style={styles.leftLabel}>가진 옷으로 옮기기</Text>
-          </Pressable>
-        )}
+      <View
+        style={styles.footer}
+        onLayout={(event) => setFooterHeight(Math.round(event.nativeEvent.layout.height))}
+      >
+        <View style={styles.footerRow}>
+          {garment.closet === "mine" ? (
+            <Pressable
+              role="button"
+              onPress={() => toast.show("이미 내 옷에 있어요", [], overFooter)}
+              style={StyleSheet.flatten([styles.left, styles.leftDone])}
+            >
+              <Text style={[styles.leftLabel, styles.leftLabelDone]}>내 옷에 있어요</Text>
+            </Pressable>
+          ) : (
+            <Pressable role="button" onPress={() => void moveToMine()} style={styles.left}>
+              <Text style={styles.leftLabel}>가진 옷으로 옮기기</Text>
+            </Pressable>
+          )}
+          {garment.closet === "mine" ? (
+            <Pressable
+              role="button"
+              onPress={() =>
+                void wearGarment(garment.id).then(() => {
+                  router.dismissAll();
+                  router.navigate("/fitting/coordi");
+                })
+              }
+              style={styles.wear}
+            >
+              <Text style={styles.wearLabel}>트윈에 입혀 보기</Text>
+            </Pressable>
+          ) : null}
+        </View>
         {garment.linkUrl ? (
           <Pressable
             role="button"
@@ -234,7 +242,6 @@ const styles = StyleSheet.create({
   link: { fontSize: 15, fontWeight: "700", color: "#151314" },
   top: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   back: { fontSize: 28, lineHeight: 30, color: "#151314" },
-  body: { paddingBottom: 220 },
   photo: { aspectRatio: 1, backgroundColor: "#F2F1EF", padding: 24 },
   image: { width: "100%", height: "100%" },
   info: { padding: 20, gap: 10 },
@@ -260,10 +267,33 @@ const styles = StyleSheet.create({
   fitNote: { fontSize: 13, color: "#76736C" },
   delete: { alignSelf: "flex-start", paddingVertical: 10 },
   deleteLabel: { fontSize: 14, color: "#76736C", textDecorationLine: "underline" },
-  footer: { position: "absolute", left: 20, right: 20, bottom: 20, gap: 10 },
-  wear: { alignItems: "center", paddingVertical: 14, borderRadius: 12, backgroundColor: "#151314" },
-  wearLabel: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  left: { alignItems: "center", paddingVertical: 16, borderRadius: 14, backgroundColor: "#151314" },
+  // 화면 바탕을 깔아 뒤의 글자가 단추 사이로 비치지 않게 한다.
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#FCFCFC",
+  },
+  footerRow: { flexDirection: "row", gap: 8 },
+  wear: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: "#151314",
+  },
+  wearLabel: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  left: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: "#151314",
+  },
   leftDone: { backgroundColor: "#F2F1EF" },
   leftLabel: { fontSize: 16, fontWeight: "700", color: "#fff" },
   leftLabelDone: { color: "#151314" },
