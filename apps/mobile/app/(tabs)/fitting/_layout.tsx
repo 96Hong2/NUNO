@@ -1,4 +1,4 @@
-import { Link, Slot, usePathname } from "expo-router";
+import { Link, Slot, Tabs, usePathname, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 // 피팅룸 위쪽 네 칸. 경로는 GLOSSARY.md 의 fitting/* 이름이다.
@@ -13,8 +13,27 @@ const CELLS = [
 
 export default function FittingLayout() {
   const pathname = usePathname();
+  const router = useRouter();
+  const inCloset = pathname.startsWith("/fitting/closet");
   return (
     <View style={styles.container}>
+      {/* 옷장 칸에서만 머리글 오른쪽에 「+ 옷 추가」 를 둔다. 누르면 옷장의 「옷을 어떻게 넣을까요?」 시트가 열린다. */}
+      <Tabs.Screen
+        options={{
+          headerRight: inCloset
+            ? () => (
+                <Pressable
+                  role="button"
+                  aria-label="옷 추가"
+                  onPress={() => router.setParams({ add: "1" })}
+                  style={styles.addButton}
+                >
+                  <Text style={styles.addLabel}>+ 옷 추가</Text>
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <View role="tablist" aria-label="피팅룸 칸" style={styles.cells}>
         {CELLS.map(({ href, label }) => {
           const selected = pathname === href || pathname.startsWith(`${href}/`);
@@ -49,4 +68,12 @@ const styles = StyleSheet.create({
   cellSelected: { borderBottomWidth: 2, borderBottomColor: "#111" },
   cellLabel: { fontSize: 15, color: "#777" },
   cellLabelSelected: { color: "#111", fontWeight: "600" },
+  addButton: {
+    marginRight: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: "#151314",
+  },
+  addLabel: { color: "#fff", fontSize: 14, fontWeight: "700" },
 });

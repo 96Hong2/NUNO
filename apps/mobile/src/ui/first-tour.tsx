@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-// 처음 둘러보기 석 장. T2 에 있는 화면만 안내한다. 피팅룸 코디, 옷장 장은 그 화면을 만드는 Task 에서 더한다.
+// 처음 둘러보기. 있는 화면만 안내한다. 피팅룸 코디 장은 코디 무대를 만드는 T4 에서 더한다.
 const PAGES = [
   { title: "내 트윈이에요", body: "고른 트윈이 기본 코디로 여기에 서요" },
   { title: "트윈 바꾸기", body: "다른 트윈으로 언제든 바꿀 수 있어요" },
+  { title: "내 옷 넣기", body: "옷 사진을 넣으면 배경을 지워 피팅룸 옷장에 담아요" },
   { title: "피팅룸과 마이", body: "아래 탭에서 피팅룸과 마이로 갈 수 있어요" },
 ] as const;
 

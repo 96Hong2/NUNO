@@ -6,7 +6,7 @@ import { pickTwin, skipTwinPick } from "../../src/composition/twin";
 import { withRo } from "../../src/ui/korean-particle";
 import { useProfile } from "../../src/ui/profile-gate";
 import { StepDots } from "../../src/ui/step-dots";
-import { Toast, useToast } from "../../src/ui/toast";
+import { useAppToast } from "../../src/ui/app-toast";
 import { TWIN_ASSETS } from "../../src/ui/twin-assets";
 import { TwinCard } from "../../src/ui/twin-card";
 
@@ -20,7 +20,7 @@ const KINDS: { kind: PresetKind; label: string }[] = [
 export default function TwinPickScreen() {
   const { refresh } = useProfile();
   const router = useRouter();
-  const toast = useToast();
+  const toast = useAppToast();
   const [kind, setKind] = useState<PresetKind>("realistic");
   const [picked, setPicked] = useState<PresetTwinKey | null>(null);
   const [saving, setSaving] = useState(false);
@@ -120,7 +120,6 @@ export default function TwinPickScreen() {
           {picked === null ? "트윈을 골라 주세요" : `${withRo(presetTwin(picked).name)} 시작`}
         </Text>
       </Pressable>
-      <Toast message={toast.message} />
     </View>
   );
 }

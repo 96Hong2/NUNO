@@ -4,13 +4,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { finishStyleStep } from "../../src/composition/profile";
 import { useProfile } from "../../src/ui/profile-gate";
 import { StepDots } from "../../src/ui/step-dots";
-import { Toast, useToast } from "../../src/ui/toast";
+import { useAppToast } from "../../src/ui/app-toast";
 
 // 온보딩 2단계. 「다음」 은 고른 태그를 저장하고, 「나중에 고를게요」 와 「건너뛰기」 는 그냥 끝낸다.
 // 셋 다 온보딩을 끝내며, 프로필을 다시 읽으면 루트의 Stack.Protected 가 홈으로 보낸다.
 export default function StyleScreen() {
   const { refresh } = useProfile();
-  const toast = useToast();
+  const toast = useAppToast();
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -85,7 +85,6 @@ export default function StyleScreen() {
       >
         <Text style={styles.buttonLabel}>다음</Text>
       </Pressable>
-      <Toast message={toast.message} />
     </View>
   );
 }
