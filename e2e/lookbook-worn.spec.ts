@@ -56,6 +56,8 @@ test("무대에 머물러도 「다 된 완성 룩 보기」 가 남고, 알림�
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
   await stripStage(page);
   await coatCard(page).click();
+  // 코트가 무대에 오르기 전에 누르면 「옷을 담으면 만들 수 있어요」 만 뜬다.
+  await expect(page.getByRole("button", { name: `무대의 ${COAT}` })).toBeVisible();
   await stageButton(page).click();
   await page
     .getByRole("dialog", { name: "골드를 쓰려면 가입해요" })
