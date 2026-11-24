@@ -74,13 +74,17 @@ function main() {
     );
   }
   if (result.status !== 0) {
-    // 실패한 단계의 머리줄(맨 마지막 "$ " 줄)부터 앞쪽 20줄. 시험 이름과 단언 줄이 앞에 나온다.
-    const lines = result.stdout.replaceAll(`${root}/`, "").split("\n");
-    const head = lines.findLastIndex((line) => line.startsWith("$ "));
-    const shown = lines
-      .slice(Math.max(head, 0))
-      .filter((line) => line.trim() && !/ELIFECYCLE|ERR_PNPM/.test(line))
-      .slice(0, 20);
+    // 실패한 단계의 머리줄(맨 마지막 "$ " 줄)과 그 뒤 20줄. vitest 는 실패 시험 이름과 단언 줄이
+    // 앞의 × 목록 뒤에 나오므로 「Failed Tests」 나 첫 FAIL 줄부터 보인다.
+    const lines = result.stdout.replaceAll(`${root}/`, "").replaceAll(root, ".").split("\n");
+    const head = Math.max(
+      lines.findLastIndex((line) => line.startsWith("$ ")),
+      0,
+    );
+    const fail = lines.findIndex((line, k) => k > head && /Failed Tests \d|^\s*FAIL\s/.test(line));
+    const shown = [lines[head], ...lines.slice(fail === -1 ? head + 1 : fail)]
+      .filter((line) => line?.trim() && !/ELIFECYCLE|ERR_PNPM/.test(line))
+      .slice(0, 21);
     block(`verify:fast 실패:\n${shown.join("\n")}\n고친 뒤 끝낸다.`);
   }
   mkdirSync(dirname(okFile), { recursive: true });
