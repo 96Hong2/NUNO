@@ -11,20 +11,27 @@ import { garmentMedia } from "../adapters/garment-media";
 import { systemClock } from "../adapters/system-clock";
 import { uuidGenerator } from "../adapters/uuid";
 import { getDeviceDb } from "./device-db";
+import { loadCurrentTwin } from "./twin";
 import { notifyClosetChanged } from "./wardrobe";
 
 // 룩북: 저장한 룩을 읽고, 룩의 입은 옷(견본 옷)을 「담은 옷」 칸에 담는다.
 
 export interface LookbookView {
   looks: Look[];
+  /** 지금 트윈. 「트윈에 입혀 보기」 는 룩을 저장한 트윈이 아니라 지금 트윈에 입힌다 */
+  twinKey: string;
   /** 두 칸 어디든 남아 있는 견본 옷 키(입은 옷 시트 「옷장에 있음」) */
   inCloset: string[];
 }
 
 export async function loadLookbook(): Promise<LookbookView> {
   const { db } = await getDeviceDb();
-  const [looks, inCloset] = await Promise.all([listLooks(db), listClosetSampleKeys(db)]);
-  return { looks, inCloset };
+  const [looks, inCloset, twinKey] = await Promise.all([
+    listLooks(db),
+    listClosetSampleKeys(db),
+    loadCurrentTwin(),
+  ]);
+  return { looks, inCloset, twinKey };
 }
 
 export function newLookId(): string {

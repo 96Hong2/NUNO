@@ -26,6 +26,7 @@ export default function LookScreen() {
   const toast = useAppToast();
   const [looks, setLooks] = useState<Look[] | null>(null);
   const [inCloset, setInCloset] = useState<Set<string>>(new Set());
+  const [twinKey, setTwinKey] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -35,6 +36,7 @@ export default function LookScreen() {
       void loadLookbook().then((view) => {
         setLooks(view.looks);
         setInCloset(new Set(view.inCloset));
+        setTwinKey(view.twinKey);
       }),
     [],
   );
@@ -160,14 +162,14 @@ export default function LookScreen() {
       </ScrollView>
       <View style={styles.bar}>
         <Text style={styles.muted}>
-          트윈 {presetTwin(look.twinKey as PresetTwinKey).name}에게 바로 입혀요
+          대표 트윈 {presetTwin((twinKey ?? look.twinKey) as PresetTwinKey).name}에게 바로 입혀요
         </Text>
         <Pressable
           role="button"
           onPress={() =>
             wear(
               look.items.map((item) => item.sampleKey),
-              "트윈에 입혔어요. 「룩북」 을 누르면 다른 룩을 고를 수 있어요",
+              "트윈에 입혔어요",
             )
           }
           style={styles.primary}

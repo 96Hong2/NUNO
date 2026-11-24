@@ -1,6 +1,6 @@
 import { SAMPLE_GARMENTS, samplePiece, type SampleGarmentKey } from "@nuno/outfit";
 import type { PresetTwinKey } from "@nuno/twin";
-import { useLocalSearchParams } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { newLookId, nowIso, todayLabels } from "../../src/composition/lookbook";
@@ -75,6 +75,9 @@ export default function OnboardingLookScreen() {
       setSaving(false);
     }
   };
+
+  // 새로고침이나 깊은 링크로 옷 두 벌 없이 오면 3단계로 돌려보낸다(빈 「첫 코디」 를 만들지 않게).
+  if (keys.length < 2) return <Redirect href="/onboarding/outfit" />;
 
   return (
     <View style={styles.screen}>

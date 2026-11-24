@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { LookImage, lookCaption, type LookPicture } from "./look-image";
 import { OverlaySheet } from "./overlay-sheet";
@@ -20,10 +20,8 @@ interface LookSaveSheetProps {
  */
 export function LookSaveSheet(props: LookSaveSheetProps) {
   const { visible, look, owner, date, saving } = props;
+  // 시트를 닫았다 다시 열어도 고친 제목을 남긴다.
   const [title, setTitle] = useState("첫 코디");
-  useEffect(() => {
-    if (visible) setTitle("첫 코디");
-  }, [visible]);
   return (
     <OverlaySheet visible={visible} title="룩북 저장" onClose={props.onClose}>
       <View style={styles.receipt}>
