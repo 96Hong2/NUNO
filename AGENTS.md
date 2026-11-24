@@ -8,7 +8,9 @@
 | --- | --- |
 | `pnpm install` | 의존성을 설치한다. Node 판은 `.nvmrc`, pnpm 판은 `packageManager` 를 따른다 |
 | `pnpm verify:fast` | 타입 검사, 린트, 경계 검사, 패키지 모양 검사, 단위 시험, 룰 색인 검사를 차례로 돈다 |
-| `pnpm verify` | CI 필수 검사 `verify` 가 도는 전체 검사. `verify:fast` 뒤에 `e2e` 를 돈다 |
+| `pnpm verify` | CI 필수 검사 `verify` 가 도는 전체 검사. `verify:fast` 뒤에 `test:db`, `e2e` 를 돈다 |
+| `pnpm test:db` | docker compose 로 시험용 Postgres 둘을 띄워 실제 DB 시험을 돌고, 덤프 복원본으로 한 번 더 돈다. Docker 가 켜져 있어야 한다 |
+| `pnpm db:local` | 로컬 개발 DB 를 띄우고 서버 역할과 판을 적용한다 |
 | `pnpm web` | Expo 웹을 http://localhost:8090 에 띄운다. Claude 브라우저 창은 `.claude/launch.json` 의 `mobile-web` |
 | `pnpm e2e` | Playwright 로 Expo 웹을 열어 `e2e/*.spec.ts` 를 돈다 |
 | `pnpm new:context <이름>` | `packages/<이름>` 에 domain, application, 공개 면 틀을 만든다 |
@@ -29,6 +31,7 @@
 | 시계 포트와 한국 날짜 헬퍼, ID 포트(시험용 고정 시계와 순번 ID 포함) | `packages/clock`, `packages/ids` |
 | 기기 저장 판과 옮기기 단계 | 각 컨텍스트가 자기 표의 옮기기 단계를 낸다. 순서는 `apps/mobile/src/composition/migrations.ts` 한 곳(T2-1 에서 만든다) |
 | 앱 화면과 라우트, 기기 SDK 어댑터, composition | `apps/mobile`. 그 폴더 `AGENTS.md` 를 따른다 |
+| API 서버 라우트, 서버 DB 판 옮기기와 역할, 생성 공급사 어댑터 | `apps/api`. 그 폴더 `AGENTS.md` 를 따른다 |
 | 기기 DB 포트와 옮기기 실행기 | `packages/device-db` |
 | 경계 규칙(무엇이 무엇을 import 하나), 앱 기능 SDK 목록 `FEATURE_SDKS` | `.dependency-cruiser.cjs` |
 | 도메인 금지 호출, 시험 린트 | `eslint.config.mjs` |

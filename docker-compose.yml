@@ -1,0 +1,32 @@
+# Postgres 컨테이너. 비밀번호는 이 컨테이너에서만 쓰는 로컬 값이다.
+# 개발 서버와 출시용 DB 주소와 비밀번호는 환경 변수로만 넣고 저장소에 두지 않는다.
+#   postgres:      로컬 개발 DB(nuno). pnpm db:local 이 역할과 판을 적용한다.
+#   test-a, test-b: pnpm test:db 가 프로젝트 이름 nuno-test 로 띄우고 끝나면 지운다.
+#                   test-b 는 역할만 만든 「다른 Postgres」 로, test-a 의 덤프를 넣어 본다.
+x-postgres: &postgres
+  image: postgres:17.12-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: nuno-local
+    POSTGRES_DB: nuno
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres -d nuno"]
+    interval: 2s
+    timeout: 3s
+    retries: 30
+
+services:
+  postgres:
+    <<: *postgres
+    ports:
+      - "127.0.0.1:${NUNO_DB_PORT:-54329}:5432"
+  test-a:
+    <<: *postgres
+    profiles: [test]
+    ports:
+      - "127.0.0.1:${NUNO_TEST_DB_PORT:-54330}:5432"
+  test-b:
+    <<: *postgres
+    profiles: [test]
+    ports:
+      - "127.0.0.1:${NUNO_TEST_RESTORE_PORT:-54331}:5432"
