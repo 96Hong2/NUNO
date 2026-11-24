@@ -13,6 +13,7 @@ expo-env.d.ts
 # 시험 결과
 playwright-report/
 test-results/
+e2e/.auth/
 
 # 기타
 .DS_Store
