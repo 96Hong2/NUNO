@@ -17,7 +17,7 @@ uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r tools
 
 ```bash
 .venv/bin/python tools/twin-landmarks/extract.py --models <모델 폴더> \
-  --out assets-source/twins --check docs/plans/evidence/T2 \
+  --out apps/mobile/assets/twins --check docs/plans/evidence/T2 \
   --twin yuna=assets-source/twins/yuna/base-source.png --twin harin=assets-source/twins/harin/base-source.jpg …
 ```
 
