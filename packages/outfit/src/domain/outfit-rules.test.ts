@@ -113,13 +113,15 @@ describe("오늘 코디", () => {
 
 describe("추천 코디 목록", () => {
   it("추천 코디마다 액세서리가 아닌 종류는 한 벌씩, 액세서리는 셋 이하다", () => {
-    for (const looks of Object.values(RECOMMENDED_LOOKS)) {
-      for (const look of looks) {
+    const broken = Object.values(RECOMMENDED_LOOKS)
+      .flat()
+      .filter((look) => {
         const pieces = look.items.map(samplePiece);
         const main = pieces.filter((p) => p.category !== "acc").map((p) => p.category);
-        expect(new Set(main).size, look.key).toBe(main.length);
-        expect(pieces.filter((p) => p.category === "acc").length, look.key).toBeLessThanOrEqual(3);
-      }
-    }
+        const accessories = pieces.length - main.length;
+        return new Set(main).size !== main.length || accessories > 3;
+      })
+      .map((look) => look.key);
+    expect(broken).toEqual([]);
   });
 });
