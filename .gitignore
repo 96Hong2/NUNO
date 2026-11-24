@@ -15,6 +15,9 @@ playwright-report/
 test-results/
 e2e/.auth/
 
+# 로컬 결과 사진(API 와 worker 의 로컬 디스크 결과 저장)
+apps/api/.local-results/
+
 # 기타
 .DS_Store
 *.log
