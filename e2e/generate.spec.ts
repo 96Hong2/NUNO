@@ -53,6 +53,8 @@ async function wearCoat(page: Page) {
   await page.getByRole("tab", { name: "피팅룸" }).click();
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
   await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
+  // 벗기기가 끝나기 전에 코트를 누르면, 늦게 끝난 벗기기가 방금 입힌 코트까지 벗긴다.
+  await expect(page.getByTestId("stage-piece")).toHaveCount(0);
   await page
     .getByRole("list", { name: "옷 목록" })
     .getByRole("button", { name: COAT, exact: true })
