@@ -3,9 +3,9 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 // 처음 둘러보기 석 장. T2 에 있는 화면만 안내한다. 피팅룸 코디, 옷장 장은 그 화면을 만드는 Task 에서 더한다.
 const PAGES = [
-  { title: "내 트윈이에요", body: "고른 트윈이 오늘 입은 코디로 여기에 서요" },
+  { title: "내 트윈이에요", body: "고른 트윈이 기본 코디로 여기에 서요" },
   { title: "트윈 바꾸기", body: "다른 트윈으로 언제든 바꿀 수 있어요" },
-  { title: "피팅룸과 마이", body: "피팅룸에서 옷을 입혀 보고, 마이에서 내 프로필을 봐요" },
+  { title: "피팅룸과 마이", body: "아래 탭에서 피팅룸과 마이로 갈 수 있어요" },
 ] as const;
 
 /** 끝까지 넘기거나(「시작하기」) 닫으면(「닫기」) onDone 을 부른다. */

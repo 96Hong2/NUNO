@@ -14,11 +14,11 @@ import { TwinSwitchSheet } from "../../src/ui/twin-switch-sheet";
 // 칸은 role tab 이 아니라 단추다. 하단 탭 셋만 tab 으로 센다.
 const CELLS = [
   {
-    key: "looks",
+    key: "recentLooks",
     label: "최근 저장한 룩",
     empty: "피팅룸에서 코디를 입혀 보고 룩북에 저장하면 여기에 보여요.",
   },
-  { key: "clothes", label: "최근 넣은 옷", empty: "옷장에 옷을 넣으면 여기에 먼저 보여요." },
+  { key: "recentGarments", label: "최근 넣은 옷", empty: "옷장에 옷을 넣으면 여기에 먼저 보여요." },
 ] as const;
 
 type CellKey = (typeof CELLS)[number]["key"];
@@ -30,13 +30,17 @@ export default function HomeScreen() {
   const { show } = toast;
   const [twin, setTwin] = useState<PresetTwinKey | null>(null);
   const [switching, setSwitching] = useState(false);
-  const [cell, setCell] = useState<CellKey>("looks");
+  const [cell, setCell] = useState<CellKey>("recentLooks");
 
   useEffect(() => {
     loadCurrentTwin().then(setTwin, (caught: unknown) => show(String(caught)));
   }, [show]);
 
   const pick = async (key: PresetTwinKey) => {
+    if (key === twin) {
+      setSwitching(false);
+      return;
+    }
     await switchTwin(key);
     setTwin(key);
     setSwitching(false);
