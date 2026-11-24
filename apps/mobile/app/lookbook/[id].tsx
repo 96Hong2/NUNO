@@ -1,5 +1,6 @@
 import {
   bookPages,
+  closetSavedMessage,
   putBlockedMessage,
   putSheetRows,
   putSheetState,
@@ -8,43 +9,72 @@ import {
 } from "@nuno/lookbook";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { SAMPLE_GARMENTS, type SampleGarmentKey } from "@nuno/outfit";
+import { categoryLabel } from "@nuno/wardrobe";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   copyLook,
   createLookbook,
+  keepSamplesInCloset,
   loadBook,
+  loadWornRows,
   moveLook,
   setLookFavorite,
   type BookLook,
   type BookView,
+  type WornRow,
 } from "../../src/composition/lookbook";
+import { wearLookItems } from "../../src/composition/outfit";
 import { useAppToast, type ToastAction } from "../../src/ui/app-toast";
 import { AiBadge, BookLookImage } from "../../src/ui/book-look-image";
 import { CHERRY } from "../../src/ui/garment-card";
 import { withRo } from "../../src/ui/korean-particle";
 import { NewLookbookSheet, PutLookSheet } from "../../src/ui/lookbook-sheets";
-
-/** 시트가 열려 있으면 알림을 화면 위쪽에 띄운다. 화면 아래에서 잰 거리는 화면 높이에서 이만큼 뺀 값이다 */
-const TOAST_FROM_TOP = 140;
+import { SAMPLE_GARMENT_IMAGES } from "../../src/ui/sample-assets";
+import { WornItemsSheet, type WornSheetRow } from "../../src/ui/worn-items-sheet";
 /** 끝 쪽에서 더 넘기면 쪽 알약 글자가 바뀌어 있는 시간 */
 const EDGE_MS = 1200;
 
 /** 「「주말 데이트」로」: 조사는 이름 끝 글자로 고르고 낫표 밖에 붙인다 */
 const quotedRo = (title: string) => `「${title}」${withRo(title).slice(title.length)}`;
 
+const GONE_NOTE = "이 휴대폰 「내 옷」에 없어요";
+
+const sheetRowOf = (row: WornRow): WornSheetRow => {
+  const sampleKey = row.sampleKey as SampleGarmentKey | null;
+  return {
+    key: row.key,
+    name: row.name,
+    fullName: sampleKey ? SAMPLE_GARMENTS[sampleKey].name : undefined,
+    categoryLabel: categoryLabel(row.category),
+    image: sampleKey
+      ? SAMPLE_GARMENT_IMAGES[sampleKey]
+      : row.thumbUri
+        ? { uri: row.thumbUri }
+        : null,
+    inCloset: row.inCloset,
+    unavailable: row.gone ? GONE_NOTE : undefined,
+  };
+};
+
+const wornCountOf = (look: BookLook) =>
+  look.kind === "device" ? look.look.items.length : look.look.wornItems.length;
+
 // 룩북 크게 보기: id 는 `all`(「모든 룩」)이나 서버 룩북 ID 다. 룩을 한 장씩 넘겨 보고, 별과 「다른 룩북에 넣기」 를 쓴다.
-// 기기 견본 룩(온보딩 「첫 코디」)은 별과 「다른 룩북에 넣기」 가 없고, 사진을 누르면 기존 룩 크게 보기를 연다.
+// 사진이나 오른쪽 아래 「입은 옷 N」 을 누르면 입은 옷 시트가 열린다. 아래 고정 줄은 「전체 보기」 와 「트윈에 입혀 보기」 다.
+// 기기 견본 룩(온보딩 「첫 코디」)은 별과 「다른 룩북에 넣기」 가 없다.
 export default function LookbookBookScreen() {
   const { id = "all", look: startKey } = useLocalSearchParams<{ id: string; look?: string }>();
   const router = useRouter();
   const toast = useAppToast();
-  const overSheet = { bottom: useWindowDimensions().height - TOAST_FROM_TOP };
   const [view, setView] = useState<BookView | null | "missing">(null);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [currentKey, setCurrentKey] = useState<string | null>(startKey ?? null);
   const [edge, setEdge] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<"put" | "new" | null>(null);
+  const [sheet, setSheet] = useState<"put" | "new" | "worn" | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const [wornRows, setWornRows] = useState<WornRow[]>([]);
+  const [wornPicked, setWornPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const edgeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(edgeTimer.current), []);
@@ -86,8 +116,7 @@ export default function LookbookBookScreen() {
   const pickedRow = rows.find((row) => row.id === picked) ?? null;
   const sheetState = putSheetState(book.id === null ? null : book.title, pickedRow !== null);
 
-  const notify = (message: string, actions?: ToastAction[]) =>
-    toast.show(message, actions, sheet ? overSheet : undefined);
+  const notify = (message: string, actions?: ToastAction[]) => toast.show(message, actions);
 
   /** 지금 룩이 목록에서 빠진 뒤 같은 자리의 룩을 연다 */
   const keepPosition = (next: readonly BookLook[]) =>
@@ -216,7 +245,85 @@ export default function LookbookBookScreen() {
     await reload();
     setPicked(made.id);
     setSheet("put");
-    toast.show(`「${made.title}」 룩북을 만들었어요`, undefined, overSheet);
+    toast.show(`「${made.title}」 룩북을 만들었어요`);
+  };
+
+  const openWorn = async (look: BookLook) => {
+    setWornRows(await loadWornRows(look));
+    setWornPicked([]);
+    setSheet("worn");
+  };
+
+  /** 룩 옷 키의 옷을 지금 코디에 입히고 「코디」 로 간다. 이 휴대폰에서 입힐 옷이 없으면 알리기만 한다 */
+  const wear = async (keys: readonly string[], message: (count: number) => string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const count = await wearLookItems(keys);
+      if (count === 0) {
+        notify("이 휴대폰에서 입힐 수 있는 옷이 없어요");
+        return;
+      }
+      setSheet(null);
+      router.dismissAll();
+      router.navigate("/fitting/coordi");
+      toast.show(message(count));
+    } catch {
+      notify("트윈에 입히지 못했어요. 다시 눌러 주세요");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const wearAll = async (look: BookLook) => {
+    const rows = await loadWornRows(look);
+    await wear(
+      rows.map((row) => row.key),
+      () => "트윈에 입혔어요",
+    );
+  };
+
+  const keepWorn = async () => {
+    if (busy || !current) return;
+    setBusy(true);
+    try {
+      const chosen = wornRows.filter((row) => wornPicked.includes(row.key));
+      const result = await keepSamplesInCloset(
+        chosen.flatMap((row) => {
+          const sampleKey = row.sampleKey as SampleGarmentKey | null;
+          if (!sampleKey) return [];
+          return [
+            {
+              sampleKey,
+              name: row.name,
+              category: row.category,
+              image: SAMPLE_GARMENT_IMAGES[sampleKey],
+            },
+          ];
+        }),
+      );
+      setWornPicked([]);
+      setWornRows(await loadWornRows(current));
+      notify(closetSavedMessage(result.added, chosen.length - result.added), [
+        {
+          label: "옷장에서 보기",
+          onPress: () => {
+            setSheet(null);
+            router.dismissAll();
+            router.navigate({ pathname: "/fitting/closet", params: { closet: "wanted" } });
+          },
+        },
+      ]);
+    } catch {
+      notify("옷장에 담지 못했어요. 다시 눌러 주세요");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toShelf = () => {
+    router.dismissAll();
+    router.navigate("/fitting/lookbook");
   };
 
   return (
@@ -280,12 +387,9 @@ export default function LookbookBookScreen() {
         <ScrollView contentContainerStyle={styles.body}>
           <View style={styles.photo}>
             <Pressable
-              role={current.kind === "device" ? "button" : undefined}
-              aria-label={current.kind === "device" ? `${current.title}, 입은 옷 보기` : undefined}
-              disabled={current.kind !== "device"}
-              onPress={() =>
-                current.kind === "device" ? router.push(`/look/${current.look.id}`) : undefined
-              }
+              role="button"
+              aria-label={`${current.title}, 입은 옷 보기`}
+              onPress={() => void openWorn(current)}
               style={styles.fill}
             >
               <BookLookImage
@@ -340,6 +444,14 @@ export default function LookbookBookScreen() {
             >
               <Text style={styles.arrowIcon}>›</Text>
             </Pressable>
+            <Pressable
+              role="button"
+              aria-label={`입은 옷 ${wornCountOf(current)}벌 보기`}
+              onPress={() => void openWorn(current)}
+              style={styles.wornPill}
+            >
+              <Text style={styles.wornPillLabel}>입은 옷 {wornCountOf(current)}</Text>
+            </Pressable>
           </View>
           <Text style={styles.title}>{current.title}</Text>
           {server ? (
@@ -352,6 +464,32 @@ export default function LookbookBookScreen() {
         </ScrollView>
       )}
 
+      {current ? (
+        <View style={styles.bar}>
+          <Pressable role="button" onPress={toShelf} style={[styles.barButton, styles.barAll]}>
+            <Text style={styles.barAllLabel}>전체 보기</Text>
+          </Pressable>
+          <Pressable
+            role="button"
+            disabled={busy}
+            onPress={() => void wearAll(current)}
+            style={[styles.barButton, styles.barWear]}
+          >
+            <Text style={styles.barWearLabel}>트윈에 입혀 보기</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <WornItemsSheet
+        visible={sheet === "worn" && current !== undefined}
+        rows={wornRows.map(sheetRowOf)}
+        picked={wornPicked}
+        onPick={setWornPicked}
+        onKeep={() => void keepWorn()}
+        onWear={() => void wear(wornPicked, (count) => `${count}벌을 트윈에 입혔어요`)}
+        onNotice={notify}
+        onClose={() => setSheet(null)}
+      />
       <PutLookSheet
         visible={sheet === "put" && server !== null}
         lookTitle={current?.title ?? ""}
@@ -391,7 +529,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: "#151314" },
   chipLabel: { fontSize: 14, fontWeight: "700", color: "#151314" },
   chipLabelOn: { color: "#fff" },
-  body: { paddingHorizontal: 8, paddingBottom: 40, gap: 12 },
+  body: { paddingHorizontal: 8, paddingBottom: 100, gap: 12 },
   photo: { aspectRatio: 3 / 4, overflow: "hidden", borderRadius: 14 },
   fill: { flex: 1 },
   photoTop: { position: "absolute", top: 12, left: 10, flexDirection: "row", gap: 6 },
@@ -436,6 +574,34 @@ const styles = StyleSheet.create({
   arrowRight: { right: 6 },
   arrowFaded: { opacity: 0.45 },
   arrowIcon: { fontSize: 24, lineHeight: 26, color: "#151314" },
+  wornPill: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+  },
+  wornPillLabel: { fontSize: 13, fontWeight: "700", color: "#151314" },
+  bar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E7E6E3",
+    backgroundColor: "#fff",
+  },
+  barButton: { height: 52, alignItems: "center", justifyContent: "center", borderRadius: 12 },
+  barAll: { flex: 1, backgroundColor: "#F7F7F7" },
+  barAllLabel: { fontSize: 15, fontWeight: "700", color: "#151314" },
+  barWear: { flex: 2, backgroundColor: "#151314" },
+  barWearLabel: { fontSize: 16, fontWeight: "700", color: "#fff" },
   title: { paddingHorizontal: 8, fontSize: 18, fontWeight: "800", color: "#151314" },
   actions: { flexDirection: "row", gap: 8, paddingHorizontal: 8 },
   action: {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useToastOverSheet } from "./app-toast";
 
 interface OverlaySheetProps {
   visible: boolean;
@@ -14,7 +15,7 @@ interface OverlaySheetProps {
 
 /**
  * 화면 안에서 아래로부터 올라오는 시트. 뒤는 어둡게 덮고 바깥을 누르면 닫힌다.
- * Modal 을 쓰지 않아 앱 알림 띠가 시트 위에 보인다.
+ * Modal 을 쓰지 않아 앱 알림 띠가 시트 위에 보인다. 열려 있는 동안 알림 띠는 화면 위쪽에 뜬다.
  */
 export function OverlaySheet({
   visible,
@@ -24,6 +25,7 @@ export function OverlaySheet({
   hideClose = false,
   children,
 }: OverlaySheetProps) {
+  useToastOverSheet(visible);
   if (!visible) return null;
   return (
     <View style={styles.layer}>
