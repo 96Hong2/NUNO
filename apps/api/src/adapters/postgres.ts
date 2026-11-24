@@ -2,8 +2,8 @@ import pg from "pg";
 import type { SqlClient } from "../db/sql-client.ts";
 
 /** `pg` 연결 풀로 `SqlClient` 를 만든다. 주소와 비밀번호는 환경 변수로만 받는다. */
-export function openPostgres(connectionString: string): SqlClient {
-  const pool = new pg.Pool({ connectionString, max: 5 });
+export function openPostgres(connectionString: string, max = 5): SqlClient {
+  const pool = new pg.Pool({ connectionString, max });
   const client = (run: pg.Pool | pg.PoolClient): SqlClient => ({
     async query<Row>(text: string, params: readonly unknown[] = []) {
       const result = await run.query(text, [...params]);

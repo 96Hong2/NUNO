@@ -5,6 +5,10 @@ import type { AppleAuth } from "./account/apple.ts";
 import { accountRoutes, devAccountRoutes } from "./account/routes.ts";
 import { schemaVersion } from "./db/migrate.ts";
 import type { SqlClient } from "./db/sql-client.ts";
+import { fileRoutes, type FileRoutesDeps } from "./generation/file-routes.ts";
+import type { ResultStore } from "./generation/ports.ts";
+import { devGenerationRoutes, generationRoutes } from "./generation/routes.ts";
+import { devGoldRoutes, goldRoutes } from "./gold/routes.ts";
 
 interface FeatureSwitchRow {
   key: string;
@@ -23,6 +27,10 @@ export interface AppOptions {
   now?: () => Date;
   /** Apple 설정이 없으면 null 이고 `/v1/auth/apple` 이 503 을 낸다. */
   apple?: AppleAuth | null;
+  /** 결과 사진 저장. 없으면 작업 주소(`/v1/generation-jobs`)를 달지 않는다. */
+  results?: ResultStore | null;
+  /** 로컬 디스크 결과 저장의 서명 주소(`/v1/files`). R2 를 쓰면 비운다. */
+  files?: Omit<FileRoutesDeps, "now"> | null;
 }
 
 /**
@@ -30,7 +38,14 @@ export interface AppOptions {
  * 기능 스위치는 읽기만 연다. 바꾸는 주소는 두지 않고, 운영자가 nuno_ops 로 바꾼다.
  */
 export function createApp(db: SqlClient, options: AppOptions = {}): Hono {
-  const { devRoutes = false, webOrigins = [], now = () => new Date(), apple = null } = options;
+  const {
+    devRoutes = false,
+    webOrigins = [],
+    now = () => new Date(),
+    apple = null,
+    results = null,
+    files = null,
+  } = options;
   const app = new Hono();
 
   if (webOrigins.length > 0) {
@@ -64,7 +79,14 @@ export function createApp(db: SqlClient, options: AppOptions = {}): Hono {
   });
 
   app.route("/", accountRoutes({ db, now, apple }));
-  if (devRoutes) app.route("/v1/dev", devAccountRoutes({ db, now }));
+  app.route("/", goldRoutes({ db, now }));
+  if (results) app.route("/", generationRoutes({ db, now, store: results }));
+  if (files) app.route("/", fileRoutes({ ...files, now }));
+  if (devRoutes) {
+    app.route("/v1/dev", devAccountRoutes({ db, now }));
+    app.route("/v1/dev", devGoldRoutes({ db, now }));
+    app.route("/v1/dev", devGenerationRoutes({ db, now }));
+  }
 
   return app;
 }

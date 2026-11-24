@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/composition/main.ts",
     "migrate": "node src/composition/run-migrations.ts",
-    "trial": "node src/composition/trial.ts"
+    "trial": "node src/composition/trial.ts",
+    "worker": "node src/composition/worker.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.8",
