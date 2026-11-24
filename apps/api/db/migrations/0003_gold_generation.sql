@@ -443,13 +443,16 @@ $$;
 
 -- 접수. 멱등 확인, 계정 상태, 동의, 스위치, 무료 하루 한도, 잔액, 작업 행, 묶기를 한 트랜잭션에 한다.
 -- 거절은 예외가 아니라 error_code 로 돌려준다. 같은 요청 ID 를 다시 보내면 처음 작업을 그대로 준다.
+-- p_pay_with 는 화면이 보여 준 결제다. 'trial' 이면 무료 장으로만, 'gold' 면 골드로만 받는다.
+-- NULL 이면 무료 잔액이 있으면 무료 장, 없으면 골드로 본다.
 CREATE FUNCTION nuno_submit_job(
   p_user_id uuid,
   p_idempotency_key text,
   p_request_hash text,
   p_manifest jsonb,
   p_consent_version integer,
-  p_now timestamptz
+  p_now timestamptz,
+  p_pay_with text DEFAULT NULL
 ) RETURNS TABLE (job_id uuid, status text, payment_kind text, error_code text)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 #variable_conflict use_column
@@ -510,7 +513,12 @@ BEGIN
   END IF;
 
   v_trial := nuno_gold_account(p_user_id, 'trial');
-  IF nuno_gold_balance(v_trial) >= c_price THEN
+  IF p_pay_with = 'trial' AND nuno_gold_balance(v_trial) < c_price THEN
+    -- 화면은 무료 장을 보여 줬지만 그사이 무료 장이 없어졌다. 묻지 않고 골드를 쓰지 않는다.
+    RETURN QUERY SELECT NULL::uuid, NULL::text, NULL::text, 'payment_changed'::text;
+    RETURN;
+  END IF;
+  IF p_pay_with IS DISTINCT FROM 'gold' AND nuno_gold_balance(v_trial) >= c_price THEN
     -- 무료 한도는 한국 날짜로 센다. 실패해 돌려받은 작업도 센다.
     IF (
       SELECT count(*) FROM generation_jobs j
@@ -564,8 +572,19 @@ BEGIN
 END;
 $$;
 
+-- 철회하지 않은 전송 동의가 있나. 부르는 쪽이 users 행을 잠근 뒤 부른다.
+-- 동의 철회(nuno_withdraw_consent)도 users 행을 먼저 잠그므로, 확인과 공급사 전송 사이에 철회가 끼지 못한다.
+CREATE FUNCTION nuno_has_transfer_consent(p_user_id uuid) RETURNS boolean
+LANGUAGE sql STABLE SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM consents c
+    WHERE c.user_id = p_user_id AND c.kind = 'generation_transfer' AND c.withdrawn_at IS NULL
+  );
+$$;
+
 -- worker 의 선점. 접수 작업을 오래된 차례로 하나 골라 generating 으로 바꾼다.
--- 사용자 행을 먼저 잠그고 작업 행을 SKIP LOCKED 로 다시 고른다. 계정이 정지되었으면 그 작업은 실패와 풀기로 끝내고 다음을 본다.
+-- 사용자 행을 먼저 잠그고 작업 행을 SKIP LOCKED 로 다시 고른다.
+-- 계정이 정지되었거나 전송 동의를 거뒀으면 그 작업은 실패와 풀기로 끝내고 다음을 본다.
 CREATE FUNCTION nuno_claim_job(p_lease_token uuid, p_lease_seconds integer, p_now timestamptz)
 RETURNS TABLE (job_id uuid, user_id uuid, input_manifest jsonb, payment_kind text)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -594,6 +613,10 @@ BEGIN
       PERFORM nuno_job_release(v_job.id, 'account_inactive', p_now);
       CONTINUE;
     END IF;
+    IF NOT nuno_has_transfer_consent(v_job.user_id) THEN
+      PERFORM nuno_job_release(v_job.id, 'consent_withdrawn', p_now);
+      CONTINUE;
+    END IF;
 
     UPDATE generation_jobs j
     SET status = 'generating',
@@ -608,7 +631,8 @@ BEGIN
 END;
 $$;
 
--- 공급사를 부르기 전에 시도 줄을 만든다. 부르기 직전에 계정 상태를 다시 보고, 정지면 실패와 풀기로 끝낸다.
+-- 공급사를 부르기 전에 시도 줄을 만든다. 다시 만들기 회차도 이 함수를 지난다.
+-- 부르기 직전에 계정 상태와 전송 동의를 다시 보고, 정지거나 동의를 거뒀으면 실패와 풀기로 끝낸다.
 CREATE FUNCTION nuno_start_attempt(
   p_job_id uuid,
   p_lease_token uuid,
@@ -627,6 +651,10 @@ BEGIN
   END IF;
   IF (SELECT u.status FROM users u WHERE u.id = v_job.user_id) <> 'active' THEN
     PERFORM nuno_job_release(p_job_id, 'account_inactive', p_now);
+    RETURN NULL;
+  END IF;
+  IF NOT nuno_has_transfer_consent(v_job.user_id) THEN
+    PERFORM nuno_job_release(p_job_id, 'consent_withdrawn', p_now);
     RETURN NULL;
   END IF;
 
@@ -877,7 +905,8 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION nuno_grant_test_gold(uuid, integer, timestamptz) TO nuno_api;
-GRANT EXECUTE ON FUNCTION nuno_submit_job(uuid, text, text, jsonb, integer, timestamptz) TO nuno_api;
+GRANT EXECUTE ON FUNCTION nuno_submit_job(uuid, text, text, jsonb, integer, timestamptz, text)
+  TO nuno_api;
 GRANT EXECUTE ON FUNCTION nuno_claim_job(uuid, integer, timestamptz) TO nuno_api;
 GRANT EXECUTE ON FUNCTION nuno_start_attempt(uuid, uuid, text, text, timestamptz) TO nuno_api;
 GRANT EXECUTE ON FUNCTION nuno_finish_attempt(
