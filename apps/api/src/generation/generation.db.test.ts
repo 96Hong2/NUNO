@@ -29,6 +29,8 @@ if (!apiUrl || !adminUrl) {
 const api = openPostgres(apiUrl, 10);
 const admin = openPostgres(adminUrl);
 
+// 동의는 켜 둔 공급사가 있어야 받는다. 이 파일 동안만 켜 둔 공급사 한 줄을 둔다.
+const SEED_PROVIDER = `db-test-seed-${randomUUID()}`;
 const NOW = new Date("2020-02-01T01:00:00Z");
 const SECRET = "db-test-file-secret";
 const PUBLIC_URL = "http://api.test";
@@ -74,10 +76,17 @@ beforeAll(async () => {
   store = createLocalResultStore({ dir: resultDir, secret: SECRET, publicUrl: PUBLIC_URL });
   app = appAt(NOW);
   await setSwitch(true);
+  await admin.query(
+    `INSERT INTO provider_configs
+       (provider, model, model_version, mode, priority, country, max_concurrency, price_usd, enabled)
+     VALUES ($1, 'm', '1', 'sync', 2, '시험 나라', 1, 0, true)`,
+    [SEED_PROVIDER],
+  );
 });
 
 afterAll(async () => {
   await setSwitch(false);
+  await admin.query("DELETE FROM provider_configs WHERE provider = $1", [SEED_PROVIDER]);
   await api.close();
   await admin.close();
   await rm(resultDir, { recursive: true, force: true });
@@ -146,6 +155,22 @@ async function setProvider(
   expect(response.status).toBe(204);
 }
 
+const postJob = (token: string, payWith?: "trial" | "gold", target = app) =>
+  call(
+    "/v1/generation-jobs",
+    token,
+    {
+      method: "POST",
+      body: {
+        requestId: `req-${randomUUID()}`,
+        manifest: { twin: { preset: "harin", version: 1 }, items: [randomUUID()] },
+        consentVersion: CONSENT_TEXT_VERSION,
+        payWith,
+      },
+    },
+    target,
+  );
+
 async function submit(
   token: string,
 ): Promise<{ jobId: string; paymentKind: string; requestId: string }> {
@@ -175,9 +200,10 @@ async function job(token: string, jobId: string, target = app): Promise<JobView>
   return (await response.json()) as JobView;
 }
 
-async function gold(token: string) {
-  return (await (await call("/v1/gold", token)).json()) as {
+async function gold(token: string, target = app) {
+  return (await (await call("/v1/gold", token, {}, target)).json()) as {
     trialCount: number;
+    trialUsableToday: boolean;
     balance: number;
     entries: { label: string; amount: number }[];
   };
@@ -253,7 +279,12 @@ describe("worker 한 바퀴", () => {
       result: null,
       refund: { kind: "trial", amount: 4 },
     });
-    expect(await gold(token)).toEqual({ trialCount: 2, balance: 0, entries: [] });
+    expect(await gold(token)).toEqual({
+      trialCount: 2,
+      trialUsableToday: true,
+      balance: 0,
+      entries: [],
+    });
     expect(await balance(userId, "hold")).toBe(0);
     const attempts = await admin.query<{ status: string }>(
       "SELECT status FROM generation_attempts WHERE job_id = $1",
@@ -375,6 +406,87 @@ describe("무료 하루 한도", () => {
     const nextDay = await submitAt("2020-03-01T15:00:00Z");
     expect(nextDay?.error_code).toBeNull();
     expect(await runJob(nextDay?.job_id ?? "")).toBe("failed");
+  });
+});
+
+describe("무료 하루 한도와 결제 선택", () => {
+  it("무료 4건이 실패한 날 골드 20 이 있으면 골드로 보낸 접수는 gold 로 받고, 무료로 보낸 접수는 429 다", async () => {
+    const { token, userId } = await readyUser();
+    await setProvider(token, "refuse");
+    // 2020-03-02 한국 시간 10시. 거절로 무료 장이 돌아와 무료 2장이 그대로 남는다.
+    const day = appAt(new Date("2020-03-02T01:00:00Z"));
+    for (let i = 0; i < 4; i += 1) {
+      const response = await postJob(token, "trial", day);
+      expect(response.status).toBe(202);
+      const { jobId } = (await response.json()) as { jobId: string };
+      expect(await runJob(jobId)).toBe("failed");
+    }
+    await call("/v1/dev/gold", token, { method: "POST", body: { amount: 20 } }, day);
+    expect(await gold(token, day)).toMatchObject({ trialCount: 2, trialUsableToday: false });
+
+    const asTrial = await postJob(token, "trial", day);
+    expect(asTrial.status).toBe(429);
+    expect(await asTrial.json()).toEqual({ error: "trial_daily_limit" });
+
+    const asGold = await postJob(token, "gold", day);
+    expect(asGold.status).toBe(202);
+    const paid = (await asGold.json()) as { jobId: string; paymentKind: string };
+    expect(paid.paymentKind).toBe("gold");
+    expect(await runJob(paid.jobId)).toBe("failed");
+    expect(await balance(userId, "trial")).toBe(8);
+    expect((await gold(token, day)).balance).toBe(20);
+  });
+});
+
+describe("동의 철회와 접수된 작업", () => {
+  it("접수 뒤 동의를 거두면 선점이 그 작업을 공급사로 보내지 않고 실패와 풀기로 끝내며 무료 장이 돌아온다", async () => {
+    const { token, userId } = await readyUser();
+    const { jobId } = await submit(token);
+    expect(await balance(userId, "trial")).toBe(4);
+    const withdraw = await call("/v1/consents/withdraw", token, {
+      method: "POST",
+      body: { kind: CONSENT_KIND },
+    });
+    expect(await withdraw.json()).toEqual({ withdrawn: 1 });
+
+    // 다른 시험 파일이 남긴 접수 작업이 있으면 선점은 그쪽으로 넘어간다. 이 작업만 아니면 된다.
+    const done = await runNextJob(workerDeps());
+    expect(done?.jobId).not.toBe(jobId);
+    expect(await job(token, jobId)).toMatchObject({
+      status: "failed",
+      failureCode: "consent_withdrawn",
+      refund: { kind: "trial", amount: 4 },
+    });
+    expect(await balance(userId, "trial")).toBe(8);
+    expect(await balance(userId, "hold")).toBe(0);
+    const attempts = await admin.query("SELECT id FROM generation_attempts WHERE job_id = $1", [
+      jobId,
+    ]);
+    expect(attempts).toHaveLength(0);
+  });
+
+  it("선점한 뒤 공급사를 부르기 전에 동의를 거두면 시도 줄을 만들지 않고 실패와 풀기로 끝낸다", async () => {
+    const { token, userId } = await readyUser();
+    const { jobId } = await submit(token);
+    const lease = randomUUID();
+    const [claimed] = await api.query<{ job_id: string }>(
+      "SELECT job_id FROM nuno_claim_job($1, $2, $3)",
+      [lease, LEASE_SECONDS, NOW],
+    );
+    expect(claimed?.job_id).toBe(jobId);
+    await call("/v1/consents/withdraw", token, { method: "POST", body: { kind: CONSENT_KIND } });
+
+    const [attempt] = await api.query<{ id: string | null }>(
+      "SELECT nuno_start_attempt($1, $2, 'fake', 'fake', $3) AS id",
+      [jobId, lease, NOW],
+    );
+    expect(attempt?.id).toBeNull();
+    expect(await job(token, jobId)).toMatchObject({
+      status: "failed",
+      failureCode: "consent_withdrawn",
+      refund: { kind: "trial", amount: 4 },
+    });
+    expect(await balance(userId, "trial")).toBe(8);
   });
 });
 
