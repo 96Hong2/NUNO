@@ -9,6 +9,7 @@ import { fileRoutes, type FileRoutesDeps } from "./generation/file-routes.ts";
 import type { ResultStore } from "./generation/ports.ts";
 import { devGenerationRoutes, generationRoutes } from "./generation/routes.ts";
 import { devGoldRoutes, goldRoutes } from "./gold/routes.ts";
+import { lookbookRoutes } from "./lookbook/routes.ts";
 
 interface FeatureSwitchRow {
   key: string;
@@ -27,7 +28,7 @@ export interface AppOptions {
   now?: () => Date;
   /** Apple 설정이 없으면 null 이고 `/v1/auth/apple` 이 503 을 낸다. */
   apple?: AppleAuth | null;
-  /** 결과 사진 저장. 없으면 작업 주소(`/v1/generation-jobs`)를 달지 않는다. */
+  /** 결과 사진 저장. 없으면 작업 주소(`/v1/generation-jobs`)와 룩북 주소를 달지 않는다. */
   results?: ResultStore | null;
   /** 로컬 디스크 결과 저장의 서명 주소(`/v1/files`). R2 를 쓰면 비운다. */
   files?: Omit<FileRoutesDeps, "now"> | null;
@@ -80,7 +81,10 @@ export function createApp(db: SqlClient, options: AppOptions = {}): Hono {
 
   app.route("/", accountRoutes({ db, now, apple }));
   app.route("/", goldRoutes({ db, now }));
-  if (results) app.route("/", generationRoutes({ db, now, store: results }));
+  if (results) {
+    app.route("/", generationRoutes({ db, now, store: results }));
+    app.route("/", lookbookRoutes({ db, now, store: results }));
+  }
   if (files) app.route("/", fileRoutes({ ...files, now }));
   if (devRoutes) {
     app.route("/v1/dev", devAccountRoutes({ db, now }));

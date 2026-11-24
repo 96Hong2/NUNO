@@ -2,7 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 import { ONBOARDED_STATE } from "./e2e/storage-state";
 
 // 개발 서버(pnpm web, 8090)와 다른 포트에 이 체크아웃의 서버를 따로 띄운다.
-// 떠 있는 서버를 다시 쓰면 다른 작업 트리의 코드를 시험할 수 있다. worktree 둘이 함께 돌면 포트를 바꾼다.
+// 떠 있는 서버를 다시 쓰면 다른 작업 트리의 코드를 시험할 수 있다.
+// worktree 둘이 함께 돌면 NUNO_E2E_PORT, NUNO_E2E_API_PORT, NUNO_DB_PORT 를 모두 서로 다르게 준다.
+// e2e 는 Docker 의 로컬 Postgres 를 쓰므로 Docker 가 켜져 있어야 한다.
 const PORT = Number(process.env.NUNO_E2E_PORT ?? 8091);
 const WEB_URL = `http://localhost:${PORT}`;
 // API 서버도 개발 API(8787)와 다른 포트에 nuno_e2e DB 로 새로 띄운다(scripts/e2e-api.mjs).
