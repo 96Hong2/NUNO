@@ -8,7 +8,12 @@ export interface GenerationRequest {
 /** 공급사가 직접 돌려주는 답: 그림을 주거나, 안전 검사로 거절한다. */
 export type ProviderAnswer =
   | { kind: "succeeded"; image: Uint8Array; mimeType: string; costUsd: number }
-  | { kind: "refused"; reason: string };
+  | {
+      kind: "refused";
+      reason: string;
+      /** 거절도 청구하는 공급사가 있다. 모르면 비우고 콘솔 청구액과 대조한다 */
+      costUsd?: number;
+    };
 
 /** 생성 공급사 포트. 진짜(Seedream, GPT-Image)와 가짜가 같은 꼴을 구현한다. signal 이 끊기면 요청을 멈춘다. */
 export interface GenerationProvider {

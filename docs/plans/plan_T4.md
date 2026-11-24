@@ -2,7 +2,7 @@
 
 > 로드맵: `docs/roadmap.md` 「T4」 · 작성 2026-11-25 · 상태: 완료(D16 평가와 iOS D18, D19 대기)
 >
-> PR: https://github.com/96Hong2/NUNO/pull/13
+> PR: https://github.com/96Hong2/NUNO/pull/13 (머지 473817f), https://github.com/96Hong2/NUNO/pull/14 (머지 a395efe)
 
 ## 목표
 
