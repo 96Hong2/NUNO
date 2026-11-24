@@ -27,7 +27,8 @@
           "cameraPermission": "옷 사진을 찍어 옷장에 넣을 때 카메라를 써요.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": false

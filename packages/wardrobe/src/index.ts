@@ -50,6 +50,7 @@ export {
   insertGarment,
   listCloset,
   listClosetSampleKeys,
+  listGarmentsWithPerson,
   listRecentGarments,
   moveGarments,
   readGarment,

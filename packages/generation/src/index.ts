@@ -1,0 +1,40 @@
+// @nuno/generation 공개 면. 밖에서 쓰는 이름을 하나씩 적어 내보낸다(export * 금지).
+export {
+  buildManifest,
+  closetLabel,
+  consentNeeded,
+  CONSENT_TEXT_VERSION,
+  failureCopy,
+  goldAmountLabel,
+  goldConfirmCopy,
+  goldWonLabel,
+  isFinishedStatus,
+  ledgerDateLabel,
+  LOOK_PRICE_GOLD,
+  makeSheetCopy,
+  nextAfterRejection,
+  outfitKeyOf,
+  progressStep,
+  PROVIDER_RETENTION_DAYS,
+  SIGNUP_TRIAL_COUNT,
+  stagePriceLabel,
+} from "./domain";
+export type {
+  GenerationManifest,
+  ManifestCloset,
+  ManifestGarment,
+  PaymentKind,
+  SubmitNext,
+} from "./domain";
+export {
+  attachGenerationJob,
+  createGenerationRequestTable,
+  deleteAllGenerationRequests,
+  deleteGenerationRequest,
+  findUnansweredRequest,
+  insertGenerationRequest,
+  listWatchedRequests,
+  markGenerationSeen,
+  readGenerationRequestByJob,
+  updateGenerationStatus,
+} from "./application";
