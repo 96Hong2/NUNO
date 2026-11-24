@@ -1,6 +1,7 @@
 import { toKstDateString } from "@nuno/clock";
 import {
   finishOnboarding,
+  markTourSeen,
   readProfile,
   saveBirthDate,
   saveDisplayName,
@@ -39,4 +40,10 @@ export async function finishStyleStep(tags: readonly string[] | null): Promise<v
 export async function submitDisplayName(value: string): Promise<void> {
   const { db } = await getDeviceDb();
   await saveDisplayName(db, value);
+}
+
+/** 처음 둘러보기를 끝까지 넘기거나 닫았을 때. */
+export async function completeTour(): Promise<void> {
+  const { db } = await getDeviceDb();
+  await markTourSeen(db);
 }
