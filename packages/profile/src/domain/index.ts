@@ -2,3 +2,6 @@
 export { BIRTH_DATE_DEFAULT, BIRTH_DATE_MIN, isValidBirthDate } from "./birth-date";
 export type { OnboardingStep, ProfileState } from "./onboarding";
 export { nextOnboardingStep } from "./onboarding";
+export { DISPLAY_NAME_MAX, normalizeDisplayName } from "./display-name";
+export type { StyleTagToggle } from "./style-tags";
+export { STYLE_TAGS, STYLE_TAGS_MAX, toggleStyleTag } from "./style-tags";

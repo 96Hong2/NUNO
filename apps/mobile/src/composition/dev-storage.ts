@@ -39,6 +39,10 @@ export async function readDevStorage(): Promise<DevStorageSnapshot> {
   const saved: SavedValue[] = [
     { label: "생년월일", value: profile.birthDate },
     { label: "트윈 ID", value: await readTwinChoice(db) },
+    {
+      label: "스타일 태그",
+      value: profile.styleTags.length > 0 ? profile.styleTags.join(", ") : null,
+    },
   ];
   const tables = await db.all<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",

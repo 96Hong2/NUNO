@@ -12,6 +12,7 @@ export default function OnboardingLayout() {
       </Stack.Protected>
       <Stack.Protected guard={hasBirthDate}>
         <Stack.Screen name="twin" />
+        <Stack.Screen name="style" />
       </Stack.Protected>
     </Stack>
   );
