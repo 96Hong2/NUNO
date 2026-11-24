@@ -15,8 +15,8 @@ import type { Placement } from "./placement";
  */
 export type CutoutSource = "vision" | "fixture" | "simple" | "none";
 
-/** 옷을 넣은 길. `garment_sources.method` 값이다. 견본 옷 담기(`sample`)는 T5 에서 더한다. */
-export type GarmentMethod = "camera" | "album";
+/** 옷을 넣은 길. `garment_sources.method` 값이다. `sample` 은 룩의 입은 옷 시트 「옷장에 담기」 로 견본 옷을 담은 것이다. */
+export type GarmentMethod = "camera" | "album" | "sample";
 
 export interface Garment {
   id: string;

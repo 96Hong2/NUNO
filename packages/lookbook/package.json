@@ -1,0 +1,14 @@
+{
+  "name": "@nuno/lookbook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@nuno/clock": "workspace:*",
+    "@nuno/device-db": "workspace:*"
+  }
+}

@@ -346,6 +346,27 @@ export const garmentMedia: GarmentMedia = {
     return paths;
   },
 
+  async storeImage(id, imageUri): Promise<StoredGarmentFiles> {
+    const directory = `garments/${id}`;
+    const paths = {
+      originalPath: `${directory}/original.png`,
+      cutoutPath: `${directory}/cutout.png`,
+      thumbPath: `${directory}/thumb.png`,
+    };
+    // 설치 파일 견본 그림은 이미 배경이 없다. canvas 로 다시 구워 PNG 로 쓴다(WebP 를 그대로 두지 않는다).
+    const image = await createImageBitmap(await (await fetch(imageUri)).blob());
+    const full = canvas(image.width, image.height);
+    context(full).drawImage(image, 0, 0);
+    const png = await toBlob(full);
+    await writeFile(paths.originalPath, png);
+    await writeFile(paths.cutoutPath, png);
+    const thumbSize = fit(image.width, image.height, THUMB_SIDE);
+    const thumb = canvas(thumbSize.width, thumbSize.height);
+    context(thumb).drawImage(image, 0, 0, thumbSize.width, thumbSize.height);
+    await writeFile(paths.thumbPath, await toBlob(thumb));
+    return paths;
+  },
+
   async resolve(path) {
     const cached = resolved.get(path);
     if (cached) return cached;

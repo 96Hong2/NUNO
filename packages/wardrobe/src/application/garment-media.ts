@@ -55,6 +55,8 @@ export interface GarmentMedia {
   /** 손보는 동안 보이는 그림. 가장자리를 자르지 않아 붓 자국 좌표가 사진 좌표와 맞는다. */
   renderPreview(photo: PreparedPhoto, edits: GarmentEdits): Promise<RenderedGarment>;
   store(id: string, photo: PreparedPhoto, rendered: RenderedGarment): Promise<StoredGarmentFiles>;
+  /** 이미 배경이 없는 그림(설치 파일 견본 옷)을 그대로 옷 폴더에 쓴다. 원본과 누끼가 같은 그림이다 */
+  storeImage(id: string, imageUri: string): Promise<StoredGarmentFiles>;
   /** 다 쓴 미리보기 주소를 놓아준다. 웹은 blob 주소를 해제하고, 아이폰은 할 일이 없다. */
   release(uri: string): void;
   /** 저장한 그림 경로를 화면이 그릴 주소로 바꾼다. */

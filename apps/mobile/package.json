@@ -11,6 +11,7 @@
     "@nuno/clock": "workspace:*",
     "@nuno/device-db": "workspace:*",
     "@nuno/ids": "workspace:*",
+    "@nuno/lookbook": "workspace:*",
     "@nuno/outfit": "workspace:*",
     "@nuno/profile": "workspace:*",
     "@nuno/twin": "workspace:*",

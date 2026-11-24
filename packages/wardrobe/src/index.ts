@@ -44,10 +44,12 @@ export type {
 } from "./domain";
 export {
   countCloset,
+  addGarmentSampleKey,
   createGarmentTables,
   deleteGarment,
   insertGarment,
   listCloset,
+  listClosetSampleKeys,
   listRecentGarments,
   moveGarments,
   readGarment,
