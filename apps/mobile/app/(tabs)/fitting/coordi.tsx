@@ -22,6 +22,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
   type GestureResponderEvent,
 } from "react-native";
@@ -60,6 +61,13 @@ import { useGenerateFlow } from "../../../src/ui/use-generate-flow";
 import { useStartGarment } from "../../../src/ui/use-start-garment";
 
 const ZOOM = { min: 1, max: 3, step: 0.5 } as const;
+
+/** 무대 높이. 와이어프레임처럼 화면 높이에서 아래 옷 칸 몫을 빼고 위아래 한도 안에 둔다. */
+function stageHeight(screenHeight: number, expanded: boolean): number {
+  return expanded
+    ? Math.min(136, Math.max(96, screenHeight - 700))
+    : Math.min(270, Math.max(216, screenHeight - 560));
+}
 /** 시트가 열려 있으면 알림을 무대 위쪽에 띄운다. */
 const TOAST_OVER_SHEET = 560;
 
@@ -67,6 +75,7 @@ const TOAST_OVER_SHEET = 560;
 export default function CoordiScreen() {
   const router = useRouter();
   const toast = useAppToast();
+  const { height: screenHeight } = useWindowDimensions();
   const { start } = useStartGarment("mine");
   const [state, setState] = useState<CoordiState | null>(null);
   const [garments, setGarments] = useState<GarmentDetail[]>([]);
@@ -161,6 +170,7 @@ export default function CoordiScreen() {
   const twinKey = state.twinKey as PresetTwinKey;
   const outfit = state.outfit;
   const nameOf = (piece: OutfitPiece) => catalogMap.get(refKey(piece.ref))?.name ?? "";
+  const shortOf = (piece: OutfitPiece) => catalogMap.get(refKey(piece.ref))?.shortName ?? "";
   // 알림 「되돌리기」 는 알림을 띄운 트윈이 지금 트윈일 때만 바꾸기 전 코디를 다시 입힌다.
   const restore = (before: Outfit): ToastAction => ({
     label: "되돌리기",
@@ -230,7 +240,7 @@ export default function CoordiScreen() {
   const today = look
     ? {
         outfit: look.items.map(samplePiece),
-        title: outfitTitle(look.items.map(samplePiece), nameOf),
+        title: outfitTitle(look.items.map(samplePiece), shortOf),
       }
     : null;
 
@@ -242,7 +252,7 @@ export default function CoordiScreen() {
       </Text>
       <View
         testID="coordi-stage"
-        style={[styles.stageWrap, expanded && styles.stageSmall]}
+        style={[styles.stageWrap, { height: stageHeight(screenHeight, expanded) }]}
         {...stagePan.panHandlers}
       >
         <View
@@ -498,8 +508,7 @@ export default function CoordiScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   hiddenHeading: { position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" },
-  stageWrap: { height: 400, overflow: "hidden" },
-  stageSmall: { height: 150 },
+  stageWrap: { overflow: "hidden" },
   stageInner: { flex: 1 },
   leftTop: { position: "absolute", top: 12, left: 12, gap: 10, alignItems: "flex-start" },
   face: {

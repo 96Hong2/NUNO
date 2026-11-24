@@ -18,7 +18,7 @@ import {
   saveOutfitToSlot,
   savedOutfitTitle,
   slotOf,
-  todayLook,
+  twinTodayLook,
   toggleGarment,
   undo,
   writeCurrentOutfit,
@@ -164,15 +164,15 @@ export function stepOutfit(direction: "undo" | "redo"): Promise<boolean> {
   });
 }
 
-/** 홈 「오늘 코디」 와 내 코디 「오늘 뭐 입지」: 오늘 추천 코디를 입힌다. */
+/** 홈 「오늘 코디」 와 내 코디 「오늘 뭐 입지」: 그 트윈의 오늘 룩을 입힌다. */
 export async function wearTodayLook(): Promise<void> {
   const twinKey = await loadCurrentTwin();
-  const look = todayLook(twinKey, today());
+  const look = twinTodayLook(twinKey);
   if (look) await changeOutfit(look.items.map(samplePiece), { remember: false });
 }
 
 export function todayLookOf(twinKey: string) {
-  return todayLook(twinKey, today());
+  return twinTodayLook(twinKey);
 }
 
 export type SaveResult = { kind: "saved"; count: number } | { kind: "full" } | { kind: "empty" };

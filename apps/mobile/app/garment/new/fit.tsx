@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import { wearGarment } from "../../../src/composition/outfit";
 import { loadCurrentTwin } from "../../../src/composition/twin";
+import { useImageAspect } from "../../../src/ui/coordi-stage";
 import { garmentFrame, type Landmarks } from "../../../src/ui/stage-layout";
 import {
   clearDraft,
@@ -81,6 +82,8 @@ export default function FitScreen() {
       });
     });
   }, [edit]);
+
+  const garmentAspect = useImageAspect(source?.cutoutUri);
 
   if (edit && (!form || !source)) return <View style={styles.loading} />;
   if (!form || !source) return <Redirect href="/fitting/closet" />;
@@ -162,7 +165,13 @@ export default function FitScreen() {
   const photoLeft = (stage.width - photoWidth) / 2;
   const photoTop = (stage.height - photoHeight) / 2;
   const garmentBox = landmarks
-    ? garmentFrame(form.category, slotOf(form.category), landmarks.pose, form.placement)
+    ? garmentFrame(
+        form.category,
+        slotOf(form.category),
+        landmarks,
+        { placement: form.placement },
+        garmentAspect ?? null,
+      )
     : null;
 
   return (
@@ -198,6 +207,7 @@ export default function FitScreen() {
             resizeMode="contain"
             style={[
               styles.abs,
+              garmentAspect === undefined && styles.measuring,
               {
                 left: photoLeft + garmentBox.x * photoWidth,
                 top: photoTop + garmentBox.y * photoHeight,
@@ -305,6 +315,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#C8B9BB",
   },
+  measuring: { opacity: 0 },
   abs: { position: "absolute" },
   badge: {
     position: "absolute",

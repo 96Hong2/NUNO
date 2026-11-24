@@ -3,7 +3,8 @@ import type { Rect } from "./geometry";
 
 /**
  * 「트윈에 맞춰 볼게요」 에서 맞춘 옷 자리. 기준 상자 대비 비율이라 트윈이 바뀌어도 같은 자리에 놓인다.
- * x, y 는 상자 가운데에서 옷 가운데까지의 거리를 상자 폭과 높이로 나눈 값, scale 은 상자에 맞춘 크기 대비 배율이다.
+ * x 는 상자 가운데에서, y 는 그 종류가 붙는 자리(anchorOf)에서 옮긴 거리를 상자 폭과 높이로 나눈 값이다.
+ * scale 은 상자에 맞춘 크기 대비 배율이다.
  */
 export interface Placement {
   x: number;
@@ -58,6 +59,7 @@ function point(pose: PosePoints, index: number): { x: number; y: number } {
 
 /**
  * 종류마다 옷을 맞출 기준 상자. 어깨, 골반, 발목 점으로 잡는다.
+ * 하의 상자는 허리(골반 점에서 몸통 길이의 0.3 위)에서, 신발 상자는 발바닥(발목 아래 다리 길이의 0.25)까지다.
  * 옷 그림은 이 상자 안에 비율을 지켜 맞춘 뒤 placement 로 옮기고 키운다.
  */
 export function referenceBox(category: GarmentCategory, pose: PosePoints): Rect {
@@ -92,10 +94,12 @@ export function referenceBox(category: GarmentCategory, pose: PosePoints): Rect 
         shoulderWidth * 2.4,
         legLength * 0.6 + hipY - shoulderY,
       );
-    case "bottom":
-      return centered(hipX, hipY - 0.03, shoulderWidth * 1.3, legLength + 0.03);
+    case "bottom": {
+      const waistY = hipY - (hipY - shoulderY) * 0.3;
+      return centered(hipX, waistY, shoulderWidth * 1.3, ankleY - waistY);
+    }
     case "shoes":
-      return centered(ankleX, ankleY - 0.04, shoulderWidth * 1.3, 0.08);
+      return centered(ankleX, ankleY - 0.02, shoulderWidth * 1.3, legLength * 0.25 + 0.02);
     case "bag":
       return centered(hipX + shoulderWidth * 0.9, hipY - 0.08, shoulderWidth * 0.8, 0.16);
     case "acc":
@@ -103,8 +107,25 @@ export function referenceBox(category: GarmentCategory, pose: PosePoints): Rect 
   }
 }
 
-/** 옷 그림(가로 / 세로 비율 aspect)을 상자에 맞춰 놓을 자리. 그림 비율은 늘리지 않는다. */
-export function placeGarment(box: Rect, placement: Placement, aspect: number): Rect {
+/** 옷 그림을 상자의 어느 쪽에 붙이나. */
+export type GarmentAnchor = "top" | "center" | "bottom";
+
+/** 상의와 아우터는 어깨에, 하의는 허리에 위 끝을 붙인다. 신발은 발바닥에 아래 끝을 붙인다. */
+export function anchorOf(category: GarmentCategory): GarmentAnchor {
+  if (category === "top" || category === "outer" || category === "bottom") return "top";
+  return category === "shoes" ? "bottom" : "center";
+}
+
+/**
+ * 옷 그림(가로 / 세로 비율 aspect)을 상자에 맞춰 놓을 자리. 그림 비율은 늘리지 않는다.
+ * aspect 는 상자와 같은 비율 좌표에서 잰 값이다. 크기를 키우면 붙인 쪽은 그대로 두고 반대쪽으로 자란다.
+ */
+export function placeGarment(
+  box: Rect,
+  placement: Placement,
+  aspect: number,
+  anchor: GarmentAnchor = "center",
+): Rect {
   const safeAspect = aspect > 0 ? aspect : 1;
   const boxAspect = box.width / box.height;
   const fitWidth = safeAspect >= boxAspect ? box.width : box.height * safeAspect;
@@ -112,6 +133,12 @@ export function placeGarment(box: Rect, placement: Placement, aspect: number): R
   const width = fitWidth * placement.scale;
   const height = fitHeight * placement.scale;
   const cx = box.x + box.width / 2 + placement.x * box.width;
-  const cy = box.y + box.height / 2 + placement.y * box.height;
-  return { x: cx - width / 2, y: cy - height / 2, width, height };
+  const shift = placement.y * box.height;
+  const y =
+    anchor === "top"
+      ? box.y + shift
+      : anchor === "bottom"
+        ? box.y + box.height - height + shift
+        : box.y + (box.height - height) / 2 + shift;
+  return { x: cx - width / 2, y, width, height };
 }
