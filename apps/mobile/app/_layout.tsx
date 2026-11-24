@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { loadProfile } from "../src/composition/profile";
 import { AppToastProvider } from "../src/ui/app-toast";
 import { GenerationWatcher } from "../src/ui/generation-watcher";
+import "../src/ui/korean-line-break";
 import { ProfileProvider } from "../src/ui/profile-gate";
 
 // 온보딩을 마치기 전에는 onboarding 만, 마친 뒤에는 (tabs) 만 열린다.

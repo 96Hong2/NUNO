@@ -1,5 +1,5 @@
 import { PROVIDER_RETENTION_DAYS } from "@nuno/generation";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
@@ -17,6 +17,8 @@ const SUB = "#76736C";
 export default function ConsentScreen() {
   const router = useRouter();
   const toast = useAppToast();
+  // 설정에서 열면 동의한 뒤 설정으로 돌아간다. 「이대로 입히기」 에서 열면 「완성 룩 만들기」 시트로 간다.
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const [provider, setProvider] = useState<ConsentProvider | null>(null);
   const [checked, setChecked] = useState([false, false, false]);
   const [busy, setBusy] = useState(false);
@@ -52,7 +54,10 @@ export default function ConsentScreen() {
     setBusy(true);
     const result = await agreeConsent();
     setBusy(false);
-    if (result === "agreed") {
+    if (result === "agreed" && from === "settings") {
+      toast.show("동의했어요");
+      back();
+    } else if (result === "agreed") {
       router.dismissAll();
       router.navigate({ pathname: "/fitting/coordi", params: { make: "1" } });
     } else if (result === "outdated") {

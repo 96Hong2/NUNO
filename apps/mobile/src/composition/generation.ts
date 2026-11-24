@@ -3,8 +3,10 @@ import {
   buildManifest,
   CONSENT_TEXT_VERSION,
   deleteGenerationRequest,
+  deleteGenerationRequestByJob,
   findUnansweredRequest,
   insertGenerationRequest,
+  latestUnsavedJobId,
   isFinishedStatus,
   listWatchedRequests,
   markGenerationSeen,
@@ -195,7 +197,9 @@ export async function discardJob(jobId: string): Promise<boolean> {
     method: "POST",
     token,
   });
-  return result.ok || result.status === 404;
+  const done = result.ok || result.status === 404;
+  if (done) await forgetJob(jobId);
+  return done;
 }
 
 /** 「내 룩북에 저장」: 입은 옷 이름, 분류, 칸을 함께 저장한다. 연타해도 룩은 하나다 */
@@ -215,7 +219,21 @@ export async function keepJob(jobId: string): Promise<boolean> {
       })),
     },
   });
+  if (result.ok) await forgetJob(jobId);
   return result.ok;
+}
+
+/** 저장했거나 지운 작업은 기기 요청 줄을 지운다. 저장 안 한 결과 찾기에서 빠진다 */
+async function forgetJob(jobId: string): Promise<void> {
+  const { db } = await getDeviceDb();
+  await deleteGenerationRequestByJob(db, jobId);
+}
+
+/** 다 만들었지만 저장도 「나가기」 도 하지 않은 결과. 무대의 「다 된 완성 룩 보기」 가 연다 */
+export async function findUnsavedJob(): Promise<string | null> {
+  if (!(await sessionToken())) return null;
+  const { db } = await getDeviceDb();
+  return latestUnsavedJobId(db);
 }
 
 export interface FinishedJob {

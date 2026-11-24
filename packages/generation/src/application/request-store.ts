@@ -102,6 +102,19 @@ export async function deleteGenerationRequest(db: SqlExecutor, requestId: string
   await db.run("DELETE FROM generation_requests WHERE request_id = ?", [requestId]);
 }
 
+/** 결과를 룩북에 저장했거나 「나가기」 로 지웠다. 그 작업 줄을 지운다. */
+export async function deleteGenerationRequestByJob(db: SqlExecutor, jobId: string): Promise<void> {
+  await db.run("DELETE FROM generation_requests WHERE job_id = ?", [jobId]);
+}
+
+/** 다 만들었지만 아직 저장하지도 지우지도 않은 작업 가운데 가장 최근 것 */
+export async function latestUnsavedJobId(db: SqlExecutor): Promise<string | null> {
+  const row = await db.get<{ job_id: string }>(
+    "SELECT job_id FROM generation_requests WHERE status = 'succeeded' ORDER BY created_at DESC LIMIT 1",
+  );
+  return row?.job_id ?? null;
+}
+
 /** 로그아웃과 계정 바꾸기: 이 기기의 생성 요청을 모두 지운다. */
 export async function deleteAllGenerationRequests(db: SqlExecutor): Promise<void> {
   await db.run("DELETE FROM generation_requests");

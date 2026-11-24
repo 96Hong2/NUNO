@@ -15,7 +15,7 @@ import { ConfirmSheet } from "../src/ui/generate-sheets";
 const INK = "#151314";
 const SUB = "#76736C";
 
-// 설정: 「개인정보와 안전」 의 완성 룩 만들기 동의, 「계정」 의 로그아웃. 가입 전에는 계정 칸을 숨긴다.
+// 설정: 「개인정보와 안전」 의 완성 룩 만들기 동의, 「계정」 의 로그아웃. 가입 전에는 두 칸 모두 숨긴다.
 export default function SettingsScreen() {
   const router = useRouter();
   const toast = useAppToast();
@@ -50,21 +50,24 @@ export default function SettingsScreen() {
         </Text>
         <View style={styles.side} />
       </View>
-      {account ? (
+      {account?.signedIn ? (
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.section}>개인정보와 안전</Text>
           <View style={styles.card}>
             <Pressable
               role="button"
-              disabled={!agreed}
-              onPress={() => setSheet("withdraw")}
+              onPress={() =>
+                agreed
+                  ? setSheet("withdraw")
+                  : router.push({ pathname: "/generate/consent", params: { from: "settings" } })
+              }
               style={styles.row}
             >
               <View style={styles.rowText}>
                 <Text style={styles.rowTitle}>완성 룩 만들기 동의</Text>
                 <Text style={styles.rowSub}>{agreed ? "동의함" : "동의 안 함"}</Text>
               </View>
-              {agreed ? <Text style={styles.chevron}>›</Text> : null}
+              <Text style={styles.chevron}>›</Text>
             </Pressable>
           </View>
           {account.signedIn ? (
@@ -83,6 +86,7 @@ export default function SettingsScreen() {
       <ConfirmSheet
         visible={sheet === "withdraw"}
         title="동의를 거둘까요?"
+        body="거두면 다음 「이대로 입히기」 때 다시 물어요. 이미 만든 완성 룩은 그대로예요"
         action="동의 거두기"
         busy={busy}
         onConfirm={() => void confirm(withdrawConsent, "동의를 거뒀어요")}

@@ -16,7 +16,7 @@ import {
   onAccountChange,
   type AccountState,
 } from "../composition/account";
-import { hasPersonPhoto, submitGeneration } from "../composition/generation";
+import { findUnsavedJob, hasPersonPhoto, submitGeneration } from "../composition/generation";
 import { useAppToast } from "./app-toast";
 import type { CatalogItem } from "./coordi-catalog";
 import { GENERATE_CHERRY, GoldConfirmSheet, JoinSheet, MakeLookSheet } from "./generate-sheets";
@@ -51,10 +51,13 @@ export function useGenerateFlow(
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
 
+  const [unsavedJob, setUnsavedJob] = useState<string | null>(null);
+
   const reload = useCallback(() => loadAccount().then((next) => (setAccount(next), next)), []);
   useFocusEffect(
     useCallback(() => {
       void reload();
+      void findUnsavedJob().then(setUnsavedJob, () => setUnsavedJob(null));
     }, [reload]),
   );
   useEffect(() => onAccountChange(() => void reload()), [reload]);
@@ -172,7 +175,20 @@ export function useGenerateFlow(
   const trialCount = account?.signedIn ? (account.gold?.trialCount ?? null) : SIGNUP_TRIAL_COUNT;
   const empty = items.length === 0;
 
-  const button = visible ? (
+  // 알림을 놓쳐도 저장하지 않은 결과로 돌아갈 수 있게 무대 단추 위에 둔다.
+  const resultChip =
+    visible && account?.signedIn && unsavedJob ? (
+      <Pressable
+        role="button"
+        aria-label="다 된 완성 룩 보기"
+        onPress={() => router.push(`/generate/${unsavedJob}`)}
+        style={styles.resultChip}
+      >
+        <Text style={styles.resultChipLabel}>다 된 완성 룩 보기</Text>
+      </Pressable>
+    ) : null;
+
+  const generateButton = visible ? (
     <Pressable
       role="button"
       aria-label="이대로 입히기"
@@ -184,6 +200,13 @@ export function useGenerateFlow(
       {trialCount === null ? null : <Text style={styles.price}>{stagePriceLabel(trialCount)}</Text>}
     </Pressable>
   ) : null;
+
+  const button = (
+    <>
+      {resultChip}
+      {generateButton}
+    </>
+  );
 
   const sheets = (
     <>
@@ -228,6 +251,17 @@ const styles = StyleSheet.create({
     backgroundColor: GENERATE_CHERRY,
   },
   dim: { opacity: 0.45 },
+  resultChip: {
+    position: "absolute",
+    right: 12,
+    bottom: 76,
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    justifyContent: "center",
+    backgroundColor: "#151314",
+  },
+  resultChipLabel: { color: "#fff", fontSize: 13, fontWeight: "700" },
   label: { color: "#fff", fontSize: 15, fontWeight: "800" },
   price: { color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: "600" },
 });

@@ -17,7 +17,7 @@ import { EmptyScreen } from "../../src/ui/empty-screen";
 import { useProfile } from "../../src/ui/profile-gate";
 
 // 마이 프로필: 이름과 스타일 태그를 보인다. 생년월일은 보이지 않는다.
-// 서버가 있으면 머리 오른쪽에 「설정」, 가입 뒤에는 프로필 아래 「내 골드」 카드를 둔다.
+// 가입 뒤에는 머리 오른쪽에 「설정」, 프로필 아래 「내 골드」 카드를 둔다. 설정 칸은 모두 계정이 있어야 쓴다.
 export default function MyScreen() {
   const { profile, refresh } = useProfile();
   const router = useRouter();
@@ -49,7 +49,7 @@ export default function MyScreen() {
     <EmptyScreen title="마이">
       <Tabs.Screen
         options={{
-          headerRight: account?.server
+          headerRight: account?.signedIn
             ? () => (
                 <Pressable
                   role="button"
