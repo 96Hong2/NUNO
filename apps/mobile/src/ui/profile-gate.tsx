@@ -39,6 +39,9 @@ export function ProfileProvider({ load, children }: ProfileProviderProps) {
     return (
       <View style={styles.center}>
         <Text style={styles.title}>저장소를 열지 못했어요</Text>
+        <Text style={styles.body}>
+          다른 탭에서 NUNO 가 열려 있으면 그 탭을 닫고 다시 시도해 주세요.
+        </Text>
         <Text style={styles.detail}>{error}</Text>
         <Pressable role="button" style={styles.button} onPress={() => void refresh()}>
           <Text style={styles.buttonLabel}>다시 시도</Text>
@@ -64,7 +67,8 @@ const styles = StyleSheet.create({
   blank: { flex: 1, backgroundColor: "#fff" },
   center: { flex: 1, padding: 24, gap: 12, justifyContent: "center", backgroundColor: "#fff" },
   title: { fontSize: 18, fontWeight: "600" },
-  detail: { fontSize: 13, color: "#777" },
+  body: { fontSize: 15 },
+  detail: { fontSize: 12, color: "#999" },
   button: {
     alignSelf: "flex-start",
     paddingVertical: 10,

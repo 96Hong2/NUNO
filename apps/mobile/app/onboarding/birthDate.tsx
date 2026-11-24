@@ -13,7 +13,8 @@ export default function BirthDateScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const today = todayKst();
-  const disabled = saving || !isValidBirthDate(value, today);
+  const valid = isValidBirthDate(value, today);
+  const disabled = saving || !valid;
 
   const next = async () => {
     setSaving(true);
@@ -34,6 +35,9 @@ export default function BirthDateScreen() {
         </Text>
         <Text style={styles.subtitle}>생년월일은 프로필에 보이지 않아요.</Text>
         <BirthDateField value={value} min={BIRTH_DATE_MIN} max={today} onChange={setValue} />
+        {value !== "" && !valid ? (
+          <Text style={styles.error}>1900년 1월 1일부터 오늘까지 고를 수 있어요</Text>
+        ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
       <Pressable
