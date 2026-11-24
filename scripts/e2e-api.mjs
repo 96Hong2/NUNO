@@ -20,7 +20,7 @@ const target = dev
   ? { db: "nuno_dev", port: 8787, origins: "http://localhost:8090", fresh: false }
   : {
       db: "nuno_e2e",
-      port: Number(process.env.NUNO_E2E_API_PORT ?? 8792),
+      port: Number(process.env.NUNO_E2E_API_PORT ?? 8877),
       origins:
         process.env.NUNO_WEB_ORIGINS ?? `http://localhost:${process.env.NUNO_E2E_PORT ?? 8091}`,
       fresh: true,

@@ -6,7 +6,7 @@ import { ONBOARDED_STATE } from "./e2e/storage-state";
 const PORT = Number(process.env.NUNO_E2E_PORT ?? 8091);
 const WEB_URL = `http://localhost:${PORT}`;
 // API 서버도 개발 API(8787)와 다른 포트에 nuno_e2e DB 로 새로 띄운다(scripts/e2e-api.mjs).
-const API_PORT = Number(process.env.NUNO_E2E_API_PORT ?? 8792);
+const API_PORT = Number(process.env.NUNO_E2E_API_PORT ?? 8877);
 const API_URL = `http://localhost:${API_PORT}`;
 
 // Expo 웹(Metro)을 띄워 화면을 사용자처럼 눌러 본다. Metro 는 첫 요청 때 번들을 만들어 느리다.
