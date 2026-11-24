@@ -254,6 +254,9 @@ importers:
       '@nuno/ids':
         specifier: workspace:*
         version: link:../../packages/ids
+      '@nuno/outfit':
+        specifier: workspace:*
+        version: link:../../packages/outfit
       '@nuno/profile':
         specifier: workspace:*
         version: link:../../packages/profile
@@ -327,6 +330,12 @@ importers:
   packages/device-db: {}
 
   packages/ids: {}
+
+  packages/outfit:
+    dependencies:
+      '@nuno/device-db':
+        specifier: workspace:*
+        version: link:../device-db
 
   packages/profile:
     dependencies:
