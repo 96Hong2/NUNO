@@ -68,7 +68,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--models", required=True, help="face_landmarker.task, pose_landmarker_heavy.task 가 든 폴더")
     parser.add_argument("--twin", action="append", required=True, help="키=기본 사진 경로. 여러 번 준다")
-    parser.add_argument("--out", required=True, help="assets-source/twins 폴더")
+    parser.add_argument("--out", required=True, help="앱 판 폴더 apps/mobile/assets/twins")
     parser.add_argument("--check", required=True, help="확인 그림을 둘 폴더")
     args = parser.parse_args()
 

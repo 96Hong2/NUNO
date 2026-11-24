@@ -1,7 +1,16 @@
 import { DISPLAY_NAME_MAX } from "@nuno/profile";
 import { Link } from "expo-router";
 import { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { submitDisplayName } from "../../src/composition/profile";
 import { EmptyScreen } from "../../src/ui/empty-screen";
 import { useProfile } from "../../src/ui/profile-gate";
@@ -64,7 +73,11 @@ export default function MyScreen() {
         animationType="slide"
         onRequestClose={() => setEditing(false)}
       >
-        <View style={styles.backdrop}>
+        {/* iOS 키보드가 이름 칸과 「저장」 을 가리지 않게 시트를 키보드 위로 올린다. */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.backdrop}
+        >
           <View style={styles.sheet}>
             <Text role="heading" aria-level={3} style={styles.sheetTitle}>
               이름
@@ -87,7 +100,7 @@ export default function MyScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </EmptyScreen>
   );

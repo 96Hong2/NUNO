@@ -1,6 +1,6 @@
 # 프리셋 트윈 점과 마스크 뽑기
 
-프리셋 트윈 기본 사진에서 얼굴 점 478개, 몸 점 33개, 사람 마스크를 뽑아 `assets-source/twins/<키>/` 에 둔다. 확인 그림은 `docs/plans/evidence/T2/landmarks-<키>.png` 다. 앱과 `verify` 는 이 스크립트를 부르지 않는다.
+프리셋 트윈 원본 기본 사진(`assets-source/twins/<키>/base-source.*`)에서 얼굴 점 478개, 몸 점 33개, 사람 마스크를 뽑아 앱 판 폴더 `apps/mobile/assets/twins/<키>/` 에 둔다. 마스크는 그 폴더의 `base.jpg` 크기로 줄인다. 확인 그림은 `docs/plans/evidence/T2/landmarks-<키>.png` 다. 앱과 `verify` 는 이 스크립트를 부르지 않는다.
 
 ## 준비
 
@@ -17,7 +17,7 @@ uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r tools
 
 ```bash
 .venv/bin/python tools/twin-landmarks/extract.py --models <모델 폴더> \
-  --out assets-source/twins --check docs/plans/evidence/T2 \
+  --out apps/mobile/assets/twins --check docs/plans/evidence/T2 \
   --twin yuna=assets-source/twins/yuna/base-source.png --twin harin=assets-source/twins/harin/base-source.jpg …
 ```
 
