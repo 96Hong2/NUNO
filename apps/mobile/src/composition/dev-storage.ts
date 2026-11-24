@@ -1,5 +1,6 @@
 import { readProfile } from "@nuno/profile";
 import { readTwinChoice } from "@nuno/twin";
+import { countCloset, listRecentGarments, readGarmentMethod } from "@nuno/wardrobe";
 import { systemClock } from "../adapters/system-clock";
 import { getDeviceDb } from "./device-db";
 
@@ -36,12 +37,19 @@ export interface DevStorageSnapshot {
 export async function readDevStorage(): Promise<DevStorageSnapshot> {
   const { adapterName, db, schemaVersion } = await getDeviceDb();
   const profile = await readProfile(db);
+  const closet = await countCloset(db);
+  const [latest] = await listRecentGarments(db, 1);
   const saved: SavedValue[] = [
     { label: "생년월일", value: profile.birthDate },
     { label: "트윈 ID", value: await readTwinChoice(db) },
     {
       label: "스타일 태그",
       value: profile.styleTags.length > 0 ? profile.styleTags.join(", ") : null,
+    },
+    { label: "옷 (내 옷, 담은 옷)", value: `${closet.mine}벌, ${closet.wanted}벌` },
+    {
+      label: "마지막에 넣은 옷의 넣은 길",
+      value: latest ? await readGarmentMethod(db, latest.id) : null,
     },
   ];
   const tables = await db.all<{ name: string }>(

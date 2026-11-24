@@ -1,0 +1,25 @@
+// wardrobe 유스케이스와 저장소 함수. 그림 파일은 앱 composition 이 어댑터로 다룬다.
+export {
+  countCloset,
+  createGarmentTables,
+  deleteGarment,
+  insertGarment,
+  listCloset,
+  listRecentGarments,
+  moveGarments,
+  readGarment,
+  readGarmentMethod,
+  setFavorite,
+  updateGarmentFit,
+  type ClosetCounts,
+  type GarmentFit,
+  type NewGarment,
+} from "./garment-store";
+export {
+  NO_EDITS,
+  type GarmentEdits,
+  type GarmentMedia,
+  type PreparedPhoto,
+  type RenderedGarment,
+  type StoredGarmentFiles,
+} from "./garment-media";

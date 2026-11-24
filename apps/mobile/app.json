@@ -18,7 +18,16 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "옷 사진을 골라 옷장에 넣을 때 사진 보관함을 열어요.",
+          "cameraPermission": "옷 사진을 찍어 옷장에 넣을 때 카메라를 써요.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

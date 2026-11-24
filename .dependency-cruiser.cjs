@@ -9,6 +9,7 @@ const FEATURE_SDKS = [
   "expo-sqlite",
   "expo-crypto",
   "expo-file-system",
+  "expo-asset",
   "expo-image-picker",
   "expo-camera",
   "expo-media-library",
@@ -116,7 +117,8 @@ module.exports = {
     {
       name: "adapters-only-in-composition",
       severity: "error",
-      comment: "어댑터는 composition 에서 연다. 화면은 composition 의 함수를 불러 쓰고 어댑터를 직접 import 하지 않는다.",
+      comment:
+        "어댑터는 composition 에서 연다. 화면은 composition 의 함수를 불러 쓰고 어댑터를 직접 import 하지 않는다.",
       from: { pathNot: ["^apps/[^/]+/src/(adapters|composition)/", TEST_FILE] },
       to: { path: "^apps/[^/]+/src/adapters/" },
     },

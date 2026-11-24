@@ -1,0 +1,47 @@
+// wardrobe 도메인: 순수 타입과 함수만 둔다. 시각과 ID 는 인자로 받는다.
+export { CLOSET_LABELS, isClosetKey, saveButtonLabel, type ClosetKey } from "./closet";
+export { pickGarmentColor } from "./dominant-color";
+export {
+  cleanMeasurementText,
+  filterGarments,
+  followGarmentName,
+  linkHost,
+  normalizeGarmentName,
+  normalizeLinkUrl,
+  parseMeasurements,
+  parsePriceKrw,
+  type CutoutSource,
+  type Garment,
+  type GarmentFilter,
+  type GarmentMethod,
+} from "./garment";
+export {
+  categoryLabel,
+  colorLabel,
+  defaultGarmentName,
+  GARMENT_CATEGORIES,
+  GARMENT_COLORS,
+  isGarmentCategory,
+  isGarmentColor,
+  isSeason,
+  isSizeLabel,
+  MEASUREMENT_FIELDS,
+  type MeasurementField,
+  SEASONS,
+  SIZE_LABELS,
+  type GarmentCategory,
+  type GarmentColor,
+  type Season,
+  type SizeLabel,
+} from "./garment-attributes";
+export { faceStillVisible, type BrushStroke, type Rect } from "./geometry";
+export {
+  DEFAULT_PLACEMENT,
+  nudgeScale,
+  nudgeY,
+  placeGarment,
+  referenceBox,
+  scalePercent,
+  type Placement,
+  type PosePoints,
+} from "./placement";
