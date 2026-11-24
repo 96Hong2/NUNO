@@ -139,6 +139,8 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   v_count integer;
 BEGIN
+  -- 작업 함수들처럼 사용자 행을 먼저 잠가, 철회와 공급사 전송 시작의 순서를 정한다.
+  PERFORM 1 FROM users WHERE id = p_user_id FOR UPDATE;
   UPDATE consents SET withdrawn_at = p_now
   WHERE user_id = p_user_id AND kind = p_kind AND withdrawn_at IS NULL;
   GET DIAGNOSTICS v_count = ROW_COUNT;
