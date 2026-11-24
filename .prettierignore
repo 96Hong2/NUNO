@@ -1,3 +1,5 @@
 pnpm-lock.yaml
 **/*.md
 docs/plans/evidence/
+# 점 데이터는 스크립트가 만든 한 줄 JSON 이다. 포맷하면 수천 줄로 늘어난다.
+apps/mobile/assets/
