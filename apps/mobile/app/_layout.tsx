@@ -14,6 +14,7 @@ const GARMENT_SCREENS = [
   "garment/new/info",
   "garment/new/fit",
   "garment/[id]",
+  "look/[id]",
 ];
 
 export default function RootLayout() {
@@ -31,7 +32,7 @@ export default function RootLayout() {
                 </Stack.Protected>
                 <Stack.Protected guard={done}>
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  {/* 옷 넣기 네 단계와 옷 상세는 탭 위로 덮어 연다. 화면마다 자기 위 줄을 그린다. */}
+                  {/* 옷 넣기 네 단계, 옷 상세, 룩 크게 보기는 탭 위로 덮어 연다. 화면마다 자기 위 줄을 그린다. */}
                   {GARMENT_SCREENS.map((name) => (
                     <Stack.Screen key={name} name={name} options={{ headerShown: false }} />
                   ))}

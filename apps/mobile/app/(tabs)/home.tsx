@@ -1,9 +1,11 @@
+import type { Look } from "@nuno/lookbook";
 import { DEFAULT_PRESET_TWIN, presetTwin, type PresetTwinKey } from "@nuno/twin";
 import { categoryLabel } from "@nuno/wardrobe";
 import { Tabs, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { wearTodayLook } from "../../src/composition/outfit";
+import { loadLookbook } from "../../src/composition/lookbook";
 import { completeTour } from "../../src/composition/profile";
 import { loadCurrentTwin, switchTwin } from "../../src/composition/twin";
 import {
@@ -12,6 +14,7 @@ import {
   type ClosetView,
 } from "../../src/composition/wardrobe";
 import { FirstTour } from "../../src/ui/first-tour";
+import { LookCard } from "../../src/ui/look-card";
 import { GarmentCard } from "../../src/ui/garment-card";
 import { useProfile } from "../../src/ui/profile-gate";
 import { useAppToast } from "../../src/ui/app-toast";
@@ -24,12 +27,16 @@ const CELLS = [
   {
     key: "recentLooks",
     label: "최근 저장한 룩",
-    empty: "피팅룸에서 코디를 입혀 보고 룩북에 저장하면 여기에 보여요.",
+    empty:
+      "온보딩에서 저장한 첫 코디가 여기에 보여요. 코디는 피팅룸 「코디」 의 「내 코디」 에 저장해요.",
   },
   { key: "recentGarments", label: "최근 넣은 옷", empty: "옷장에 옷을 넣으면 여기에 먼저 보여요." },
 ] as const;
 
 type CellKey = (typeof CELLS)[number]["key"];
+
+/** 홈 「최근 저장한 룩」 카드 수(와이어프레임 8장) */
+const RECENT_LOOK_LIMIT = 8;
 
 // 홈 무대: 고른 트윈의 기본 코디 완성 사진이 흰 바탕 위에 선다. 꾸민 얼굴과 입힌 옷은 반영하지 않는다.
 export default function HomeScreen() {
@@ -40,11 +47,15 @@ export default function HomeScreen() {
   const [switching, setSwitching] = useState(false);
   const [cell, setCell] = useState<CellKey>("recentLooks");
   const [recent, setRecent] = useState<ClosetView | null>(null);
+  const [looks, setLooks] = useState<Look[]>([]);
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
-      const load = () => void loadRecentGarments().then(setRecent);
+      const load = () => {
+        void loadRecentGarments().then(setRecent);
+        void loadLookbook().then((view) => setLooks(view.looks));
+      };
       load();
       return onClosetChange(load);
     }, []),
@@ -137,7 +148,23 @@ export default function HomeScreen() {
               </Pressable>
             ))}
           </View>
-          {current.key === "recentGarments" && recent && recent.garments.length > 0 ? (
+          {current.key === "recentLooks" && looks.length > 0 ? (
+            <View style={styles.recent}>
+              <View style={styles.recentHead}>
+                <Text style={styles.recentCount}>저장한 룩 {looks.length}개</Text>
+                <Pressable role="button" onPress={() => router.navigate("/fitting/lookbook")}>
+                  <Text style={styles.recentLink}>내 룩북 전체 보기 ›</Text>
+                </Pressable>
+              </View>
+              <View style={styles.recentGrid}>
+                {looks.slice(0, RECENT_LOOK_LIMIT).map((look) => (
+                  <View key={look.id} style={styles.lookCell}>
+                    <LookCard look={look} onPress={() => router.push(`/look/${look.id}`)} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : current.key === "recentGarments" && recent && recent.garments.length > 0 ? (
             <View style={styles.recent}>
               <View style={styles.recentHead}>
                 <Text style={styles.recentCount}>
@@ -173,7 +200,18 @@ export default function HomeScreen() {
         onPick={(key) => void pick(key)}
         onClose={() => setSwitching(false)}
       />
-      <FirstTour visible={!profile.tourSeen} onDone={() => void finishTour()} />
+      <FirstTour
+        visible={!profile.tourSeen}
+        lead={
+          looks.length > 0
+            ? {
+                title: "첫 코디를 저장했어요",
+                body: "룩북에 저장했어요. 자주 쓰는 곳만 짧게 알려 드릴게요",
+              }
+            : undefined
+        }
+        onDone={() => void finishTour()}
+      />
     </View>
   );
 }
@@ -214,4 +252,5 @@ const styles = StyleSheet.create({
   recentLink: { fontSize: 14, fontWeight: "700", color: "#151314" },
   recentGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -5, rowGap: 16 },
   recentCell: { width: "33.333%", paddingHorizontal: 5 },
+  lookCell: { width: "50%", paddingHorizontal: 5 },
 });

@@ -14,17 +14,29 @@ const PAGES = [
   { title: "피팅룸과 마이", body: "아래 탭에서 피팅룸과 마이로 갈 수 있어요" },
 ] as const;
 
-/** 끝까지 넘기거나(「시작하기」) 닫으면(「닫기」) onDone 을 부른다. */
-export function FirstTour({ visible, onDone }: { visible: boolean; onDone: () => void }) {
+/**
+ * 끝까지 넘기거나(「시작하기」) 닫으면(「닫기」) onDone 을 부른다.
+ * lead 를 주면 맨 앞에 한 장 더한다(온보딩에서 룩을 저장했을 때 「첫 코디를 저장했어요」).
+ */
+export function FirstTour({
+  visible,
+  lead,
+  onDone,
+}: {
+  visible: boolean;
+  lead?: { title: string; body: string };
+  onDone: () => void;
+}) {
   const [index, setIndex] = useState(0);
-  const page = PAGES[index] ?? PAGES[0];
-  const last = index === PAGES.length - 1;
+  const pages = lead ? [lead, ...PAGES] : PAGES;
+  const page = pages[index] ?? pages[0] ?? PAGES[0];
+  const last = index === pages.length - 1;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDone}>
       <View style={styles.backdrop}>
         <View role="dialog" aria-label="처음 둘러보기" style={styles.card}>
           <Text style={styles.count}>
-            {index + 1} / {PAGES.length}
+            {index + 1} / {pages.length}
           </Text>
           <Text role="heading" aria-level={3} style={styles.title}>
             {page.title}

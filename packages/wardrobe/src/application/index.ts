@@ -1,10 +1,12 @@
 // wardrobe 유스케이스와 저장소 함수. 그림 파일은 앱 composition 이 어댑터로 다룬다.
 export {
+  addGarmentSampleKey,
   countCloset,
   createGarmentTables,
   deleteGarment,
   insertGarment,
   listCloset,
+  listClosetSampleKeys,
   listRecentGarments,
   moveGarments,
   readGarment,

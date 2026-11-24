@@ -80,4 +80,19 @@ export const LOOK_PHOTOS: Record<string, ImageSourcePropType | undefined> = {
   "yuna-co": image(require("../../assets/looks/yuna-co.webp")),
   "yuna-d1": image(require("../../assets/looks/yuna-d1.webp")),
 };
+/**
+ * 온보딩 「완성 룩이에요」 착장 사진. 키는 「<트윈>_<아우터 견본 키>_<하의 견본 키>」 다.
+ * 하린 9장만 있다. 없는 조합은 옷 그림을 겹쳐 보인다.
+ */
+export const ONBOARDING_LOOK_PHOTOS: Record<string, ImageSourcePropType | undefined> = {
+  harin_w18_w14: image(require("../../assets/onboarding-looks/harin_w18_w14.webp")),
+  harin_w18_w28: image(require("../../assets/onboarding-looks/harin_w18_w28.webp")),
+  harin_w18_w32: image(require("../../assets/onboarding-looks/harin_w18_w32.webp")),
+  harin_w21_w14: image(require("../../assets/onboarding-looks/harin_w21_w14.webp")),
+  harin_w21_w28: image(require("../../assets/onboarding-looks/harin_w21_w28.webp")),
+  harin_w21_w32: image(require("../../assets/onboarding-looks/harin_w21_w32.webp")),
+  harin_w36_w14: image(require("../../assets/onboarding-looks/harin_w36_w14.webp")),
+  harin_w36_w28: image(require("../../assets/onboarding-looks/harin_w36_w28.webp")),
+  harin_w36_w32: image(require("../../assets/onboarding-looks/harin_w36_w32.webp")),
+};
 /* eslint-enable @typescript-eslint/no-require-imports */

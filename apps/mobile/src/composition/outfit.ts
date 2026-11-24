@@ -26,8 +26,10 @@ import {
   type OutfitHistory,
   type OutfitPiece,
   type RecentOutfit,
+  type SampleGarmentKey,
   type SavedOutfit,
 } from "@nuno/outfit";
+import { insertLook, type Look } from "@nuno/lookbook";
 import { finishOnboarding } from "@nuno/profile";
 import type { SqlExecutor } from "@nuno/device-db";
 import { listCloset, readGarment } from "@nuno/wardrobe";
@@ -233,19 +235,35 @@ export async function wearGarment(id: string): Promise<void> {
 }
 
 /**
- * 온보딩 3단계를 끝낸다. 고른 옷이 있으면(「이대로 입히기」) 지금 코디로 입히고 「내 코디」 빈 첫 칸에 「첫 코디」 로 담는다.
- * 없으면(「건너뛰기」) 끝만 적는다. 두 컨텍스트의 쓰기를 트랜잭션 하나로 묶는다.
+ * 온보딩을 끝낸다. 4/4 「완성 룩이에요」 의 룩북 저장 시트에서 부르면(look 이 있으면)
+ * 룩 한 장, 지금 코디, 최근 줄, 「내 코디」 빈 첫 칸 「첫 코디」 를 한 트랜잭션에 쓰고 온보딩을 끝낸다.
+ * 룩 ID 는 시트를 열 때 정한다. 같은 룩이 이미 있으면(저장 단추 연타) 나머지를 모두 건너뛴다.
+ * look 이 없으면(「건너뛰기」) 끝만 적는다. 세 컨텍스트의 쓰기를 트랜잭션 하나로 묶는다.
  */
-export async function finishOnboardingOutfit(outfit: Outfit | null): Promise<void> {
-  const twinKey = await loadCurrentTwin();
+export async function finishOnboardingOutfit(look: Look | null): Promise<void> {
   const { db } = await getDeviceDb();
   await db.transaction(async (tx) => {
-    if (outfit && outfit.length > 0) {
-      const written = await writeOutfitTx(tx, twinKey, outfit);
+    if (look) {
+      if (!(await insertLook(tx, look))) return;
+      const outfit = look.items.map((item) => samplePiece(item.sampleKey as SampleGarmentKey));
+      const written = await writeOutfitTx(tx, look.twinKey, outfit);
       const slot = firstFreeSlot((await listSavedOutfits(tx)).map((item) => item.slot));
-      if (slot !== null) await putSavedTx(tx, twinKey, written, slot, "첫 코디");
+      if (slot !== null) await putSavedTx(tx, look.twinKey, written, slot, "첫 코디");
     }
     await finishOnboarding(tx);
   });
   changed();
+}
+
+/**
+ * 룩의 입은 옷 시트 「트윈에 입혀 보기 N」, 룩 크게 보기 「트윈에 입혀 보기」: 고른 견본 옷만 지금 코디 위에 입힌다.
+ * 같은 종류는 바뀌고, 고르지 않은 종류는 입던 옷을 그대로 둔다. 되돌리기 기록에 쌓인다.
+ */
+export function wearSamples(keys: readonly string[]): Promise<Outfit | null> {
+  return changeOutfit((current) =>
+    keys.reduce<Outfit>((outfit, key) => {
+      const piece = samplePiece(key as SampleGarmentKey);
+      return isWorn(outfit, piece.ref) ? outfit : toggleGarment(outfit, piece);
+    }, current),
+  );
 }

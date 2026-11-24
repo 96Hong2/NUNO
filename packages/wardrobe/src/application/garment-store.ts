@@ -52,10 +52,20 @@ export const createGarmentTables: Omit<Migration, "version"> = {
   },
 };
 
+/** 넣은 길 표에 견본 옷 키 칸을 더하는 옮기기 단계. 견본 옷을 담은 옷이 「옷장에 있음」 인지 이 칸으로 본다. */
+export const addGarmentSampleKey: Omit<Migration, "version"> = {
+  name: "add-garment-sample-key",
+  async up(tx) {
+    await tx.exec("ALTER TABLE garment_sources ADD COLUMN sample_key TEXT");
+  },
+};
+
 /** 옷 넣기 마지막 단추가 넘기는 값. id 는 사진을 고를 때 정해져 담기를 연타해도 같다. */
 export interface NewGarment extends Omit<Garment, "isFavorite" | "createdAt" | "updatedAt"> {
   method: GarmentMethod;
   hadPerson: boolean;
+  /** 견본 옷을 담았으면 그 견본 키 */
+  sampleKey?: string;
 }
 
 interface GarmentRow {
@@ -161,7 +171,22 @@ export async function insertGarment(
     "INSERT INTO garment_sources (garment_id, method, had_person, created_at) VALUES (?, ?, ?, ?)",
     [garment.id, garment.method, garment.hadPerson ? 1 : 0, now],
   );
+  // 견본 키 칸은 판 5(addGarmentSampleKey)에서 생겼다. 견본 옷을 담을 때만 쓴다.
+  if (garment.sampleKey) {
+    await db.run("UPDATE garment_sources SET sample_key = ? WHERE garment_id = ?", [
+      garment.sampleKey,
+      garment.id,
+    ]);
+  }
   return true;
+}
+
+/** 두 칸 어디든 남아 있는 옷의 견본 키. 룩의 입은 옷 시트 「옷장에 있음」 에 쓴다 */
+export async function listClosetSampleKeys(db: SqlExecutor): Promise<string[]> {
+  const rows = await db.all<{ sample_key: string }>(
+    "SELECT DISTINCT s.sample_key FROM garment_sources s JOIN garments g ON g.id = s.garment_id WHERE s.sample_key IS NOT NULL",
+  );
+  return rows.map((row) => row.sample_key);
 }
 
 /** 한 칸의 옷. 마지막에 넣은 옷이 앞이다. */

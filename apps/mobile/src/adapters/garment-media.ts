@@ -55,6 +55,22 @@ export const garmentMedia: GarmentMedia = {
     };
   },
 
+  async storeImage(id, imageUri) {
+    const directory = new Directory(Paths.document, "garments", id);
+    directory.create({ intermediates: true, idempotent: true });
+    const paths = {
+      originalPath: `garments/${id}/original.png`,
+      cutoutPath: `garments/${id}/cutout.png`,
+      thumbPath: `garments/${id}/thumb.png`,
+    };
+    for (const name of ["original.png", "cutout.png", "thumb.png"]) {
+      const target = new File(directory, name);
+      if (target.exists) target.delete();
+      await new File(imageUri).copy(target);
+    }
+    return paths;
+  },
+
   release() {
     // 아이폰 파일 주소는 놓아줄 것이 없다.
   },

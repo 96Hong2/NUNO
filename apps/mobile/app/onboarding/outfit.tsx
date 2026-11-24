@@ -1,6 +1,7 @@
 import { ONBOARDING_SAMPLES, refKey, samplePiece, type SampleGarmentKey } from "@nuno/outfit";
 import type { PresetTwinKey } from "@nuno/twin";
 import { categoryLabel } from "@nuno/wardrobe";
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { finishOnboardingOutfit } from "../../src/composition/outfit";
@@ -19,10 +20,11 @@ const ROWS = [
 ] as const;
 
 // 온보딩 3단계 「입고 싶은 옷을 골라 보세요」. 줄마다 하나씩 고르면 트윈 위에 바로 겹친다.
-// 「이대로 입히기」 는 두 벌을 지금 코디와 「내 코디」 첫 칸에 담고 온보딩을 끝낸다(완성 룩 화면은 T5).
+// 「이대로 입히기」 는 4/4 「완성 룩이에요」 로 간다. 저장은 그 화면의 룩북 저장 시트에서 한다.
 export default function OnboardingOutfitScreen() {
   const { refresh } = useProfile();
   const toast = useAppToast();
+  const router = useRouter();
   const [twin, setTwin] = useState<PresetTwinKey | null>(null);
   const [picked, setPicked] = useState<{ outer?: SampleGarmentKey; bottom?: SampleGarmentKey }>({});
   const [saving, setSaving] = useState(false);
@@ -37,11 +39,12 @@ export default function OnboardingOutfitScreen() {
     .map(samplePiece);
   const ready = Boolean(picked.outer && picked.bottom);
 
-  const finish = async (withOutfit: boolean) => {
+  /** 「건너뛰기」: 옷을 입히지 않고 온보딩을 끝낸다 */
+  const skip = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      await finishOnboardingOutfit(withOutfit ? outfit : null);
+      await finishOnboardingOutfit(null);
       await refresh();
     } catch (caught) {
       toast.show(caught instanceof Error ? caught.message : String(caught));
@@ -49,12 +52,16 @@ export default function OnboardingOutfitScreen() {
     }
   };
 
+  /** 「이대로 입히기」: 저장하지 않고 4/4 「완성 룩이에요」 로 간다. 저장은 4/4 의 룩북 저장 시트에서 한다 */
   const submit = () => {
-    if (!ready) {
+    if (!ready || !picked.outer || !picked.bottom) {
       toast.show("아우터와 하의를 하나씩 골라 주세요");
       return;
     }
-    void finish(true);
+    router.navigate({
+      pathname: "/onboarding/look",
+      params: { outer: picked.outer, bottom: picked.bottom },
+    });
   };
 
   return (
@@ -62,7 +69,7 @@ export default function OnboardingOutfitScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.topRow}>
           <StepDots current={3} />
-          <Pressable role="button" hitSlop={12} onPress={() => void finish(false)}>
+          <Pressable role="button" hitSlop={12} onPress={() => void skip()}>
             <Text style={styles.skip}>건너뛰기</Text>
           </Pressable>
         </View>
