@@ -2,7 +2,7 @@
 
 > 로드맵: `docs/roadmap.md` 「T3」 · 작성 2026-11-25 · 상태: 완료
 >
-> PR: https://github.com/96Hong2/NUNO/pull/10
+> PR: https://github.com/96Hong2/NUNO/pull/10 , https://github.com/96Hong2/NUNO/pull/11
 
 ## 목표
 
