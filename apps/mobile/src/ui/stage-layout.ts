@@ -1,14 +1,18 @@
 import type { OutfitCategory, OutfitSlot } from "@nuno/outfit";
 import {
+  anchorOf,
   placeGarment,
+  placeOnBody,
   referenceBox,
+  type BodySpot,
   type Placement,
   type PosePoints,
   type Rect,
 } from "@nuno/wardrobe";
 
 // 코디 무대에서 옷 그림을 놓을 자리(트윈 사진 대비 0~1 비율).
-// 옷장 옷과 견본 옷 모두 「트윈에 맞춰 볼게요」 와 같은 기준 상자와 placement 로 놓는다.
+// 옷장 옷은 「트윈에 맞춰 볼게요」 와 같은 기준 상자와 placement 로 놓는다.
+// 견본 옷은 와이어프레임 무대 자리 값(spot)을 그 트윈 몸 점에 맞춰 옮겨 놓는다.
 // 액세서리는 두르는 자리마다 상자를 따로 잡는다. 머리 자리는 옷장의 액세서리 상자를 쓴다.
 
 /** 트윈 몸 점 자료(assets/twins/<키>/landmarks.json) */
@@ -66,16 +70,21 @@ export function slotBox(category: OutfitCategory, slot: OutfitSlot, pose: PosePo
 }
 
 /**
- * 옷 그림을 그릴 상자. 그림은 이 상자 안에 비율을 지켜(contain) 그린다.
- * 상자 비율을 그대로 placeGarment 에 넘기므로, 그 안에 contain 으로 그린 그림은
- * 실제 그림 비율로 placeGarment 를 한 자리와 같다(가운데 기준 확대와 맞춤이 서로 바뀌어도 같다).
+ * 옷 그림을 그릴 상자. 그림은 이 상자에 꼭 맞게 그린다.
+ * imageAspect 는 옷 그림의 가로 / 세로 픽셀 비율이다. 그림을 읽기 전(null)에는 기준 상자 비율로 잡는다.
  */
 export function garmentFrame(
   category: OutfitCategory,
   slot: OutfitSlot,
-  pose: PosePoints,
-  placement: Placement,
+  landmarks: Landmarks,
+  fit: { placement: Placement; spot?: BodySpot },
+  imageAspect: number | null,
 ): Rect {
-  const box = slotBox(category, slot, pose);
-  return placeGarment(box, placement, box.width / box.height);
+  const photoAspect = landmarks.image.width / landmarks.image.height;
+  const box = slotBox(category, slot, landmarks.pose);
+  const aspect = imageAspect ? imageAspect / photoAspect : box.width / box.height;
+  if (fit.spot) {
+    return placeOnBody(fit.spot, landmarks.pose, aspect, category === "shoes" ? "bottom" : "top");
+  }
+  return placeGarment(box, fit.placement, aspect, anchorOf(category));
 }

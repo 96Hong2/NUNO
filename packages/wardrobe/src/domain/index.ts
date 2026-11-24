@@ -34,14 +34,17 @@ export {
   type Season,
   type SizeLabel,
 } from "./garment-attributes";
+export { placeOnBody, type BodySpot } from "./body-spot";
 export { faceStillVisible, type BrushStroke, type Rect } from "./geometry";
 export {
+  anchorOf,
   DEFAULT_PLACEMENT,
   nudgeScale,
   nudgeY,
   placeGarment,
   referenceBox,
   scalePercent,
+  type GarmentAnchor,
   type Placement,
   type PosePoints,
 } from "./placement";

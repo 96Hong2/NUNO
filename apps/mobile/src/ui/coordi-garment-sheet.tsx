@@ -42,7 +42,7 @@ interface GarmentSheetProps {
 /** 무대 아래 옷 칸: 종류 칩, 거르기, 코디 줄, 옷 격자 */
 export function CoordiGarmentSheet(props: GarmentSheetProps) {
   const { outfit, catalog, catalogMap, recents, category, favoriteOnly, twinKey } = props;
-  const nameOf = (piece: Outfit[number]) => catalogMap.get(refKey(piece.ref))?.name ?? "";
+  const nameOf = (piece: Outfit[number]) => catalogMap.get(refKey(piece.ref))?.shortName ?? "";
   const looks = (RECOMMENDED_LOOKS[twinKey] ?? []).map((look) => look.items.map(samplePiece));
   const tab = recents.length === 0 ? "reco" : props.tab;
   const strip = tab === "recent" ? recents.map((item) => item.outfit) : looks;
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: "row", gap: 14 },
   tab: { fontSize: 14, color: "#9A968E" },
   tabOn: { color: "#151314", fontWeight: "700" },
-  strip: { gap: 10 },
+  strip: { gap: 8 },
   empty: { fontSize: 13, color: "#76736C" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   cell: { width: "23%", aspectRatio: 1 },

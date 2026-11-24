@@ -18,7 +18,7 @@ const GARMENTS = [
   ["highneck-knit.jpg", "상의"],
   ["hline-skirt.jpg", "하의"],
   ["hobo-bag.jpg", "가방"],
-  ["hood-muffler.jpg", "액세서리"],
+  ["pleats-mini.jpg", "하의"],
   ["knit-stripe.jpg", "상의"],
   ["lavender-padding.jpg", "아우터"],
   ["long-boots.jpg", "신발"],

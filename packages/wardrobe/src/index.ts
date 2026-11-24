@@ -1,5 +1,6 @@
 // @nuno/wardrobe 공개 면. 밖에서 쓰는 이름을 하나씩 적어 내보낸다(export * 금지).
 export {
+  anchorOf,
   categoryLabel,
   cleanMeasurementText,
   CLOSET_LABELS,
@@ -22,6 +23,7 @@ export {
   parsePriceKrw,
   pickGarmentColor,
   placeGarment,
+  placeOnBody,
   referenceBox,
   saveButtonLabel,
   scalePercent,
@@ -29,10 +31,12 @@ export {
   SIZE_LABELS,
 } from "./domain";
 export type {
+  BodySpot,
   BrushStroke,
   ClosetKey,
   Garment,
   GarmentCategory,
+  GarmentAnchor,
   GarmentColor,
   GarmentFilter,
   GarmentMethod,

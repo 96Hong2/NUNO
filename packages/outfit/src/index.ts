@@ -22,6 +22,7 @@ export {
   slotOf,
   suggestGarments,
   todayLook,
+  twinTodayLook,
   toggleGarment,
   undo,
 } from "./domain";
@@ -33,9 +34,10 @@ export type {
   OutfitPiece,
   OutfitSlot,
   RecentOutfit,
-  SampleFit,
+  RecommendedLook,
   SampleGarment,
   SampleGarmentKey,
+  SampleStage,
   SuggestCandidate,
 } from "./domain";
 export {

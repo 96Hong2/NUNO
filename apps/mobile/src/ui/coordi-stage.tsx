@@ -10,6 +10,35 @@ import { TWIN_ASSETS } from "./twin-assets";
 /** 무대 분홍 바탕. 트윈 기본 사진 가장자리 색(여섯 트윈 평균)이다. */
 export const STAGE_PINK = "#CDB7B9";
 
+type Box = { x: number; y: number; width: number; height: number };
+
+/**
+ * 그림의 가로 / 세로 비율. known 이 있으면 그 값을 쓰고, 없으면 uri 의 그림 크기를 읽는다.
+ * undefined 는 아직 읽는 중, null 은 크기를 알 수 없는 그림이다.
+ */
+export function useImageAspect(uri: string | undefined, known?: number): number | null | undefined {
+  const [measured, setMeasured] = useState<{ uri: string; aspect: number | null }>();
+  useEffect(() => {
+    if (known || !uri) return;
+    let live = true;
+    Image.getSize(
+      uri,
+      (width, height) => {
+        if (live) setMeasured({ uri, aspect: width > 0 && height > 0 ? width / height : null });
+      },
+      () => {
+        if (live) setMeasured({ uri, aspect: null });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [uri, known]);
+  if (known) return known;
+  if (!uri) return null;
+  return measured?.uri === uri ? measured.aspect : undefined;
+}
+
 interface CoordiStageProps {
   twinKey: PresetTwinKey;
   outfit: Outfit;
@@ -36,7 +65,7 @@ export function CoordiStage({ twinKey, outfit, catalog, onTapPiece, thumbnail }:
   const photoHeight = photoWidth / aspect;
   const left = (size.width - photoWidth) / 2;
   const top = (size.height - photoHeight) / 2;
-  const toPx = (box: { x: number; y: number; width: number; height: number }) => ({
+  const toPx = (box: Box) => ({
     left: left + box.x * photoWidth,
     top: top + box.y * photoHeight,
     width: box.width * photoWidth,
@@ -66,21 +95,15 @@ export function CoordiStage({ twinKey, outfit, catalog, onTapPiece, thumbnail }:
           {pieces.map((piece) => {
             const item = catalog.get(refKey(piece.ref));
             if (!item) return null;
-            const frame = toPx(
-              garmentFrame(piece.category, piece.slot, landmarks.pose, item.placement),
-            );
             return (
-              <Pressable
+              <StagePiece
                 key={item.key}
-                testID="stage-piece"
-                role={onTapPiece ? "button" : "img"}
-                aria-label={`무대의 ${item.name}`}
-                disabled={!onTapPiece}
-                onPress={() => onTapPiece?.(piece)}
-                style={[styles.abs, frame]}
-              >
-                <Image source={item.image} resizeMode="contain" style={styles.fill} />
-              </Pressable>
+                piece={piece}
+                item={item}
+                landmarks={landmarks}
+                toPx={toPx}
+                onTap={onTapPiece}
+              />
             );
           })}
           {!thumbnail && showLandmarks() ? (
@@ -92,6 +115,37 @@ export function CoordiStage({ twinKey, outfit, catalog, onTapPiece, thumbnail }:
   );
 }
 
+/** 무대 위 옷 한 벌. 그림 비율을 안 뒤에 자리를 잡아 보인다. */
+function StagePiece({
+  piece,
+  item,
+  landmarks,
+  toPx,
+  onTap,
+}: {
+  piece: OutfitPiece;
+  item: CatalogItem;
+  landmarks: Landmarks;
+  toPx: (box: Box) => object;
+  onTap?: (piece: OutfitPiece) => void;
+}) {
+  const uri = typeof item.image === "object" && "uri" in item.image ? item.image.uri : undefined;
+  const aspect = useImageAspect(uri, item.aspect);
+  const frame = toPx(garmentFrame(piece.category, piece.slot, landmarks, item, aspect ?? null));
+  return (
+    <Pressable
+      testID="stage-piece"
+      role={onTap ? "button" : "img"}
+      aria-label={`무대의 ${item.name}`}
+      disabled={!onTap}
+      onPress={() => onTap?.(piece)}
+      style={[styles.abs, frame, aspect === undefined && styles.loading]}
+    >
+      <Image source={item.image} resizeMode="contain" style={styles.fill} />
+    </Pressable>
+  );
+}
+
 /** 개발 빌드 「점 겹쳐 보기」: 어깨와 골반 점, 상의와 하의 기준 상자 */
 function LandmarkOverlay({
   landmarks,
@@ -100,7 +154,7 @@ function LandmarkOverlay({
 }: {
   landmarks: Landmarks;
   outfit: Outfit;
-  toPx: (box: { x: number; y: number; width: number; height: number }) => object;
+  toPx: (box: Box) => object;
 }) {
   const points = [11, 12, 23, 24].map((index) => ({
     index,
@@ -138,6 +192,7 @@ const styles = StyleSheet.create({
   stage: { flex: 1, overflow: "hidden", backgroundColor: STAGE_PINK },
   abs: { position: "absolute" },
   fill: { width: "100%", height: "100%" },
+  loading: { opacity: 0 },
   devBox: { borderWidth: 1, borderColor: "#1E6BFF" },
   devPoint: {
     width: 8,
