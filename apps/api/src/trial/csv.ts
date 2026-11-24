@@ -48,3 +48,9 @@ export function parseCsv(source: string): CsvRow[] {
   if (!header) return [];
   return rows.map((row) => Object.fromEntries(header.map((name, i) => [name, row[i] ?? ""])));
 }
+
+/** 머리줄의 열 이름(BOM 을 뗀다). 데이터 줄이 없어도 읽는다 */
+export function csvColumns(text: string): string[] {
+  const first = text.replace(/^\uFEFF/, "").split(/\r?\n/)[0] ?? "";
+  return Object.keys(parseCsv(`${first}\n${first.replace(/[^,]/g, "") + "x"}\n`)[0] ?? {});
+}

@@ -3,7 +3,7 @@ import {
   type GenerationProvider,
   type ProviderOutcome,
 } from "../generation/provider.ts";
-import { csvHeader, csvLine, parseCsv, type CsvRow } from "./csv.ts";
+import { csvColumns, csvHeader, csvLine, parseCsv, type CsvRow } from "./csv.ts";
 import { stripMetadata, type ImageKind } from "./strip-metadata.ts";
 
 // 반증 실험 호출 스크립트의 본체. 요청 목록을 부르고 결과를 채점 폴더와 호출 장부로 나눠 남긴다.
@@ -103,6 +103,7 @@ export const CALL_COLUMNS = [
   "billing_checked",
   "elapsed_ms",
   "called_at",
+  "scoring_dir",
 ] as const;
 
 export interface TrialOptions {
@@ -228,28 +229,52 @@ function checkLedgerHeader(text: string | null): void {
  */
 async function flushStaged(ledgerPath: string, scoringDir: string, io: TrialIo): Promise<string[]> {
   const scoringPath = `${scoringDir}/scoring.csv`;
-  const rows = parseCsv((await io.readText(scoringPath)) ?? "");
+  const text = (await io.readText(scoringPath)) ?? "";
+  const rows = parseCsv(text);
   const scored = new Set(rows.map((row) => row.file));
+  // 장부 하나로 채점 폴더 여럿을 쓸 수 있다. 이 폴더로 갈 그림만 본다(폴더 칸이 빈 줄은 이 폴더 것으로 본다).
   const pending = parseCsv((await io.readText(ledgerPath)) ?? "").filter(
-    (row) => row.status === "succeeded" && row.file && !scored.has(row.file),
+    (row) =>
+      row.status === "succeeded" &&
+      row.file &&
+      !scored.has(row.file) &&
+      (row.scoring_dir || scoringDir) === scoringDir,
   );
   const missing: string[] = [];
   const added: CsvRow[] = [];
   for (const row of shuffled(pending, () => io.random())) {
     const file = row.file ?? "";
     const target = `${scoringDir}/${file}`;
-    const moved = await io.moveFile(`${ledgerPath}.staging/${file}`, target);
+    const moved = await io.moveFile(`${stagingDir(ledgerPath, scoringDir)}/${file}`, target);
     if (moved || (await io.exists(target))) added.push(row);
     else missing.push(file);
   }
-  if (added.length > 0 || !(await io.readText(scoringPath))) {
+  if (added.length > 0 || !text) {
+    // 기획자가 더한 열과 그 순서, BOM 을 그대로 두고 빠진 기본 열만 뒤에 붙인다.
+    const bom = text.startsWith("\uFEFF") ? "\uFEFF" : "";
+    const header = text ? csvColumns(text) : [];
+    const columns = [...header, ...SCORING_COLUMNS.filter((column) => !header.includes(column))];
     const all = shuffled([...rows, ...added], () => io.random());
     await io.writeText(
       scoringPath,
-      csvHeader(SCORING_COLUMNS) + all.map((row) => csvLine(SCORING_COLUMNS, row)).join(""),
+      bom + csvHeader(columns) + all.map((row) => csvLine(columns, row)).join(""),
     );
   }
   return missing;
+}
+
+/** 채점 폴더마다 대기 폴더를 따로 둔다. 남은 그림이 다른 채점 폴더로 가지 않게 */
+function stagingDir(ledgerPath: string, scoringDir: string): string {
+  return `${ledgerPath}.staging/${scoringDir.replace(/[^A-Za-z0-9가-힣._-]/g, "_")}`;
+}
+
+/** 스프레드시트가 UTF-8 이 아닌 글자 표(CP949 등)로 저장하면 한글이 깨진 채 다시 써져 되돌릴 수 없다 */
+function checkUtf8(path: string, text: string | null): void {
+  if (text?.includes("\uFFFD")) {
+    throw new Error(
+      `${path} 가 UTF-8 이 아니다. 스프레드시트에서 「CSV UTF-8」 로 다시 저장한 뒤 돌린다`,
+    );
+  }
 }
 
 async function runLocked(
@@ -260,6 +285,8 @@ async function runLocked(
   io: TrialIo,
 ): Promise<TrialResult> {
   const ledgerText = await io.readText(ledgerPath);
+  checkUtf8(ledgerPath, ledgerText);
+  checkUtf8(`${scoringDir}/scoring.csv`, await io.readText(`${scoringDir}/scoring.csv`));
   checkLedgerHeader(ledgerText);
   const calls = parseCsv(ledgerText ?? "");
   if (!ledgerText) await io.appendText(ledgerPath, csvHeader(CALL_COLUMNS));
@@ -370,8 +397,8 @@ async function runLocked(
       const file = `${io.randomName()}.${clean.kind === "jpeg" ? "jpg" : "png"}`;
       // 대기 폴더에 그림을 먼저 쓰고 장부 결과 줄을 쓴다. 그 사이에 죽으면 calling 만 남아 「끊긴 호출」 로 알려진다.
       // 채점 폴더로는 끝날 때 섞어 옮긴다.
-      await io.writeFile(`${ledgerPath}.staging/${file}`, clean.bytes);
-      await record({ file });
+      await io.writeFile(`${stagingDir(ledgerPath, scoringDir)}/${file}`, clean.bytes);
+      await record({ file, scoring_dir: scoringDir });
     }
   } finally {
     // 처음과 끝 두 번 옮기므로 같은 그림이 두 번 나올 수 있다. 한 번만 알린다.

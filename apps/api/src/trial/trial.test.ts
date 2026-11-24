@@ -346,6 +346,50 @@ describe("반증 실험 호출 스크립트: 장부가 어긋나는 장면", () 
     expect(order.slice(0, 6).every((key) => key === "s")).toBe(false);
   });
 
+  it("채점 CSV 를 다시 써도 기획자가 더한 열, 그 칸, BOM 이 남는다", async () => {
+    const { io, files } = memoryIo();
+    await runTrial([request("a", "seedream")], providers, paths, io);
+    const [header = "", ...lines] = (files.get("out/scoring/scoring.csv") as string)
+      .trimEnd()
+      .split("\n");
+    files.set(
+      "out/scoring/scoring.csv",
+      `\uFEFF${header},memo\r\n${lines.map((line) => `${line},소매 길이 다시 보기`).join("\r\n")}\r\n`,
+    );
+    await runTrial([request("b", "seedream")], providers, paths, io);
+    const text = files.get("out/scoring/scoring.csv") as string;
+    expect(text.startsWith("\uFEFF")).toBe(true);
+    const rows = parseCsv(text);
+    expect(rows.find((row) => row.file === "r001.jpg")?.memo).toBe("소매 길이 다시 보기");
+    expect(rows.map((row) => row.file).sort()).toEqual(["r001.jpg", "r002.jpg"]);
+  });
+
+  it("UTF-8 이 아닌 글자 표로 저장한 채점 CSV(깨진 글자)면 한 건도 부르지 않는다", async () => {
+    const { io, files } = memoryIo();
+    await runTrial([request("a", "seedream")], providers, paths, io);
+    files.set("out/scoring/scoring.csv", "file,fail_reason\nr001.jpg,\uFFFD\uFFFD\n");
+    await expect(runTrial([request("b", "seedream")], providers, paths, io)).rejects.toThrow(
+      "UTF-8",
+    );
+    expect(
+      parseCsv(files.get("ledger/calls.csv") as string).some((row) => row.request_id === "b"),
+    ).toBe(false);
+  });
+
+  it("장부 하나로 채점 폴더 둘을 번갈아 써도 그림은 제 폴더로만 가고 「찾지 못했다」 가 나오지 않는다", async () => {
+    const { io, files } = memoryIo();
+    const big = { seedream: 10, sunburst: 10, flare: 10 };
+    const a = { ...paths, caps: big, scoringDir: "A" };
+    const b = { ...paths, caps: big, scoringDir: "B" };
+    expect((await runTrial([request("a1", "seedream")], providers, a, io)).missing).toEqual([]);
+    expect((await runTrial([request("b1", "seedream")], providers, b, io)).missing).toEqual([]);
+    expect((await runTrial([request("a2", "seedream")], providers, a, io)).missing).toEqual([]);
+    const inA = parseCsv(files.get("A/scoring.csv") as string).map((row) => row.input);
+    const inB = parseCsv(files.get("B/scoring.csv") as string).map((row) => row.input);
+    expect(inA.sort()).toEqual(["in-a1", "in-a2"]);
+    expect(inB).toEqual(["in-b1"]);
+  });
+
   it("D5 검사는 점 파일을 건너뛰고, 화상 데이터 안의 우연한 글자는 메타데이터로 보지 않는다", () => {
     const name = "0b5c5f2e-1111-4222-8333-444455556666.jpg";
     // SOS 뒤 화상 데이터에 「tIME」, 「Exif」 와 같은 바이트가 우연히 들어 있다
