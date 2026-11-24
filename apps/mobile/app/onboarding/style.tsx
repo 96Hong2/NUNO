@@ -1,24 +1,26 @@
 import { STYLE_TAGS, STYLE_TAGS_MAX, toggleStyleTag } from "@nuno/profile";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { finishStyleStep } from "../../src/composition/profile";
+import { finishStyleStep, saveStyleChoice } from "../../src/composition/profile";
 import { useProfile } from "../../src/ui/profile-gate";
 import { StepDots } from "../../src/ui/step-dots";
 import { useAppToast } from "../../src/ui/app-toast";
 
-// 온보딩 2단계. 「다음」 은 고른 태그를 저장하고, 「나중에 고를게요」 와 「건너뛰기」 는 그냥 끝낸다.
-// 셋 다 온보딩을 끝내며, 프로필을 다시 읽으면 루트의 Stack.Protected 가 홈으로 보낸다.
+// 온보딩 2단계. 「다음」 은 고른 태그를 저장하고 3단계로, 「나중에 고를게요」 는 저장 없이 3단계로 간다.
+// 「건너뛰기」 는 온보딩을 끝내며, 프로필을 다시 읽으면 루트의 Stack.Protected 가 홈으로 보낸다.
 export default function StyleScreen() {
   const { refresh } = useProfile();
+  const router = useRouter();
   const toast = useAppToast();
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const finish = async (tags: string[] | null) => {
+  const finish = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      await finishStyleStep(tags);
+      await finishStyleStep();
       await refresh();
     } catch (caught) {
       toast.show(caught instanceof Error ? caught.message : String(caught));
@@ -37,7 +39,18 @@ export default function StyleScreen() {
       toast.show("스타일을 하나 이상 골라 주세요");
       return;
     }
-    void finish(selected);
+    if (saving) return;
+    setSaving(true);
+    void saveStyleChoice(selected).then(
+      () => {
+        setSaving(false);
+        router.navigate("/onboarding/outfit");
+      },
+      (caught: unknown) => {
+        setSaving(false);
+        toast.show(String(caught));
+      },
+    );
   };
 
   return (
@@ -45,7 +58,7 @@ export default function StyleScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.topRow}>
           <StepDots current={2} />
-          <Pressable role="button" hitSlop={12} onPress={() => void finish(null)}>
+          <Pressable role="button" hitSlop={12} onPress={() => void finish()}>
             <Text style={styles.skip}>건너뛰기</Text>
           </Pressable>
         </View>
@@ -73,7 +86,11 @@ export default function StyleScreen() {
             );
           })}
         </View>
-        <Pressable role="button" onPress={() => void finish(null)} style={styles.later}>
+        <Pressable
+          role="button"
+          onPress={() => router.navigate("/onboarding/outfit")}
+          style={styles.later}
+        >
           <Text style={styles.laterLabel}>나중에 고를게요</Text>
         </Pressable>
       </ScrollView>

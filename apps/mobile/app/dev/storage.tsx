@@ -8,6 +8,8 @@ import {
   type ConstraintCheck,
   type DevStorageSnapshot,
 } from "../../src/composition/dev-storage";
+import { GARMENT_CATEGORIES } from "@nuno/wardrobe";
+import { setDevStage, showLandmarks, stageHidden } from "../../src/ui/stage-config";
 
 export default function DevStorageScreen() {
   if (!__DEV__) return <Redirect href="/my" />;
@@ -86,6 +88,8 @@ function DevStorage() {
         </View>
       ) : null}
 
+      <StageSwitches />
+
       <Text role="heading" aria-level={2} style={styles.heading}>
         dev_probe
       </Text>
@@ -113,9 +117,63 @@ function DevStorage() {
   );
 }
 
+/** 코디 무대 시험: 점 겹쳐 보기와 무대에 겹치지 않을 분류. 앱을 켠 동안만 남는다. */
+function StageSwitches() {
+  const [, setTick] = useState(0);
+  const rerender = () => setTick((value) => value + 1);
+  const hidden = new Set(GARMENT_CATEGORIES.map((c) => c.key).filter(stageHidden));
+  return (
+    <>
+      <Text role="heading" aria-level={2} style={styles.heading}>
+        코디 무대 시험
+      </Text>
+      <Pressable
+        role="switch"
+        aria-checked={showLandmarks()}
+        onPress={() => {
+          setDevStage({ landmarks: !showLandmarks() });
+          rerender();
+        }}
+        style={styles.toggle}
+      >
+        <Text style={styles.row}>점 겹쳐 보기: {showLandmarks() ? "켬" : "끔"}</Text>
+      </Pressable>
+      <View role="group" aria-label="무대에 겹치지 않는 분류" style={styles.actions}>
+        {GARMENT_CATEGORIES.map((category) => {
+          const on = hidden.has(category.key);
+          return (
+            <Pressable
+              key={category.key}
+              role="checkbox"
+              aria-checked={on}
+              onPress={() => {
+                const next = new Set(hidden);
+                if (on) next.delete(category.key);
+                else next.add(category.key);
+                setDevStage({ hidden: next });
+                rerender();
+              }}
+              style={[styles.toggle, on && styles.toggleOn]}
+            >
+              <Text style={styles.row}>{category.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  toggle: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#f1f1f1",
+  },
+  toggleOn: { backgroundColor: "#ffd7de" },
   container: { padding: 24, gap: 12, backgroundColor: "#fff", flexGrow: 1 },
-  actions: { flexDirection: "row", gap: 8 },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   button: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, backgroundColor: "#111" },
   buttonLabel: { color: "#fff", fontSize: 15 },
   heading: { fontSize: 16, fontWeight: "600", marginTop: 8 },

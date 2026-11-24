@@ -1,3 +1,4 @@
+import { slotOf } from "@nuno/outfit";
 import type { PresetTwinKey } from "@nuno/twin";
 import {
   cleanMeasurementText,
@@ -6,13 +7,10 @@ import {
   parseMeasurements,
   nudgeScale,
   nudgeY,
-  placeGarment,
-  referenceBox,
   saveButtonLabel,
   scalePercent,
   SIZE_LABELS,
   type ClosetKey,
-  type PosePoints,
 } from "@nuno/wardrobe";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -25,7 +23,9 @@ import {
   View,
   type LayoutChangeEvent,
 } from "react-native";
+import { wearGarment } from "../../../src/composition/outfit";
 import { loadCurrentTwin } from "../../../src/composition/twin";
+import { garmentFrame, type Landmarks } from "../../../src/ui/stage-layout";
 import {
   clearDraft,
   currentDraft,
@@ -40,21 +40,6 @@ import { FlowScreen, PrimaryButton } from "../../../src/ui/flow-screen";
 import { TWIN_ASSETS } from "../../../src/ui/twin-assets";
 import { withObject } from "../../../src/ui/korean-particle";
 
-interface Landmarks {
-  image: { width: number; height: number };
-  pose: PosePoints;
-}
-
-function imageAspect(uri: string): Promise<number> {
-  return new Promise((resolve) => {
-    Image.getSize(
-      uri,
-      (width, height) => resolve(width / Math.max(1, height)),
-      () => resolve(1),
-    );
-  });
-}
-
 // 4 / 4 「트윈에 맞춰 볼게요」: 지금 트윈 기본 사진 위에 옷을 놓고 크기와 위치를 맞춘다.
 // 맞춘 값은 기준 상자 대비 비율로 저장해 T4 코디 무대가 같은 자리에 놓는다.
 // edit 에 옷 ID 를 주면 옷 상세 「고치기」 의 「치수 고치기」 다. 단계 표시 없이 「저장」 으로 끝난다.
@@ -64,9 +49,7 @@ export default function FitScreen() {
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const draft = edit ? null : currentDraft();
   const [form, setForm] = useState<DraftForm | null>(draft?.form ?? null);
-  const [source, setSource] = useState<{ cutoutUri: string; aspect: number } | null>(
-    draft?.rendered ?? null,
-  );
+  const [source, setSource] = useState<{ cutoutUri: string } | null>(draft?.rendered ?? null);
   const [twin, setTwin] = useState<PresetTwinKey | null>(null);
   const [stage, setStage] = useState({ width: 0, height: 0 });
   const saving = useRef(false);
@@ -77,9 +60,9 @@ export default function FitScreen() {
 
   useEffect(() => {
     if (!edit) return;
-    void loadGarment(edit).then(async (garment) => {
+    void loadGarment(edit).then((garment) => {
       if (!garment) return;
-      setSource({ cutoutUri: garment.cutoutUri, aspect: await imageAspect(garment.cutoutUri) });
+      setSource({ cutoutUri: garment.cutoutUri });
       setForm({
         category: garment.category,
         color: garment.color,
@@ -150,11 +133,17 @@ export default function FitScreen() {
                 params: { closet: target, add: "1" },
               }),
           },
-          {
-            label: "옷장에서 보기",
-            onPress: () =>
-              router.navigate({ pathname: "/fitting/closet", params: { closet: target } }),
-          },
+          target === "mine"
+            ? {
+                label: "이 옷으로 코디하기",
+                onPress: () =>
+                  void wearGarment(saved.id).then(() => router.navigate("/fitting/coordi")),
+              }
+            : {
+                label: "옷장에서 보기",
+                onPress: () =>
+                  router.navigate({ pathname: "/fitting/closet", params: { closet: target } }),
+              },
         ],
       );
     } catch (caught) {
@@ -173,7 +162,7 @@ export default function FitScreen() {
   const photoLeft = (stage.width - photoWidth) / 2;
   const photoTop = (stage.height - photoHeight) / 2;
   const garmentBox = landmarks
-    ? placeGarment(referenceBox(form.category, landmarks.pose), form.placement, rendered.aspect)
+    ? garmentFrame(form.category, slotOf(form.category), landmarks.pose, form.placement)
     : null;
 
   return (

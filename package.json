@@ -26,7 +26,8 @@
     "web": "pnpm --filter mobile exec expo start --port 8090",
     "e2e": "playwright test",
     "test:db": "node scripts/test-db.mjs",
-    "db:local": "node scripts/test-db.mjs --local"
+    "db:local": "node scripts/test-db.mjs --local",
+    "overlay:sheet": "node scripts/overlay-sheet.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -28,3 +28,10 @@ export function withObject(word: string): string {
   if (code < 0 || code > 11171) return `${word}을(를)`;
   return code % 28 === 0 ? `${word}를` : `${word}을`;
 }
+
+/** 이름 뒤에 「은」 이나 「는」 을 붙인다. 한글이 아니면 「은(는)」 이다. */
+export function withTopic(word: string): string {
+  const code = (word.at(-1) ?? "").charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return `${word}은(는)`;
+  return code % 28 === 0 ? `${word}는` : `${word}은`;
+}

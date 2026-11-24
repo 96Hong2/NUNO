@@ -51,6 +51,12 @@ export async function readDevStorage(): Promise<DevStorageSnapshot> {
       label: "마지막에 넣은 옷의 넣은 길",
       value: latest ? await readGarmentMethod(db, latest.id) : null,
     },
+    {
+      label: "마지막에 넣은 옷의 placement_x, placement_y, placement_scale",
+      value: latest?.placement
+        ? `${latest.placement.x}, ${latest.placement.y}, ${latest.placement.scale}`
+        : null,
+    },
   ];
   const tables = await db.all<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
