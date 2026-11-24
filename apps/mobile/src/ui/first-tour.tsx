@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-// 처음 둘러보기. 있는 화면만 안내한다. 피팅룸 코디 장은 코디 무대를 만드는 T4 에서 더한다.
+// 처음 둘러보기. 있는 화면만 안내한다.
 const PAGES = [
   { title: "내 트윈이에요", body: "고른 트윈이 기본 코디로 여기에 서요" },
   { title: "트윈 바꾸기", body: "다른 트윈으로 언제든 바꿀 수 있어요" },
+  { title: "코디", body: "홈 무대 오른쪽 위 「코디」 를 누르면 옷을 골라 트윈에 입혀요" },
+  {
+    title: "누르면 바로 입어요",
+    body: "피팅룸 「코디」 에서 아우터, 상의 같은 분류를 고르고 옷 카드를 눌러 보세요",
+  },
   { title: "내 옷 넣기", body: "옷 사진을 넣으면 배경을 지워 피팅룸 옷장에 담아요" },
   { title: "피팅룸과 마이", body: "아래 탭에서 피팅룸과 마이로 갈 수 있어요" },
 ] as const;

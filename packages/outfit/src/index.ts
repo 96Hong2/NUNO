@@ -16,6 +16,7 @@ export {
   SAVED_SLOTS,
   SAMPLE_GARMENTS,
   sameOutfit,
+  sameRef,
   samplePiece,
   savedOutfitTitle,
   slotOf,

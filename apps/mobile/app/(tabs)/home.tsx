@@ -3,6 +3,7 @@ import { categoryLabel } from "@nuno/wardrobe";
 import { Tabs, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { wearTodayLook } from "../../src/composition/outfit";
 import { completeTour } from "../../src/composition/profile";
 import { loadCurrentTwin, switchTwin } from "../../src/composition/twin";
 import {
@@ -99,8 +100,24 @@ export default function HomeScreen() {
               style={styles.stageImage}
             />
           ) : null}
-          <Pressable role="button" onPress={() => setSwitching(true)} style={styles.switchButton}>
-            <Text style={styles.switchLabel}>트윈 바꾸기</Text>
+          <View style={styles.stageLeft}>
+            <Pressable role="button" onPress={() => setSwitching(true)} style={styles.stageButton}>
+              <Text style={styles.switchLabel}>트윈 바꾸기</Text>
+            </Pressable>
+            <Pressable
+              role="button"
+              onPress={() => void wearTodayLook().then(() => router.navigate("/fitting/coordi"))}
+              style={styles.stageButton}
+            >
+              <Text style={styles.switchLabel}>오늘 코디</Text>
+            </Pressable>
+          </View>
+          <Pressable
+            role="button"
+            onPress={() => router.navigate("/fitting/coordi")}
+            style={[styles.stageButton, styles.stageRight]}
+          >
+            <Text style={styles.switchLabel}>코디</Text>
           </Pressable>
         </View>
 
@@ -168,10 +185,9 @@ const styles = StyleSheet.create({
   bellIcon: { fontSize: 20 },
   stage: { width: "100%", aspectRatio: 3 / 4, backgroundColor: "#fff" },
   stageImage: { width: "100%", height: "100%" },
-  switchButton: {
-    position: "absolute",
-    left: 16,
-    top: 16,
+  stageLeft: { position: "absolute", left: 16, top: 16, gap: 8, alignItems: "flex-start" },
+  stageRight: { position: "absolute", right: 16, top: 16 },
+  stageButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 16,

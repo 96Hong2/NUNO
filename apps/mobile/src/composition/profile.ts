@@ -26,15 +26,16 @@ export async function submitBirthDate(value: string): Promise<void> {
   await saveBirthDate(db, value, todayKst());
 }
 
-/**
- * 스타일 단계를 끝낸다. tags 가 있으면(「다음」) 함께 저장하고, 없으면(「나중에 고를게요」, 「건너뛰기」) 끝만 적는다.
- */
-export async function finishStyleStep(tags: readonly string[] | null): Promise<void> {
+/** 스타일 단계 「건너뛰기」: 태그 없이 온보딩을 끝낸다. 「다음」 과 「나중에 고를게요」 는 3단계로 간다. */
+export async function finishStyleStep(): Promise<void> {
   const { db } = await getDeviceDb();
-  await db.transaction(async (tx) => {
-    if (tags !== null) await saveStyleTags(tx, tags);
-    await finishOnboarding(tx);
-  });
+  await finishOnboarding(db);
+}
+
+/** 스타일 단계 「다음」: 태그만 저장하고 3단계로 간다. 온보딩은 3단계에서 끝난다. */
+export async function saveStyleChoice(tags: readonly string[]): Promise<void> {
+  const { db } = await getDeviceDb();
+  await saveStyleTags(db, tags);
 }
 
 export async function submitDisplayName(value: string): Promise<void> {

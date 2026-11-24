@@ -9,6 +9,7 @@ import {
   removeGarment,
   type GarmentDetail,
 } from "../../src/composition/wardrobe";
+import { wearGarment } from "../../src/composition/outfit";
 import { useAppToast } from "../../src/ui/app-toast";
 import { CHERRY, formatPrice } from "../../src/ui/garment-card";
 import { withObject } from "../../src/ui/korean-particle";
@@ -162,6 +163,20 @@ export default function GarmentDetailScreen() {
         {garment.closet === "mine" ? (
           <Pressable
             role="button"
+            onPress={() =>
+              void wearGarment(garment.id).then(() => {
+                router.dismissAll();
+                router.navigate("/fitting/coordi");
+              })
+            }
+            style={styles.wear}
+          >
+            <Text style={styles.wearLabel}>트윈에 입혀 보기</Text>
+          </Pressable>
+        ) : null}
+        {garment.closet === "mine" ? (
+          <Pressable
+            role="button"
             onPress={() => toast.show("이미 내 옷에 있어요", [], { bottom: DETAIL_TOAST_BOTTOM })}
             style={StyleSheet.flatten([styles.left, styles.leftDone])}
           >
@@ -219,7 +234,7 @@ const styles = StyleSheet.create({
   link: { fontSize: 15, fontWeight: "700", color: "#151314" },
   top: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   back: { fontSize: 28, lineHeight: 30, color: "#151314" },
-  body: { paddingBottom: 160 },
+  body: { paddingBottom: 220 },
   photo: { aspectRatio: 1, backgroundColor: "#F2F1EF", padding: 24 },
   image: { width: "100%", height: "100%" },
   info: { padding: 20, gap: 10 },
@@ -246,6 +261,8 @@ const styles = StyleSheet.create({
   delete: { alignSelf: "flex-start", paddingVertical: 10 },
   deleteLabel: { fontSize: 14, color: "#76736C", textDecorationLine: "underline" },
   footer: { position: "absolute", left: 20, right: 20, bottom: 20, gap: 10 },
+  wear: { alignItems: "center", paddingVertical: 14, borderRadius: 12, backgroundColor: "#151314" },
+  wearLabel: { color: "#fff", fontSize: 15, fontWeight: "700" },
   left: { alignItems: "center", paddingVertical: 16, borderRadius: 14, backgroundColor: "#151314" },
   leftDone: { backgroundColor: "#F2F1EF" },
   leftLabel: { fontSize: 16, fontWeight: "700", color: "#fff" },

@@ -107,6 +107,18 @@ export async function loadGarment(id: string): Promise<GarmentDetail | null> {
   return { ...card, cutoutUri: await garmentMedia.resolve(garment.cutoutPath) };
 }
 
+/** 피팅룸 「코디」 옷 목록과 무대: 그 칸 옷을 카드 그림과 누끼 그림 주소와 함께 읽는다. */
+export async function loadClosetImages(closet: ClosetKey): Promise<GarmentDetail[]> {
+  const { db } = await getDeviceDb();
+  const garments = await listCloset(db, closet);
+  return Promise.all(
+    garments.map(async (garment) => ({
+      ...(await withThumb(garment)),
+      cutoutUri: await garmentMedia.resolve(garment.cutoutPath),
+    })),
+  );
+}
+
 /** 「치수 고치기」 의 「저장」 */
 export async function saveGarmentFit(id: string, fit: GarmentFit): Promise<void> {
   const { db } = await getDeviceDb();
