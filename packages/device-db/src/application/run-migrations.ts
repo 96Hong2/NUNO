@@ -7,7 +7,7 @@ import {
 } from "../domain";
 
 export interface MigrationOptions {
-  /** 적용한 판 번호를 적는 표 이름. T2-1 부터 `schema_migrations` 를 쓴다. */
+  /** 적용한 판 번호를 적는 표 이름. `schema_migrations` 를 쓴다. */
   versionTable: string;
 }
 

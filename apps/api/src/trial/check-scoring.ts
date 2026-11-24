@@ -1,7 +1,7 @@
 import { parseCsv } from "./csv.ts";
 import { imageKind, metadataLeft } from "./strip-metadata.ts";
 
-// D5 판정 명령의 본체. 채점 폴더를 훑어 블라인드가 새는 곳을 찾는다.
+// 블라인드 검사 명령의 본체. 채점 폴더를 훑어 블라인드가 새는 곳을 찾는다.
 // 이름이 무작위(UUID)인지, 그림 형식이 하나인지, 메타데이터 덩어리가 남았는지, 채점 CSV 에 모델을 드러내는 열이 있는지.
 
 const UUID_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png)$/;

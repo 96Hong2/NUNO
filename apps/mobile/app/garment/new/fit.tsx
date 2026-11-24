@@ -42,7 +42,7 @@ import { TWIN_ASSETS } from "../../../src/ui/twin-assets";
 import { withObject } from "../../../src/ui/korean-particle";
 
 // 4 / 4 「트윈에 맞춰 볼게요」: 지금 트윈 기본 사진 위에 옷을 놓고 크기와 위치를 맞춘다.
-// 맞춘 값은 기준 상자 대비 비율로 저장해 T4 코디 무대가 같은 자리에 놓는다.
+// 맞춘 값은 기준 상자 대비 비율로 저장해 코디 무대가 같은 자리에 놓는다.
 // edit 에 옷 ID 를 주면 옷 상세 「고치기」 의 「치수 고치기」 다. 단계 표시 없이 「저장」 으로 끝난다.
 export default function FitScreen() {
   const router = useRouter();
@@ -122,7 +122,7 @@ export default function FitScreen() {
       clearDraft();
       // 단계 화면을 모두 닫고, 옷이 든 칸으로 옷장을 연다.
       // 주소 값이 다르면 dismissTo 가 옛 단계 화면을 남기고 옷장을 새로 쌓는다. 그래서 모두 닫은 뒤 칸을 연다.
-      router.dismissAll();
+      if (router.canDismiss()) router.dismissAll();
       router.navigate({ pathname: "/fitting/closet", params: { closet: saved.closet } });
       const target: ClosetKey = saved.closet;
       toast.show(

@@ -36,7 +36,7 @@ export interface ModelReport {
   /** 정상 사진당 원가(원). 정상이 0장이면 null */
   krwPerNormal: number | null;
   p95Ms: number | null;
-  /** 트윈 종류, 옷 출처, 품목 수별 정상 수(D8) */
+  /** 트윈 종류, 옷 출처, 품목 수별 정상 수 */
   normalBy: Record<string, number>;
 }
 

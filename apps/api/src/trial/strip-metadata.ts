@@ -20,7 +20,7 @@ export function stripMetadata(bytes: Uint8Array): { kind: ImageKind; bytes: Uint
 }
 
 /**
- * 구조를 따라 걸어 남아 있는 메타데이터 덩어리 이름을 돌려준다(D5 검사용).
+ * 구조를 따라 걸어 남아 있는 메타데이터 덩어리 이름을 돌려준다(블라인드 검사용).
  * 화상 데이터 안의 우연한 글자는 보지 않는다. JPEG 끝(EOI) 뒤에 남은 바이트도 문제로 돌려준다.
  */
 export function metadataLeft(bytes: Uint8Array): string[] {

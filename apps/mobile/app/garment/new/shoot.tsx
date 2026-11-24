@@ -21,7 +21,7 @@ export default function ShootScreen() {
       title="옷을 펼쳐 놓고 찍어 주세요"
       sub="밝은 바닥에 펼치면 배경이 잘 지워져요"
       onBack={() => {
-        router.dismissAll();
+        if (router.canDismiss()) router.dismissAll();
         router.navigate({ pathname: "/fitting/closet", params: { closet: from, add: "1" } });
       }}
       footer={

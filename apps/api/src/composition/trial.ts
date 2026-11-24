@@ -1,6 +1,6 @@
 // 반증 실험 명령. 키가 생기기 전에는 가짜 공급사로만 돈다.
 //   node src/composition/trial.ts run <요청 목록.json> <호출 장부.csv> <채점 폴더> --provider fake
-//   node src/composition/trial.ts check <채점 폴더>              (D5: 블라인드 검사)
+//   node src/composition/trial.ts check <채점 폴더>              (블라인드 검사)
 //   node src/composition/trial.ts report <호출 장부.csv> <채점 폴더> [세트]
 // 호출 장부 하나를 실험 전체가 함께 쓴다(모델별 상한을 이 장부로 센다). 채점 폴더 밖에 둔다.
 import { randomUUID } from "node:crypto";

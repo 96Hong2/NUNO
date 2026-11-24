@@ -12,12 +12,12 @@ import { stripMetadata, type ImageKind } from "./strip-metadata.ts";
 
 /**
  * 반증 실험 모델. 셋째 자리는 차단 시험 전용 GPT-Image-2.6 Flare 다(개발 계획 v2 작업 09).
- * FASHN 이나 Qwen 을 셋째 후보로 시험하려면 결정 D3 로 새 상한을 받아 이 표에 더한다.
+ * FASHN 이나 Qwen 을 셋째 후보로 시험하려면 기획자에게 새 상한을 승인받아 이 표에 더한다.
  */
 export type TrialModel = "seedream" | "sunburst" | "flare";
 
 /**
- * 모델별 호출 상한, 세 모델 합 422건. 결정 D3(시험 숫자 한 묶음) 승인 전 값이다.
+ * 모델별 호출 상한, 세 모델 합 422건. 기획자가 시험 숫자를 승인하기 전 값이다.
  * 206 = 선택 세트 130, 확인 세트 40, 네 품목 탐색 36. Flare 는 차단 시험 10건.
  */
 export const MODEL_CALL_CAPS: Record<TrialModel, number> = {
