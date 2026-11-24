@@ -32,6 +32,7 @@
 | 기기 DB 포트와 옮기기 실행기 | `packages/device-db` |
 | 경계 규칙(무엇이 무엇을 import 하나), 앱 기능 SDK 목록 `FEATURE_SDKS` | `.dependency-cruiser.cjs` |
 | 도메인 금지 호출, 시험 린트 | `eslint.config.mjs` |
+| AI 도구 호출을 막는 판정(보호 경로, main 시험). 고치기 전에 기획자에게 묻는다 | `.claude/hooks/policy.mjs` |
 | 패키지 계층 폴더, 시험 위치, `@nuno/*` 의존 선언 검사 | `scripts/check-packages.mjs` |
 | 화면 이름과 코드 이름. 새 이름은 이 표에 먼저 더한다 | `GLOSSARY.md` |
 | Task 목록, DoD 문장, Task 상태 | `docs/roadmap.md` |
