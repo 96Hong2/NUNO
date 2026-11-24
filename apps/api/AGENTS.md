@@ -9,6 +9,7 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 | `pnpm test:db` (루트) | 로컬 Postgres 를 띄워 역할 설정, 판 옮기기, DB 시험, 덤프 복원 시험을 돈다 |
 | `pnpm db:local` (루트) | 로컬 개발 DB(127.0.0.1:54329, nuno)를 띄우고 역할과 판을 적용한다 |
 | `pnpm --filter api migrate` | `DATABASE_ADMIN_URL`(관리자) 로 판을 옮긴다. API 는 켜질 때 판을 옮기지 않는다 |
+| `pnpm --filter api trial run <요청 목록.json> <호출 장부.csv> <채점 폴더> --provider fake` | 반증 실험 호출. 모델별 상한(`MODEL_CALL_CAPS`)에 닿으면 멈추고 종료 코드 2. `check`, `report` 는 plan_T6 참고 |
 | `pnpm --filter api start` | `DATABASE_URL`(nuno_api) 로 서버를 띄운다. 포트는 `PORT`, 없으면 8787 |
 
 ## 규칙
