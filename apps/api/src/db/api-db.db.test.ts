@@ -1,6 +1,8 @@
+import { readdirSync } from "node:fs";
 import { afterAll, describe, expect, it } from "vitest";
 import { openPostgres } from "../adapters/postgres.ts";
 import { createApp } from "../app.ts";
+import { MIGRATIONS_DIR } from "./migrate.ts";
 
 // 실제 Postgres 에 붙는 시험. scripts/test-db.mjs 가 컨테이너를 띄우고 판을 적용한 뒤 주소를 넘긴다.
 const apiUrl = process.env.TEST_DATABASE_API_URL;
@@ -11,11 +13,19 @@ afterAll(() => api.close());
 
 const pgError = (error: unknown) => (error as { code?: string }).code;
 
+// 판 파일 이름의 네 자리 번호 가운데 가장 큰 값. 판을 더해도 이 시험을 고치지 않는다.
+const latestMigration = Math.max(
+  ...readdirSync(MIGRATIONS_DIR)
+    .map((name) => /^(\d{4})_/.exec(name)?.[1])
+    .filter((digits): digits is string => digits !== undefined)
+    .map(Number),
+);
+
 describe("API 와 DB 권한(nuno_api 로 접속)", () => {
-  it("상태 확인 주소가 200 과 판 번호 1 을 준다", async () => {
+  it("상태 확인 주소가 200 과 마지막 판 번호를 준다", async () => {
     const response = await app.request("/v1/health");
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, schemaVersion: 1 });
+    expect(await response.json()).toEqual({ ok: true, schemaVersion: latestMigration });
   });
 
   it("기능 스위치 조회 주소가 feature_switches 행을 준다", async () => {
