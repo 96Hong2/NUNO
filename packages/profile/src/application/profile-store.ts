@@ -42,6 +42,11 @@ export async function readProfile(db: SqlExecutor): Promise<ProfileState> {
   };
 }
 
+/** 온보딩을 끝냈다고 적는다. 끝까지 했든 건너뛰었든 같다. */
+export async function finishOnboarding(db: SqlExecutor): Promise<void> {
+  await db.run("UPDATE profile SET onboarding_done = 1 WHERE id = 1");
+}
+
 /** today 는 한국 날짜 `YYYY-MM-DD`. 받을 수 없는 날짜면 던진다. */
 export async function saveBirthDate(db: SqlExecutor, value: string, today: string): Promise<void> {
   if (!isValidBirthDate(value, today)) throw new Error(`받을 수 없는 생년월일: ${value}`);

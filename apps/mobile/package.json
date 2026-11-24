@@ -11,6 +11,7 @@
     "@nuno/clock": "workspace:*",
     "@nuno/device-db": "workspace:*",
     "@nuno/profile": "workspace:*",
+    "@nuno/twin": "workspace:*",
     "@react-native-community/datetimepicker": "9.2.1",
     "expo": "~58.0.26",
     "expo-constants": "~58.0.16",

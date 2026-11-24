@@ -4,6 +4,7 @@ import { useProfile } from "../src/ui/profile-gate";
 
 const FIRST_ROUTE = {
   birthDate: "/onboarding/birthDate",
+  twin: "/onboarding/twin",
   done: "/home",
 } as const;
 

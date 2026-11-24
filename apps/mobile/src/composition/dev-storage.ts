@@ -1,4 +1,5 @@
 import { readProfile } from "@nuno/profile";
+import { readTwinChoice } from "@nuno/twin";
 import { systemClock } from "../adapters/system-clock";
 import { getDeviceDb } from "./device-db";
 
@@ -35,7 +36,10 @@ export interface DevStorageSnapshot {
 export async function readDevStorage(): Promise<DevStorageSnapshot> {
   const { adapterName, db, schemaVersion } = await getDeviceDb();
   const profile = await readProfile(db);
-  const saved: SavedValue[] = [{ label: "생년월일", value: profile.birthDate }];
+  const saved: SavedValue[] = [
+    { label: "생년월일", value: profile.birthDate },
+    { label: "트윈 ID", value: await readTwinChoice(db) },
+  ];
   const tables = await db.all<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
   );
