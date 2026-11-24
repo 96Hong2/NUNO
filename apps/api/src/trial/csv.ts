@@ -15,8 +15,8 @@ export function csvHeader(columns: readonly string[]): string {
   return `${columns.map(cell).join(",")}\n`;
 }
 
-/** 머리줄 이름을 열쇠로 한 줄씩 돌려준다. 빈 줄은 건너뛴다. */
-export function parseCsv(source: string): CsvRow[] {
+/** 글자 칸 배열로 나눈다. BOM 을 떼고, 모든 칸이 빈 줄(엑셀이 남긴 빈 행)은 건너뛴다. */
+function parseRecords(source: string): string[][] {
   // 엑셀이 「CSV UTF-8」 로 저장하면 앞에 BOM 이 붙는다. 떼지 않으면 첫 열 이름이 달라져 모든 줄의 ID 가 빈다.
   const text = source.startsWith("\uFEFF") ? source.slice(1) : source;
   const records: string[][] = [];
@@ -44,13 +44,36 @@ export function parseCsv(source: string): CsvRow[] {
     } else field += char;
   }
   if (field !== "" || record.length > 0) records.push([...record, field]);
-  const [header, ...rows] = records.filter((row) => row.some((value) => value !== ""));
+  return records.filter((row) => row.some((value) => value !== ""));
+}
+
+/** 머리줄 이름을 열쇠로 한 줄씩 돌려준다. 빈 줄은 건너뛴다. */
+export function parseCsv(source: string): CsvRow[] {
+  const [header, ...rows] = parseRecords(source);
   if (!header) return [];
   return rows.map((row) => Object.fromEntries(header.map((name, i) => [name, row[i] ?? ""])));
 }
 
-/** 머리줄의 열 이름(BOM 을 뗀다). 데이터 줄이 없어도 읽는다 */
+/** 머리줄의 열 이름. parseCsv 와 같은 줄(빈 행 다음 첫 줄)을 머리줄로 본다 */
 export function csvColumns(text: string): string[] {
-  const first = text.replace(/^\uFEFF/, "").split(/\r?\n/)[0] ?? "";
-  return Object.keys(parseCsv(`${first}\n${first.replace(/[^,]/g, "") + "x"}\n`)[0] ?? {});
+  return parseRecords(text)[0] ?? [];
+}
+
+/**
+ * 이름으로 칸을 다시 쓰면 값을 잃는 모양인지 본다: 같은 이름이나 빈 이름 열, 머리줄보다 칸이 많은 줄.
+ * 문제가 없으면 null.
+ */
+export function csvShapeProblem(text: string): string | null {
+  const [header, ...rows] = parseRecords(text);
+  if (!header) return null;
+  const names = header.map((name) => name.trim());
+  const empty = names.findIndex((name) => name === "");
+  if (empty >= 0) return `머리줄 ${empty + 1}번째 열에 이름이 없다`;
+  const duplicate = names.find((name, i) => names.indexOf(name) !== i);
+  if (duplicate) return `머리줄에 같은 이름 열(${duplicate})이 둘 이상 있다`;
+  const wide = rows.findIndex(
+    (row) => row.length > header.length && row.slice(header.length).some((v) => v !== ""),
+  );
+  if (wide >= 0) return `${wide + 2}번째 줄에 머리줄보다 칸이 많다`;
+  return null;
 }

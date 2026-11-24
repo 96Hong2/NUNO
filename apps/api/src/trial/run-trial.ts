@@ -3,7 +3,7 @@ import {
   type GenerationProvider,
   type ProviderOutcome,
 } from "../generation/provider.ts";
-import { csvColumns, csvHeader, csvLine, parseCsv, type CsvRow } from "./csv.ts";
+import { csvColumns, csvHeader, csvLine, csvShapeProblem, parseCsv, type CsvRow } from "./csv.ts";
 import { stripMetadata, type ImageKind } from "./strip-metadata.ts";
 
 // 반증 실험 호출 스크립트의 본체. 요청 목록을 부르고 결과를 채점 폴더와 호출 장부로 나눠 남긴다.
@@ -286,7 +286,11 @@ async function runLocked(
 ): Promise<TrialResult> {
   const ledgerText = await io.readText(ledgerPath);
   checkUtf8(ledgerPath, ledgerText);
-  checkUtf8(`${scoringDir}/scoring.csv`, await io.readText(`${scoringDir}/scoring.csv`));
+  const scoringText = await io.readText(`${scoringDir}/scoring.csv`);
+  checkUtf8(`${scoringDir}/scoring.csv`, scoringText);
+  // 채점 CSV 는 다시 쓴다. 이름으로 칸을 옮기면 값을 잃는 모양이면 첫 호출 전에 멈춘다.
+  const shape = scoringText ? csvShapeProblem(scoringText) : null;
+  if (shape) throw new Error(`채점 CSV ${shape}. 열 이름을 고친 뒤 다시 돌린다`);
   checkLedgerHeader(ledgerText);
   const calls = parseCsv(ledgerText ?? "");
   if (!ledgerText) await io.appendText(ledgerPath, csvHeader(CALL_COLUMNS));

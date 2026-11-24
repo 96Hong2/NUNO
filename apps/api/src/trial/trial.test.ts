@@ -390,6 +390,32 @@ describe("반증 실험 호출 스크립트: 장부가 어긋나는 장면", () 
     expect(inB).toEqual(["in-b1"]);
   });
 
+  it("채점 CSV 에 같은 이름 열, 빈 이름 열, 머리줄보다 긴 줄이 있으면 한 건도 부르지 않고, 엑셀이 남긴 맨 위 빈 행은 견딘다", async () => {
+    for (const bad of [
+      "file,메모,메모\nr001.jpg,a,b\n",
+      "file,,\nr001.jpg,a,b\n",
+      "file,normal\nr001.jpg,y,남는칸\n",
+    ]) {
+      const { io, files } = memoryIo();
+      files.set("out/scoring/scoring.csv", bad);
+      await expect(runTrial([request("a", "seedream")], providers, paths, io)).rejects.toThrow(
+        "채점 CSV",
+      );
+      expect(files.has("ledger/calls.csv")).toBe(false);
+    }
+    const { io, files } = memoryIo();
+    await runTrial([request("a", "seedream")], providers, paths, io);
+    const text = files.get("out/scoring/scoring.csv") as string;
+    const [header = "", ...lines] = text.trimEnd().split("\n");
+    files.set(
+      "out/scoring/scoring.csv",
+      `,,,,\r\n${header},메모\r\n${lines.map((l) => `${l},기획자메모`).join("\r\n")}\r\n`,
+    );
+    await runTrial([request("b", "seedream")], providers, paths, io);
+    const rows = parseCsv(files.get("out/scoring/scoring.csv") as string);
+    expect(rows.find((row) => row.file === "r001.jpg")?.메모).toBe("기획자메모");
+  });
+
   it("D5 검사는 점 파일을 건너뛰고, 화상 데이터 안의 우연한 글자는 메타데이터로 보지 않는다", () => {
     const name = "0b5c5f2e-1111-4222-8333-444455556666.jpg";
     // SOS 뒤 화상 데이터에 「tIME」, 「Exif」 와 같은 바이트가 우연히 들어 있다
