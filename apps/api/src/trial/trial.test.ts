@@ -19,6 +19,13 @@ function memoryIo() {
       files.set(path, bytes);
       return Promise.resolve();
     },
+    moveFile: (from, to) => {
+      const bytes = files.get(from);
+      if (bytes === undefined) return Promise.resolve(false);
+      files.delete(from);
+      files.set(to, bytes);
+      return Promise.resolve(true);
+    },
     appendText: (path, text) => {
       files.set(path, ((files.get(path) as string | undefined) ?? "") + text);
       return Promise.resolve();
@@ -148,7 +155,7 @@ describe("반증 실험 호출 스크립트", () => {
       "file,model\nseedream-1.jpg,seedream\n",
     );
     expect(bad.join("\n")).toMatch(/무작위 이름이 아니다/);
-    expect(bad.join("\n")).toMatch(/Exif/);
+    expect(bad.join("\n")).toMatch(/메타데이터 덩어리 APP1 가 남았다: seedream-1\.jpg/);
     expect(bad.join("\n")).toMatch(/모델을 드러내는 열이 있다: model/);
   });
 
@@ -168,6 +175,92 @@ describe("반증 실험 호출 스크립트", () => {
     const png = Uint8Array.from([...sig, ...chunk("tEXt", [65, 66]), ...keep]);
     expect([...stripMetadata(png).bytes]).toEqual([...sig, ...keep]);
     expect(() => stripMetadata(Uint8Array.from([0x52, 0x49, 0x46, 0x46]))).toThrow();
+  });
+});
+
+describe("반증 실험 호출 스크립트: 장부가 어긋나는 장면", () => {
+  it("엑셀이 장부 앞에 BOM 을 붙여도 이미 부른 요청을 다시 부르지 않는다", async () => {
+    const { io, files } = memoryIo();
+    const list = [request("a", "seedream"), request("b", "seedream")];
+    await runTrial(list, providers, paths, io);
+    files.set("ledger/calls.csv", `\uFEFF${files.get("ledger/calls.csv") as string}`);
+    expect(await runTrial(list, providers, paths, io)).toMatchObject({ called: 0, skipped: 2 });
+  });
+
+  it("장부 머리줄이 망가졌으면 한 건도 부르지 않는다", async () => {
+    const { io, files } = memoryIo();
+    files.set("ledger/calls.csv", "요청,모델\na,seedream\n");
+    await expect(runTrial([request("b", "seedream")], providers, paths, io)).rejects.toThrow(
+      "머리줄",
+    );
+  });
+
+  it("입력 그림을 읽지 못하면 부르기 전 줄을 쓰지 않아 상한 칸을 쓰지 않는다", async () => {
+    const { io, files } = memoryIo();
+    const broken: TrialIo = { ...io, readFile: () => Promise.reject(new Error("없는 파일")) };
+    await expect(runTrial([request("a", "seedream")], providers, paths, broken)).rejects.toThrow();
+    expect(await runTrial([request("a", "seedream")], providers, paths, io)).toMatchObject({
+      called: 1,
+      interrupted: [],
+    });
+    expect(files.get("ledger/calls.csv")).toMatch(/a,r001\.jpg/);
+  });
+
+  it("받은 그림을 쓸 수 없어도 청구액과 응답 시간을 장부에 남기고 멈춘다", async () => {
+    const { io, files } = memoryIo();
+    const webp: GenerationProvider = {
+      name: "webp",
+      generate: () =>
+        Promise.resolve({
+          kind: "succeeded",
+          image: Uint8Array.from([0x52, 0x49, 0x46, 0x46]),
+          mimeType: "image/webp",
+          costUsd: 0.05,
+        }),
+    };
+    await expect(
+      runTrial([request("a", "seedream")], { ...providers, seedream: webp }, paths, io),
+    ).rejects.toThrow();
+    const rows = parseCsv(files.get("ledger/calls.csv") as string);
+    expect(rows.at(-1)).toMatchObject({ request_id: "a", status: "unusable", cost_usd: "0.05" });
+  });
+
+  it("그림은 대기 폴더를 거쳐 실행이 끝날 때 채점 폴더로 옮겨지고, 대기 폴더는 빈다", async () => {
+    const { io, files } = memoryIo();
+    await runTrial([request("a", "seedream"), request("b", "seedream")], providers, paths, io);
+    const names = [...files.keys()];
+    expect(names.filter((name) => name.startsWith("ledger/calls.csv.staging/"))).toEqual([]);
+    expect(names.filter((name) => name.startsWith("out/scoring/r")).sort()).toEqual([
+      "out/scoring/r001.jpg",
+      "out/scoring/r002.jpg",
+    ]);
+    expect(parseCsv(files.get("out/scoring/scoring.csv") as string)).toHaveLength(2);
+  });
+
+  it("D5 검사는 점 파일을 건너뛰고, 화상 데이터 안의 우연한 글자는 메타데이터로 보지 않는다", () => {
+    const name = "0b5c5f2e-1111-4222-8333-444455556666.jpg";
+    // SOS 뒤 화상 데이터에 「tIME」, 「Exif」 와 같은 바이트가 우연히 들어 있다
+    const jpeg = Uint8Array.from([
+      0xff,
+      0xd8,
+      0xff,
+      0xda,
+      0x00,
+      0x02,
+      ...[..."tIMEExif"].map((c) => c.charCodeAt(0)),
+      0xff,
+      0xd9,
+    ]);
+    const csv = `file,input,normal\n${name},in-a,\n`;
+    expect(
+      checkScoringFolder(
+        [
+          { name, bytes: jpeg },
+          { name: ".DS_Store", bytes: Uint8Array.from([0, 0]) },
+        ],
+        csv,
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -207,6 +300,8 @@ describe("반증 실험 보고", () => {
       { file: "4.jpg", normal: "y" },
     ];
     const [seedream] = buildReport(calls, scoring);
+    // 호출 기준 p1: 처음 부른 3건(거절 1 포함) 가운데 정상 1장
+    expect(seedream?.p1Calls).toBeCloseTo(1 / 3);
     expect(seedream).toMatchObject({
       calls: 4,
       blocked: 1,

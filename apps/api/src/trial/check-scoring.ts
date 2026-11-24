@@ -1,12 +1,10 @@
 import { parseCsv } from "./csv.ts";
-import { imageKind } from "./strip-metadata.ts";
+import { imageKind, metadataLeft } from "./strip-metadata.ts";
 
 // D5 판정 명령의 본체. 채점 폴더를 훑어 블라인드가 새는 곳을 찾는다.
-// 이름이 무작위(UUID)인지, 그림 형식이 하나인지, 메타데이터 표지가 남았는지, 채점 CSV 에 모델을 드러내는 열이 있는지.
+// 이름이 무작위(UUID)인지, 그림 형식이 하나인지, 메타데이터 덩어리가 남았는지, 채점 CSV 에 모델을 드러내는 열이 있는지.
 
 const UUID_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png)$/;
-/** 남으면 안 되는 표지: EXIF, XMP, PNG 글과 시각과 EXIF 덩어리 이름 */
-const MARKERS = ["Exif\0\0", "http://ns.adobe.com/xap", "tEXt", "iTXt", "zTXt", "eXIf", "tIME"];
 const LEAKY_COLUMNS = [
   "model",
   "provider",
@@ -21,15 +19,20 @@ export function checkScoringFolder(
   scoringCsv: string,
 ): string[] {
   const problems: string[] = [];
-  const images = files.filter((file) => file.name !== "scoring.csv");
+  // 점 파일(.DS_Store 등)은 Finder 가 만든다. 그림이 아니라 건너뛴다.
+  const images = files.filter((file) => file.name !== "scoring.csv" && !file.name.startsWith("."));
   const kinds = new Set<string>();
   for (const file of images) {
     if (!UUID_NAME.test(file.name)) problems.push(`무작위 이름이 아니다: ${file.name}`);
-    kinds.add(imageKind(file.bytes));
-    const text = new TextDecoder("latin1").decode(file.bytes);
-    for (const marker of MARKERS) {
-      if (text.includes(marker))
-        problems.push(`메타데이터 표지 ${JSON.stringify(marker)} 가 남았다: ${file.name}`);
+    try {
+      kinds.add(imageKind(file.bytes));
+      const left = metadataLeft(file.bytes);
+      if (left.length > 0)
+        problems.push(`메타데이터 덩어리 ${left.join(", ")} 가 남았다: ${file.name}`);
+    } catch (error) {
+      problems.push(
+        `그림으로 읽지 못했다: ${file.name} (${error instanceof Error ? error.message : String(error)})`,
+      );
     }
   }
   if (kinds.size > 1) problems.push(`그림 형식이 섞였다: ${[...kinds].join(", ")}`);

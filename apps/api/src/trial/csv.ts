@@ -16,7 +16,9 @@ export function csvHeader(columns: readonly string[]): string {
 }
 
 /** 머리줄 이름을 열쇠로 한 줄씩 돌려준다. 빈 줄은 건너뛴다. */
-export function parseCsv(text: string): CsvRow[] {
+export function parseCsv(source: string): CsvRow[] {
+  // 엑셀이 「CSV UTF-8」 로 저장하면 앞에 BOM 이 붙는다. 떼지 않으면 첫 열 이름이 달라져 모든 줄의 ID 가 빈다.
+  const text = source.startsWith("\uFEFF") ? source.slice(1) : source;
   const records: string[][] = [];
   let field = "";
   let record: string[] = [];

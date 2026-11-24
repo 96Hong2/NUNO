@@ -51,8 +51,10 @@ export interface TrialRequest {
 export interface TrialIo {
   readFile(path: string): Promise<Uint8Array>;
   readText(path: string): Promise<string | null>;
-  /** 채점 그림을 쓴다. 파일 시각은 모두 같은 값으로 맞춘다(시각으로 모델이 갈리지 않게) */
+  /** 그림을 쓴다. 파일 시각(mtime)은 모두 같은 값으로 맞춘다(시각으로 모델이 갈리지 않게) */
   writeFile(path: string, bytes: Uint8Array): Promise<void>;
+  /** 대기 폴더의 그림을 채점 폴더로 옮긴다. 없으면 false */
+  moveFile(from: string, to: string): Promise<boolean>;
   appendText(path: string, text: string): Promise<void>;
   /** 잠금 파일을 만든다. 이미 있으면 던진다. 돌려준 함수로 푼다 */
   lock(path: string): Promise<() => Promise<void>>;
@@ -100,7 +102,7 @@ export const CALL_COLUMNS = [
 export interface TrialResult {
   called: number;
   skipped: number;
-  /** 부르기 전 줄만 있고 결과 줄이 없는 요청. 다시 부르지 않고 알린다 */
+  /** 부르기 전 줄만 있고 결과 줄이 없는 요청. 다시 부르지 않고 알린다(공급사가 청구했을 수 있다) */
   interrupted: string[];
   /** 상한에 닿아 부르지 않은 모델과 그 요청 수 */
   capped: Partial<Record<TrialModel, number>>;
@@ -178,6 +180,39 @@ export async function runTrial(
   }
 }
 
+const REQUIRED_LEDGER = ["request_id", "model", "status", "file"];
+
+/** 장부 머리줄이 망가졌으면(엑셀이 열 이름을 바꾸는 등) 셈이 틀리므로 첫 호출 전에 멈춘다 */
+function checkLedgerHeader(text: string | null): void {
+  if (!text) return;
+  const firstLine = (text.replace(/^\uFEFF/, "").split(/\r?\n/)[0] ?? "").split(",");
+  const header = firstLine.map((name) => name.trim().replace(/^"|"$/g, ""));
+  const missing = REQUIRED_LEDGER.filter((column) => !header.includes(column));
+  if (missing.length > 0) {
+    throw new Error(
+      `호출 장부 머리줄에 ${missing.join(", ")} 열이 없다. 장부를 고친 뒤 다시 돌린다`,
+    );
+  }
+}
+
+/**
+ * 장부에는 있는데 채점 CSV 에 아직 없는 그림을 섞은 차례로 대기 폴더에서 채점 폴더로 옮긴다.
+ * 한꺼번에 옮겨서 파일 시각(ctime)으로 호출 차례와 응답 시간이 드러나지 않는다.
+ * 실행이 도중에 죽어 남은 그림도 다음 실행 처음에 이 함수가 옮긴다.
+ */
+async function flushStaged(ledgerPath: string, scoringDir: string, io: TrialIo): Promise<void> {
+  const scoringPath = `${scoringDir}/scoring.csv`;
+  const scored = new Set(parseCsv((await io.readText(scoringPath)) ?? "").map((row) => row.file));
+  const pending = parseCsv((await io.readText(ledgerPath)) ?? "").filter(
+    (row) => row.status === "succeeded" && row.file && !scored.has(row.file),
+  );
+  for (const row of shuffled(pending, () => io.random())) {
+    const file = row.file ?? "";
+    if (!(await io.moveFile(`${ledgerPath}.staging/${file}`, `${scoringDir}/${file}`))) continue;
+    await io.appendText(scoringPath, csvLine(SCORING_COLUMNS, row));
+  }
+}
+
 async function runLocked(
   requests: readonly TrialRequest[],
   providers: Partial<Record<TrialModel, GenerationProvider>>,
@@ -186,18 +221,20 @@ async function runLocked(
   io: TrialIo,
 ): Promise<TrialResult> {
   const scoringPath = `${scoringDir}/scoring.csv`;
-  const calls = parseCsv((await io.readText(ledgerPath)) ?? "");
-  if (calls.length === 0) await io.appendText(ledgerPath, csvHeader(CALL_COLUMNS));
-  const scoring = parseCsv((await io.readText(scoringPath)) ?? "");
-  if (scoring.length === 0 && !(await io.readText(scoringPath))) {
+  const ledgerText = await io.readText(ledgerPath);
+  checkLedgerHeader(ledgerText);
+  const calls = parseCsv(ledgerText ?? "");
+  if (!ledgerText) await io.appendText(ledgerPath, csvHeader(CALL_COLUMNS));
+  if (!(await io.readText(scoringPath)))
     await io.appendText(scoringPath, csvHeader(SCORING_COLUMNS));
-  }
-  // 한 채점 폴더의 그림은 한 형식이어야 한다. 확장자로 모델이 갈리지 않게.
-  let folderKind: ImageKind | null = scoring[0]?.file?.endsWith(".png")
-    ? "png"
-    : scoring[0]
-      ? "jpeg"
-      : null;
+  await flushStaged(ledgerPath, scoringDir, io);
+  // 한 채점 폴더의 그림은 한 형식이어야 한다. 확장자로 모델이 갈리지 않게. 장부의 성공 줄로 정한다.
+  const firstFile = calls.find((row) => row.status === "succeeded" && row.file)?.file;
+  let folderKind: ImageKind | null = firstFile
+    ? firstFile.endsWith(".png")
+      ? "png"
+      : "jpeg"
+    : null;
 
   const lastStatus = new Map(calls.map((row) => [row.request_id ?? "", row.status ?? ""]));
   const interrupted = [...lastStatus]
@@ -206,69 +243,88 @@ async function runLocked(
   const counts = countCalls(calls);
   const result: TrialResult = { called: 0, skipped: 0, interrupted, capped: {} };
 
-  for (const request of shuffled(requests, () => io.random())) {
-    if (lastStatus.has(request.id)) {
-      result.skipped += 1;
-      continue;
-    }
-    if (counts[request.model] >= caps[request.model]) {
-      result.capped[request.model] = (result.capped[request.model] ?? 0) + 1;
-      continue;
-    }
-    const provider = providers[request.model] as GenerationProvider;
-    const base: CsvRow = {
-      request_id: request.id,
-      input: request.input,
-      model: request.model,
-      provider: provider.name,
-      set: request.set,
-      twin_kind: request.twinKind,
-      garment_source: request.garmentSource,
-      items: String(request.items),
-      attempt: String(request.attempt),
-    };
-    // 부르기 전에 남긴다. 도중에 죽으면 이 줄만 남고, 다시 돌려도 그 요청은 부르지 않으며 상한에 센다.
-    await io.appendText(
-      ledgerPath,
-      csvLine(CALL_COLUMNS, {
-        ...base,
-        status: "calling",
-        called_at: new Date(io.now()).toISOString(),
-      }),
-    );
-    counts[request.model] += 1;
-    result.called += 1;
-    const outcome = await callProvider(provider, {
-      twinImage: await io.readFile(request.twinImage),
-      garmentImages: await Promise.all(request.garmentImages.map((path) => io.readFile(path))),
-      prompt: request.prompt,
-    }).catch((error: unknown) => (error instanceof Error ? error : new Error(String(error))));
-    const { status, reason, cost } = statusOf(outcome);
-    let file = "";
-    if (!(outcome instanceof Error) && outcome.kind === "succeeded") {
-      const clean = stripMetadata(outcome.image);
-      folderKind ??= clean.kind;
-      if (clean.kind !== folderKind) {
-        throw new Error(
-          `채점 폴더에 ${folderKind} 와 ${clean.kind} 가 섞인다. 확장자로 모델이 드러나 멈춘다(한 형식으로 굽는 법을 정한다)`,
-        );
+  try {
+    for (const request of shuffled(requests, () => io.random())) {
+      if (lastStatus.has(request.id)) {
+        result.skipped += 1;
+        continue;
       }
-      file = `${io.randomName()}.${clean.kind === "jpeg" ? "jpg" : "png"}`;
-      await io.writeFile(`${scoringDir}/${file}`, clean.bytes);
-      await io.appendText(scoringPath, csvLine(SCORING_COLUMNS, { ...base, file }));
+      if (counts[request.model] >= caps[request.model]) {
+        result.capped[request.model] = (result.capped[request.model] ?? 0) + 1;
+        continue;
+      }
+      const provider = providers[request.model] as GenerationProvider;
+      // 입력 그림은 부르기 전 줄을 쓰기 전에 읽는다. 경로가 틀리면 상한 칸을 쓰지 않고 멈춘다.
+      const input = {
+        twinImage: await io.readFile(request.twinImage),
+        garmentImages: await Promise.all(request.garmentImages.map((path) => io.readFile(path))),
+        prompt: request.prompt,
+      };
+      const base: CsvRow = {
+        request_id: request.id,
+        input: request.input,
+        model: request.model,
+        provider: provider.name,
+        set: request.set,
+        twin_kind: request.twinKind,
+        garment_source: request.garmentSource,
+        items: String(request.items),
+        attempt: String(request.attempt),
+      };
+      // 부르기 전에 남긴다. 도중에 죽으면 이 줄만 남고, 다시 돌려도 그 요청은 부르지 않으며 상한에 센다.
+      await io.appendText(
+        ledgerPath,
+        csvLine(CALL_COLUMNS, {
+          ...base,
+          status: "calling",
+          called_at: new Date(io.now()).toISOString(),
+        }),
+      );
+      counts[request.model] += 1;
+      result.called += 1;
+      const outcome = await callProvider(provider, input).catch((error: unknown) =>
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      const { status, reason, cost } = statusOf(outcome);
+      const record = (extra: CsvRow) =>
+        io.appendText(
+          ledgerPath,
+          csvLine(CALL_COLUMNS, {
+            ...base,
+            status,
+            blocked_reason: reason,
+            cost_usd: cost,
+            elapsed_ms: outcome instanceof Error ? "" : String(outcome.elapsedMs),
+            called_at: new Date(io.now()).toISOString(),
+            ...extra,
+          }),
+        );
+      if (outcome instanceof Error || outcome.kind !== "succeeded") {
+        await record({});
+        continue;
+      }
+      // 받은 그림을 쓸 수 없어도(형식 오류, 형식 섞임) 청구액과 응답 시간은 장부에 먼저 남기고 멈춘다.
+      let clean: ReturnType<typeof stripMetadata>;
+      try {
+        clean = stripMetadata(outcome.image);
+        folderKind ??= clean.kind;
+        if (clean.kind !== folderKind) {
+          throw new Error(
+            `채점 폴더에 ${folderKind} 와 ${clean.kind} 가 섞인다. 확장자로 모델이 드러나 멈춘다(한 형식으로 굽는 법을 정한다)`,
+          );
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        await record({ status: "unusable", blocked_reason: message });
+        throw error;
+      }
+      const file = `${io.randomName()}.${clean.kind === "jpeg" ? "jpg" : "png"}`;
+      // 장부 결과 줄(파일 이름 포함)을 먼저 쓰고 대기 폴더에 그림을 둔다. 채점 폴더로는 끝날 때 섞어 옮긴다.
+      await record({ file });
+      await io.writeFile(`${ledgerPath}.staging/${file}`, clean.bytes);
     }
-    await io.appendText(
-      ledgerPath,
-      csvLine(CALL_COLUMNS, {
-        ...base,
-        file,
-        status,
-        blocked_reason: reason,
-        cost_usd: cost,
-        elapsed_ms: outcome instanceof Error ? "" : String(outcome.elapsedMs),
-        called_at: new Date(io.now()).toISOString(),
-      }),
-    );
+  } finally {
+    await flushStaged(ledgerPath, scoringDir, io);
   }
   return result;
 }

@@ -10,6 +10,7 @@ import {
   open,
   readdir,
   readFile,
+  rename,
   rm,
   utimes,
   writeFile,
@@ -33,6 +34,15 @@ const io: TrialIo = {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, bytes);
     await utimes(path, FIXED_TIME, FIXED_TIME);
+  },
+  moveFile: async (from, to) => {
+    await mkdir(dirname(to), { recursive: true });
+    const moved = await rename(from, to).then(
+      () => true,
+      () => false,
+    );
+    if (moved) await utimes(to, FIXED_TIME, FIXED_TIME);
+    return moved;
   },
   appendText: async (path, text) => {
     await mkdir(dirname(path), { recursive: true });
@@ -107,7 +117,7 @@ if (command === "run") {
     process.exit(1);
   }
   console.log(
-    `문제 없음: 그림 ${files.length - 1}장, 이름은 무작위, 메타데이터 없음, 채점 CSV 에 모델 열 없음`,
+    `문제 없음: 그림 ${files.filter((file) => /\.(jpg|png)$/.test(file.name)).length}장, 이름은 무작위, 메타데이터 없음, 채점 CSV 에 모델 열 없음`,
   );
 } else if (command === "report") {
   const [ledgerPath, scoringDir, set = "select"] = args;

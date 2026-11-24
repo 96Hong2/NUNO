@@ -21,9 +21,15 @@ export interface ModelReport {
   errors: number;
   scored: number;
   normal: number;
-  /** 처음 만든 장의 정상 비율과 다시 만든 장의 정상 비율 */
+  /** 채점한 장 가운데 정상 비율(처음 만든 장, 다시 만든 장) */
   p1: number | null;
   p2: number | null;
+  /**
+   * 부른 호출 가운데 정상 사진을 받은 비율(거절, 무응답, 오류를 분모에 넣음).
+   * 최종 전달 비율 1 - (1 - p1)(1 - p2) 에 어느 쪽을 쓸지는 기획자가 정한다. 둘 다 낸다
+   */
+  p1Calls: number | null;
+  p2Calls: number | null;
   costUsd: number;
   /** 청구액이 비어 있는 호출 수(거절 과금 미확인 등). 0 이 아니면 원가가 작게 나온다 */
   costMissing: number;
@@ -82,6 +88,7 @@ export function buildReport(
     const normal = mine.filter(isNormal);
     const first = scored.filter((row) => row.attempt === "1");
     const second = scored.filter((row) => row.attempt === "2");
+    const callsOf = (attempt: string) => mine.filter((row) => row.attempt === attempt);
     const costUsd = mine.reduce((sum, row) => sum + (Number(row.cost_usd) || 0), 0);
     const totalKrw = costUsd * KRW_PER_USD + CHECK_KRW_PER_CALL * mine.length;
     const normalBy: Record<string, number> = {};
@@ -99,11 +106,14 @@ export function buildReport(
       calls: mine.length,
       blocked: mine.filter((row) => row.status === "refused").length,
       timedOut: mine.filter((row) => row.status === "timed_out").length,
-      errors: mine.filter((row) => row.status === "error" || row.status === "calling").length,
+      errors: mine.filter((row) => ["error", "calling", "unusable"].includes(row.status ?? ""))
+        .length,
       scored: scored.length,
       normal: normal.length,
       p1: ratio(first.filter(isNormal).length, first.length),
       p2: ratio(second.filter(isNormal).length, second.length),
+      p1Calls: ratio(callsOf("1").filter(isNormal).length, callsOf("1").length),
+      p2Calls: ratio(callsOf("2").filter(isNormal).length, callsOf("2").length),
       costUsd,
       costMissing: mine.filter((row) => row.cost_usd === "" && row.status !== "timed_out").length,
       krwPerNormal: normal.length === 0 ? null : totalKrw / normal.length + OTHER_KRW_PER_PHOTO,
@@ -134,7 +144,8 @@ export function formatReport(reports: readonly ModelReport[], set: string): stri
   const lines = reports.map((r) =>
     [
       `[${r.model}] ${set} 호출 ${r.calls}, 차단 ${r.blocked}, 무응답 ${r.timedOut}, 오류와 끊김 ${r.errors}, 채점 ${r.scored}, 정상 ${r.normal}`,
-      `  p1 ${pct(r.p1)}, p2 ${pct(r.p2)}, 청구 ${r.costUsd.toFixed(2)} USD(청구액 빈 호출 ${r.costMissing}), 정상 사진당 ${r.krwPerNormal === null ? "-" : `${Math.round(r.krwPerNormal)}원`}, 응답 p95 ${r.p95Ms ?? "-"}ms`,
+      `  채점 기준 p1 ${pct(r.p1)}, p2 ${pct(r.p2)}, 호출 기준 p1 ${pct(r.p1Calls)}, p2 ${pct(r.p2Calls)}`,
+      `  청구 ${r.costUsd.toFixed(2)} USD(청구액 빈 호출 ${r.costMissing}), 정상 사진당 ${r.krwPerNormal === null ? "-" : `${Math.round(r.krwPerNormal)}원`}, 응답 p95 ${r.p95Ms ?? "-"}ms`,
       `  정상 수: ${
         Object.entries(r.normalBy)
           .map(([key, count]) => `${key} ${count}`)

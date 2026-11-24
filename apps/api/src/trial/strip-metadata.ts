@@ -67,3 +67,34 @@ function concat(parts: Uint8Array[]): Uint8Array {
   }
   return out;
 }
+
+/**
+ * 구조를 따라 읽어 남은 메타데이터 덩어리 이름을 돌려준다(검사용).
+ * JPEG 은 SOS 앞 덩어리만, PNG 는 덩어리 이름만 본다. 압축된 화상 데이터 안의 우연한 글자는 보지 않는다.
+ */
+export function metadataLeft(bytes: Uint8Array): string[] {
+  const kind = imageKind(bytes);
+  const found: string[] = [];
+  if (kind === "jpeg") {
+    let at = 2;
+    while (at + 4 <= bytes.length && bytes[at] === 0xff) {
+      const marker = bytes[at + 1] ?? 0;
+      if (marker === 0xda) break;
+      const color = marker === 0xe2 || marker === 0xee;
+      if (((marker >= 0xe0 && marker <= 0xef) || marker === 0xfe) && !color) {
+        found.push(marker === 0xfe ? "COM" : `APP${marker - 0xe0}`);
+      }
+      at += 2 + (((bytes[at + 2] ?? 0) << 8) | (bytes[at + 3] ?? 0));
+    }
+    return found;
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let at = 8;
+  while (at + 12 <= bytes.length) {
+    const type = String.fromCharCode(...bytes.subarray(at + 4, at + 8));
+    if (!PNG_KEEP.has(type)) found.push(type);
+    if (type === "IEND") break;
+    at += 12 + view.getUint32(at);
+  }
+  return found;
+}
