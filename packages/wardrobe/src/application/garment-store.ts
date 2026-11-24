@@ -304,3 +304,16 @@ export async function readGarmentMethod(db: SqlExecutor, id: string): Promise<st
   );
   return row?.method ?? null;
 }
+
+/** 사람이 함께 찍힌 사진으로 넣은 옷 ID. 그런 옷은 완성 룩 만들기에 보내지 않는다. */
+export async function listGarmentsWithPerson(
+  db: SqlExecutor,
+  ids: readonly string[],
+): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const rows = await db.all<{ garment_id: string }>(
+    `SELECT garment_id FROM garment_sources WHERE had_person = 1 AND garment_id IN (${ids.map(() => "?").join(", ")})`,
+    [...ids],
+  );
+  return rows.map((row) => row.garment_id);
+}

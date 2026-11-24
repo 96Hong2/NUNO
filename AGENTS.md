@@ -25,6 +25,7 @@
 | 옷 정보, 옷장 두 칸 「내 옷」 `mine` 과 「담은 옷」 `wanted` | `packages/wardrobe`: T3 에서 new:context 로 만든다 |
 | 겹쳐 입히기 순서, 「내 코디」, 최근 입혀 본 코디 | `packages/outfit`: T4 에서 new:context 로 만든다 |
 | 룩북과 룩, 입은 옷 사본 | `packages/lookbook`: T5 에서 new:context 로 만든다 |
+| 「이대로 입히기」 화면 글자, 접수 거절 판정, 기기 생성 요청 표 | `packages/generation`: T7 에서 new:context 로 만들었다 |
 | 골드 원장, 묶음, 충전 | `apps/api/src/gold`: T7 에서 만든다(서버 업무 코드 자리, ADR 0002) |
 | 가입, 동의, 계정 삭제 | `apps/api/src/account`(서버 업무 코드 자리, ADR 0002) |
 | 신고, 차단 | `packages/safety`: T8 에서 new:context 로 만든다 |

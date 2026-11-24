@@ -7,6 +7,8 @@ interface OverlaySheetProps {
   onClose: () => void;
   /** 머리 제목과 닫기 사이에 두는 단추 */
   headerAction?: ReactNode;
+  /** 머리 오른쪽 ✕ 를 숨긴다. 시트 안에 「닫기」 단추를 따로 두는 시트가 쓴다 */
+  hideClose?: boolean;
   children: ReactNode;
 }
 
@@ -19,6 +21,7 @@ export function OverlaySheet({
   title,
   onClose,
   headerAction,
+  hideClose = false,
   children,
 }: OverlaySheetProps) {
   if (!visible) return null;
@@ -32,9 +35,11 @@ export function OverlaySheet({
             {title}
           </Text>
           {headerAction}
-          <Pressable role="button" aria-label="닫기" hitSlop={12} onPress={onClose}>
-            <Text style={styles.close}>✕</Text>
-          </Pressable>
+          {hideClose ? null : (
+            <Pressable role="button" aria-label="닫기" hitSlop={12} onPress={onClose}>
+              <Text style={styles.close}>✕</Text>
+            </Pressable>
+          )}
         </View>
         {children}
       </View>

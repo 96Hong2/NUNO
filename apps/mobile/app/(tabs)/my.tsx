@@ -1,6 +1,6 @@
 import { DISPLAY_NAME_MAX } from "@nuno/profile";
-import { Link } from "expo-router";
-import { useState } from "react";
+import { Link, Tabs, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -11,13 +11,20 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { loadAccount, onAccountChange, type AccountState } from "../../src/composition/account";
 import { submitDisplayName } from "../../src/composition/profile";
 import { EmptyScreen } from "../../src/ui/empty-screen";
 import { useProfile } from "../../src/ui/profile-gate";
 
-// 마이 프로필: 이름과 스타일 태그만 보인다. 생년월일은 보이지 않는다.
+// 마이 프로필: 이름과 스타일 태그를 보인다. 생년월일은 보이지 않는다.
+// 가입 뒤에는 머리 오른쪽에 「설정」, 프로필 아래 「내 골드」 카드를 둔다. 설정 칸은 모두 계정이 있어야 쓴다.
 export default function MyScreen() {
   const { profile, refresh } = useProfile();
+  const router = useRouter();
+  const [account, setAccount] = useState<AccountState | null>(null);
+  const reloadAccount = useCallback(() => void loadAccount().then(setAccount), []);
+  useFocusEffect(reloadAccount);
+  useEffect(() => onAccountChange(reloadAccount), [reloadAccount]);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +47,23 @@ export default function MyScreen() {
 
   return (
     <EmptyScreen title="마이">
+      <Tabs.Screen
+        options={{
+          headerRight: account?.signedIn
+            ? () => (
+                <Pressable
+                  role="button"
+                  aria-label="설정"
+                  hitSlop={8}
+                  onPress={() => router.push("/settings")}
+                  style={styles.gear}
+                >
+                  <Text style={styles.gearIcon}>⚙</Text>
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <Pressable role="button" onPress={open} style={styles.nameRow}>
         <Text style={profile.displayName ? styles.name : styles.namePlaceholder}>
           {profile.displayName ?? "이름 정하기"}
@@ -57,6 +81,18 @@ export default function MyScreen() {
           ))
         )}
       </View>
+
+      {account?.signedIn && account.gold ? (
+        <Pressable
+          role="button"
+          aria-label={`내 골드 ${account.gold.balance}골드`}
+          onPress={() => router.push("/gold")}
+          style={styles.goldCard}
+        >
+          <Text style={styles.goldLabel}>내 골드</Text>
+          <Text style={styles.goldValue}>{account.gold.balance}골드</Text>
+        </Pressable>
+      ) : null}
 
       {__DEV__ ? (
         <Link href="/dev/storage" asChild>
@@ -119,6 +155,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#f2f2f2",
   },
   empty: { fontSize: 14, color: "#777" },
+  gear: { marginRight: 16, padding: 4 },
+  gearIcon: { fontSize: 22, color: "#151314" },
+  goldCard: {
+    gap: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    backgroundColor: "#F4F3F1",
+  },
+  goldLabel: { fontSize: 13, color: "#76736C" },
+  goldValue: { fontSize: 22, fontWeight: "800", color: "#151314" },
   devRow: {
     paddingVertical: 14,
     paddingHorizontal: 16,

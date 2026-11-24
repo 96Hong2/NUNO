@@ -56,13 +56,14 @@ import { drawnOnStage } from "../../../src/ui/stage-config";
 import { SuggestPanel, SuggestRange, type SuggestScope } from "../../../src/ui/suggest-panel";
 import { TWIN_ASSETS } from "../../../src/ui/twin-assets";
 import { TwinSwitchSheet } from "../../../src/ui/twin-switch-sheet";
+import { useGenerateFlow } from "../../../src/ui/use-generate-flow";
 import { useStartGarment } from "../../../src/ui/use-start-garment";
 
 const ZOOM = { min: 1, max: 3, step: 0.5 } as const;
 /** 시트가 열려 있으면 알림을 무대 위쪽에 띄운다. */
 const TOAST_OVER_SHEET = 560;
 
-// 피팅룸 「코디」: 트윈 무대 위에 옷을 바로 겹쳐 입히고 벗긴다. 서버 요청은 없다.
+// 피팅룸 「코디」: 트윈 무대 위에 옷을 바로 겹쳐 입히고 벗긴다. 서버는 「이대로 입히기」 흐름만 부른다.
 export default function CoordiScreen() {
   const router = useRouter();
   const toast = useAppToast();
@@ -93,6 +94,8 @@ export default function CoordiScreen() {
 
   const catalog = useMemo(() => buildCatalog(garments), [garments]);
   const catalogMap = useMemo(() => new Map(catalog.map((item) => [item.key, item])), [catalog]);
+
+  const generate = useGenerateFlow(state?.twinKey ?? "", state?.outfit ?? [], catalogMap);
 
   const notify = (message: string, actions?: ToastAction[]) =>
     toast.show(message, actions, sheet ? { bottom: TOAST_OVER_SHEET } : undefined);
@@ -350,6 +353,7 @@ export default function CoordiScreen() {
                 onPress={() => setRange(false)}
               />
             ) : null}
+            {generate.button}
             <SuggestRange
               visible={range}
               counts={{
@@ -486,6 +490,7 @@ export default function CoordiScreen() {
           else void start(method);
         }}
       />
+      {generate.sheets}
     </View>
   );
 }
