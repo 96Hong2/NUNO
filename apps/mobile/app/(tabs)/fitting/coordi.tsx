@@ -60,8 +60,6 @@ import { useGenerateFlow } from "../../../src/ui/use-generate-flow";
 import { useStartGarment } from "../../../src/ui/use-start-garment";
 
 const ZOOM = { min: 1, max: 3, step: 0.5 } as const;
-/** 시트가 열려 있으면 알림을 무대 위쪽에 띄운다. */
-const TOAST_OVER_SHEET = 560;
 
 // 피팅룸 「코디」: 트윈 무대 위에 옷을 바로 겹쳐 입히고 벗긴다. 서버는 「이대로 입히기」 흐름만 부른다.
 export default function CoordiScreen() {
@@ -97,8 +95,7 @@ export default function CoordiScreen() {
 
   const generate = useGenerateFlow(state?.twinKey ?? "", state?.outfit ?? [], catalogMap);
 
-  const notify = (message: string, actions?: ToastAction[]) =>
-    toast.show(message, actions, sheet ? { bottom: TOAST_OVER_SHEET } : undefined);
+  const notify = (message: string, actions?: ToastAction[]) => toast.show(message, actions);
 
   // 손잡이: 누르거나 위로 끌면 옷 칸이 올라오고, 아래로 끌면 내려온다.
   const handle = useRef(

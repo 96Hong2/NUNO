@@ -1,4 +1,4 @@
-import { closetSavedMessage, wornSheetState, type Look } from "@nuno/lookbook";
+import { closetSavedMessage, type Look } from "@nuno/lookbook";
 import { SAMPLE_GARMENTS, type SampleGarmentKey } from "@nuno/outfit";
 import { presetTwin, type PresetTwinKey } from "@nuno/twin";
 import { categoryLabel, type GarmentCategory } from "@nuno/wardrobe";
@@ -8,13 +8,9 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { keepSamplesInCloset, loadLookbook } from "../../src/composition/lookbook";
 import { wearSamples } from "../../src/composition/outfit";
 import { useAppToast } from "../../src/ui/app-toast";
-import { CHERRY } from "../../src/ui/garment-card";
 import { LookImage } from "../../src/ui/look-image";
-import { OverlaySheet } from "../../src/ui/overlay-sheet";
 import { SAMPLE_GARMENT_IMAGES } from "../../src/ui/sample-assets";
-
-/** 시트가 열려 있으면 알림을 화면 위쪽에 띄운다 */
-const TOAST_OVER_SHEET = 560;
+import { WornItemsSheet } from "../../src/ui/worn-items-sheet";
 
 const imageOf = (key: string) => SAMPLE_GARMENT_IMAGES[key as SampleGarmentKey];
 
@@ -58,10 +54,7 @@ export default function LookScreen() {
   }
 
   const notify = (message: string, actions?: { label: string; onPress: () => void }[]) =>
-    toast.show(message, actions, sheet ? { bottom: TOAST_OVER_SHEET } : undefined);
-  const missing = picked.filter((key) => !inCloset.has(key)).length;
-  const state = wornSheetState(picked.length, missing);
-  const allPicked = picked.length === look.items.length;
+    toast.show(message, actions);
 
   const wear = (keys: readonly string[], message: string) =>
     void wearSamples(keys).then(() => {
@@ -73,14 +66,6 @@ export default function LookScreen() {
     });
 
   const keep = async () => {
-    if (picked.length === 0) {
-      notify("담을 옷을 먼저 골라 주세요");
-      return;
-    }
-    if (missing === 0) {
-      notify("고른 옷은 이미 옷장에 있어요");
-      return;
-    }
     if (busy) return;
     setBusy(true);
     try {
@@ -178,81 +163,23 @@ export default function LookScreen() {
         </Pressable>
       </View>
 
-      <OverlaySheet
+      <WornItemsSheet
         visible={sheet}
-        title={`입은 옷 ${look.items.length}개`}
+        rows={look.items.map((item) => ({
+          key: item.sampleKey,
+          name: item.name,
+          fullName: SAMPLE_GARMENTS[item.sampleKey as SampleGarmentKey]?.name,
+          categoryLabel: categoryLabel(item.category as GarmentCategory),
+          image: imageOf(item.sampleKey),
+          inCloset: inCloset.has(item.sampleKey),
+        }))}
+        picked={picked}
+        onPick={setPicked}
+        onKeep={() => void keep()}
+        onWear={() => wear(picked, `${picked.length}벌을 트윈에 입혔어요`)}
+        onNotice={notify}
         onClose={() => setSheet(false)}
-        headerAction={
-          <Pressable
-            role="button"
-            onPress={() => setPicked(allPicked ? [] : look.items.map((item) => item.sampleKey))}
-            style={styles.pickAll}
-          >
-            <Text style={styles.pickAllLabel}>{allPicked ? "모두 풀기" : "모두 고르기"}</Text>
-          </Pressable>
-        }
-      >
-        {look.items.map((item) => {
-          const on = picked.includes(item.sampleKey);
-          const name = SAMPLE_GARMENTS[item.sampleKey as SampleGarmentKey]?.name ?? item.name;
-          return (
-            <View key={item.sampleKey} style={styles.row}>
-              <Pressable
-                role="checkbox"
-                aria-checked={on}
-                aria-label={`${name} 고르기`}
-                onPress={() =>
-                  setPicked(
-                    on
-                      ? picked.filter((key) => key !== item.sampleKey)
-                      : [...picked, item.sampleKey],
-                  )
-                }
-                style={[styles.box, on && styles.boxOn]}
-              >
-                {on ? <Text style={styles.boxMark}>✓</Text> : null}
-              </Pressable>
-              <View style={styles.rowPhoto}>
-                <Image source={imageOf(item.sampleKey)} resizeMode="contain" style={styles.fill} />
-              </View>
-              <View style={styles.rowText}>
-                <Text style={styles.muted}>{categoryLabel(item.category as GarmentCategory)}</Text>
-                <Text style={styles.itemName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                {inCloset.has(item.sampleKey) ? (
-                  <Text style={styles.inCloset}>옷장에 있음</Text>
-                ) : null}
-              </View>
-            </View>
-          );
-        })}
-        <Text style={styles.line}>{state.line}</Text>
-        <View style={styles.sheetButtons}>
-          <Pressable
-            role="button"
-            onPress={() => void keep()}
-            style={[styles.half, state.closet.active ? styles.outline : styles.idle]}
-          >
-            <Text style={[styles.halfLabel, !state.closet.active && styles.idleLabel]}>
-              {state.closet.label}
-            </Text>
-          </Pressable>
-          <Pressable
-            role="button"
-            onPress={() =>
-              picked.length === 0
-                ? notify("입혀 볼 옷을 먼저 골라 주세요")
-                : wear(picked, `${picked.length}벌을 트윈에 입혔어요`)
-            }
-            style={[styles.half, state.wear.active ? styles.cherry : styles.idle]}
-          >
-            <Text style={[styles.halfLabel, state.wear.active ? styles.white : styles.idleLabel]}>
-              {state.wear.label}
-            </Text>
-          </Pressable>
-        </View>
-      </OverlaySheet>
+      />
     </View>
   );
 }
@@ -309,35 +236,4 @@ const styles = StyleSheet.create({
     backgroundColor: "#151314",
   },
   primaryLabel: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  pickAll: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: "#F4F3F1",
-  },
-  pickAllLabel: { fontSize: 12, color: "#151314" },
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  box: {
-    width: 22,
-    height: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: "#C9C6C0",
-  },
-  boxOn: { borderColor: CHERRY, backgroundColor: CHERRY },
-  boxMark: { color: "#fff", fontSize: 13, fontWeight: "800" },
-  rowPhoto: { width: 52, height: 52, padding: 4, borderRadius: 8, backgroundColor: "#F4F3F1" },
-  rowText: { flex: 1, gap: 2 },
-  inCloset: { fontSize: 12, fontWeight: "700", color: CHERRY },
-  line: { fontSize: 13, color: "#76736C" },
-  sheetButtons: { flexDirection: "row", gap: 8 },
-  half: { flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 12 },
-  outline: { borderWidth: 1.5, borderColor: "#151314", backgroundColor: "#fff" },
-  cherry: { backgroundColor: CHERRY },
-  idle: { backgroundColor: "#E7E6E3" },
-  halfLabel: { fontSize: 14, fontWeight: "700", color: "#151314" },
-  white: { color: "#fff" },
-  idleLabel: { color: "#76736C" },
 });

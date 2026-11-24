@@ -1,8 +1,10 @@
 import { toKstDateString } from "@nuno/clock";
 import { listLooks, lookTitleFromNames, type Look, type LookbookSummary } from "@nuno/lookbook";
+import { isSampleGarmentKey, SAMPLE_GARMENTS } from "@nuno/outfit";
 import {
   insertGarment,
   listClosetSampleKeys,
+  readGarment,
   type GarmentCategory,
   type GarmentColor,
 } from "@nuno/wardrobe";
@@ -132,7 +134,8 @@ export interface ServerLook {
   resultId: string;
   /** 서명 주소. 기한이 지나면 다시 읽는다 */
   imageUrl: string;
-  wornItems: { name?: unknown }[];
+  /** 만들 때 보낸 입은 옷: id 는 견본 옷 `s:<키>`, 옷장 옷 `g:<옷 ID>` 다 */
+  wornItems: { id?: unknown; name?: unknown }[];
   isFavorite: boolean;
   savedAt: string;
   /** null 이면 「모든 룩」 줄이다 */
@@ -306,4 +309,65 @@ export async function createLookbook(title: string): Promise<{ id: string; title
     body: { title },
   });
   return result.ok ? result.data : null;
+}
+
+/** 입은 옷 시트의 한 줄. 룩북 크게 보기의 기기 견본 룩과 서버 완성 룩이 함께 쓴다 */
+export interface WornRow {
+  /** 룩 옷 키: 견본 옷 `s:<키>`, 옷장 옷 `g:<옷 ID>`. 「트윈에 입혀 보기」 에 그대로 넘긴다 */
+  key: string;
+  name: string;
+  category: GarmentCategory;
+  /** 견본 옷 키. 옷장 옷이면 null */
+  sampleKey: string | null;
+  /** 옷장 옷 카드 그림 주소. 견본 옷이면 null 이고 설치 파일 그림을 쓴다 */
+  thumbUri: string | null;
+  /** 옷장에 있다. 견본 옷은 두 칸 어디든, 옷장 옷은 「내 옷」 칸이다 */
+  inCloset: boolean;
+  /** 이 휴대폰에 없어 고를 수 없다(지운 옷장 옷, 다른 휴대폰에서 넣은 옷) */
+  gone: boolean;
+}
+
+const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
+
+/**
+ * 룩의 입은 옷을 시트 줄로 읽는다. 서버 완성 룩은 만들 때 보낸 옷 키로 견본 옷과 이 휴대폰 옷장 옷을 찾는다.
+ * 키를 알아볼 수 없는 줄은 뺀다.
+ */
+export async function loadWornRows(look: BookLook): Promise<WornRow[]> {
+  const { db } = await getDeviceDb();
+  const inCloset = new Set(await listClosetSampleKeys(db));
+  const items =
+    look.kind === "device"
+      ? look.look.items.map((item) => ({ id: `s:${item.sampleKey}`, name: item.name }))
+      : look.look.wornItems.map((item) => ({ id: textOf(item.id), name: textOf(item.name) }));
+  const rows: WornRow[] = [];
+  for (const item of items) {
+    if (item.id.startsWith("s:")) {
+      const sampleKey = item.id.slice(2);
+      if (!isSampleGarmentKey(sampleKey)) continue;
+      const sample = SAMPLE_GARMENTS[sampleKey];
+      rows.push({
+        key: item.id,
+        name: item.name || sample.name,
+        category: sample.category,
+        sampleKey,
+        thumbUri: null,
+        inCloset: inCloset.has(sampleKey),
+        gone: false,
+      });
+    } else if (item.id.startsWith("g:")) {
+      const garment = await readGarment(db, item.id.slice(2));
+      const mine = garment?.closet === "mine";
+      rows.push({
+        key: item.id,
+        name: item.name || garment?.name || "",
+        category: garment?.category ?? "top",
+        sampleKey: null,
+        thumbUri: garment && mine ? await garmentMedia.resolve(garment.thumbPath) : null,
+        inCloset: mine,
+        gone: !mine,
+      });
+    }
+  }
+  return rows;
 }
