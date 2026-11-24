@@ -50,6 +50,11 @@ export function onClosetChange(listener: () => void): () => void {
   return () => closetListeners.delete(listener);
 }
 
+/** 다른 조립 모듈(룩북의 「옷장에 담기」)이 옷장을 바꾼 뒤 부른다 */
+export function notifyClosetChanged(): void {
+  closetChanged();
+}
+
 function closetChanged(): void {
   for (const listener of closetListeners) listener();
 }
