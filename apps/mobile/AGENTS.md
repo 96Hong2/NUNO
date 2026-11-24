@@ -30,7 +30,8 @@ Expo SDK 58 과 Expo Router 앱이다. 워크스페이스 필터 이름은 `mobi
 - Claude 브라우저 창은 `.claude/launch.json` 의 `mobile-web` 으로 연다. 기기 DB(OPFS)는 localhost 에서만 저장된다.
 - 같은 DB 를 탭 둘이 열면 잠긴다. 「저장소 보기」 는 탭 하나에서만 본다.
 - `pnpm e2e` 는 8091(`NUNO_E2E_PORT`)에 이 체크아웃의 서버를 따로 띄운다. 떠 있는 서버를 다시 쓰지 않는다.
-- worktree 둘에서 e2e 를 함께 돌리면 `NUNO_E2E_PORT` 를 서로 다르게 준다. 시험은 루트 `e2e/*.spec.ts` 다.
+- worktree 둘에서 e2e 를 함께 돌리면 `NUNO_E2E_PORT`, `NUNO_E2E_API_PORT`, `NUNO_DB_PORT` 를 모두 서로 다르게 준다.
+- e2e 는 Docker 가 켜져 있어야 한다. 시험은 루트 `e2e/*.spec.ts` 다.
 - 지나간 탭 화면은 inert 로 뒤에 남는다. e2e 에서 머리글은 `h1:not([inert] *)` 로 찾는다.
 
 ## iOS

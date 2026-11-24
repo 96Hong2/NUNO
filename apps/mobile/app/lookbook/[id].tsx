@@ -48,6 +48,8 @@ export default function LookbookBookScreen() {
   const [busy, setBusy] = useState(false);
   const edgeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(edgeTimer.current), []);
+  // 사진이 열리지 않아 룩북을 다시 읽은 룩. 다시 읽은 사진도 안 열리면 되풀이하지 않는다.
+  const refetched = useRef(new Set<string>());
 
   const reload = useCallback(async () => {
     const loaded = await loadBook(id);
@@ -289,6 +291,13 @@ export default function LookbookBookScreen() {
               <BookLookImage
                 look={current}
                 label={current.kind === "server" ? "완성 룩 사진" : current.title}
+                onLoad={() => refetched.current.delete(current.key)}
+                onError={() => {
+                  // 오래 머물러 서명 주소 기한이 지났다. 한 번만 다시 읽어 새 주소를 받는다.
+                  if (refetched.current.has(current.key)) return;
+                  refetched.current.add(current.key);
+                  void reload();
+                }}
               />
             </Pressable>
             <View style={styles.photoTop} pointerEvents="box-none">

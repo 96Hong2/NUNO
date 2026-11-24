@@ -280,3 +280,50 @@ test("책장의 「새 룩북」 카드로 빈 룩북을 만들면 「아직 룩
   await expect(book(page, "겨울 여행")).toContainText("아직 룩이 없어요");
   await expect(book(page, "겨울 여행")).toContainText("룩 0개");
 });
+
+test("룩북 크게 보기에서 사진 서명 주소가 열리지 않으면 룩북을 한 번 다시 읽어 새 주소로 사진을 보인다", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  await page.getByRole("tab", { name: "피팅룸" }).click();
+  await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
+  await wearOnly(page, FIRST);
+  await stageButton(page).click();
+  await page
+    .getByRole("dialog", { name: "골드를 쓰려면 가입해요" })
+    .getByRole("button", { name: "시험 계정으로 계속하기" })
+    .click();
+  await page.getByRole("button", { name: "모두 동의하기" }).click();
+  await page.getByRole("button", { name: "동의하고 만들기" }).click();
+  await makeSheet(page).getByRole("button", { name: "무료로 만들기" }).click();
+  await saveResult(page);
+
+  // 첫 사진 요청만 기한 지난 주소처럼 403 으로 막는다. 서명 기한은 초 단위라 1초 넘게 끌어 새 주소가 달라지게 한다.
+  const requests: { url: URL; blocked: boolean }[] = [];
+  await page.route(/\/v1\/files\//, async (route) => {
+    const blocked = requests.length === 0;
+    requests.push({ url: new URL(route.request().url()), blocked });
+    if (!blocked) {
+      await route.continue();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    await route.fulfill({ status: 403, body: "" });
+  });
+  const loaded: string[] = [];
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    if (url.pathname.startsWith("/v1/files/") && response.status() === 200)
+      loaded.push(url.pathname);
+  });
+  await page.goto("/lookbook/all");
+  await expect(page.getByRole("heading", { name: "모든 룩" })).toBeVisible();
+  await expect(lookTitle(page, FIRST)).toBeVisible();
+
+  await expect.poll(() => requests.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(2);
+  const [first, again] = requests;
+  expect(again?.url.pathname).toBe(first?.url.pathname);
+  expect(again?.url.search).not.toBe(first?.url.search);
+  await expect.poll(() => loaded).toContain(first?.url.pathname);
+});

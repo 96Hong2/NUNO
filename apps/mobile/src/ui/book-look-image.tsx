@@ -6,20 +6,31 @@ import { LookImage } from "./look-image";
 /**
  * 룩북의 룩 그림. 기기 견본 룩은 기존 룩 그림, 서버 완성 룩은 서명 주소 사진이다.
  * badge 면 「✦ AI 생성」 을 붙인다. 기기 견본 룩은 착장 사진일 때만 붙는다.
+ * 서명 주소 기한이 지나 사진이 열리지 않으면 onError, 열리면 onLoad 를 부른다.
  */
 export function BookLookImage({
   look,
   badge = false,
   label,
+  onLoad,
+  onError,
 }: {
   look: BookLook;
   badge?: boolean;
   label?: string;
+  onLoad?: () => void;
+  onError?: () => void;
 }) {
   if (look.kind === "device") return <LookImage look={look.look} badge={badge} label={label} />;
   return (
     <View role="img" aria-label={label} style={styles.frame}>
-      <Image source={{ uri: look.look.imageUrl }} resizeMode="cover" style={styles.fill} />
+      <Image
+        source={{ uri: look.look.imageUrl }}
+        resizeMode="cover"
+        style={styles.fill}
+        onLoad={onLoad}
+        onError={onError}
+      />
       {badge ? <AiBadge /> : null}
     </View>
   );
