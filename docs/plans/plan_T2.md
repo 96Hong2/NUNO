@@ -1,6 +1,8 @@
 # plan_T2: 생년월일 입력, 트윈 여섯 고르기, 홈 무대
 
-> 로드맵: `docs/roadmap.md` 「T2」 · 작성 2026-11-24 · 상태: 완료(PR D 머지 대기)
+> 로드맵: `docs/roadmap.md` 「T2」 · 작성 2026-11-24 · 상태: 완료
+>
+> PR: https://github.com/96Hong2/NUNO/pull/5 , https://github.com/96Hong2/NUNO/pull/6 , https://github.com/96Hong2/NUNO/pull/7 , https://github.com/96Hong2/NUNO/pull/9
 
 ## 목표
 
