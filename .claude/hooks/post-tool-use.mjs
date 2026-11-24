@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
-import { commonGitDir, gitTopLevel, readHookInput } from "./hook-input.mjs";
+import { gitTopLevel, readHookInput } from "./hook-input.mjs";
 
 const FORMAT = /^\.(?:[cm]?[jt]sx?|json|ya?ml|css)$/;
 const LINT = /^\.[cm]?[jt]sx?$/;
@@ -32,16 +32,11 @@ function main() {
   const extension = extname(filePath).toLowerCase();
   if (!FORMAT.test(extension) || !existsSync(filePath)) return;
 
-  // 이 세션 저장소(그 worktree 포함)의 파일만 본다. 다른 저장소는 그쪽 설정을 모르니 손대지 않는다.
+  // 이 세션 저장소의 파일만 본다. 다른 저장소는 그쪽 설정을 모르니 손대지 않는다.
   // 세션 폴더(cwd)가 저장소 밖이어도 프로젝트 폴더(CLAUDE_PROJECT_DIR)의 저장소면 본다.
   const root = gitTopLevel(dirname(filePath));
-  if (root === null) return;
-  const sessionDirs = [cwd, process.env.CLAUDE_PROJECT_DIR].filter((dir) => dir);
-  const sessionRepos = sessionDirs
-    .map(gitTopLevel)
-    .filter((top) => top !== null)
-    .map(commonGitDir);
-  if (!sessionRepos.includes(commonGitDir(root))) return;
+  const sessionTops = [cwd, process.env.CLAUDE_PROJECT_DIR].filter((dir) => dir).map(gitTopLevel);
+  if (root === null || !sessionTops.includes(root)) return;
   const rel = relative(root, filePath);
   if (rel.split("/").includes("node_modules")) return;
   if (!["prettier", "eslint"].every((bin) => existsSync(join(root, "node_modules", ".bin", bin)))) {
