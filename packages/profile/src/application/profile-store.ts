@@ -1,5 +1,11 @@
 import type { Migration, SqlExecutor } from "@nuno/device-db";
-import { isValidBirthDate, type ProfileState } from "../domain";
+import {
+  isValidBirthDate,
+  normalizeDisplayName,
+  STYLE_TAGS,
+  STYLE_TAGS_MAX,
+  type ProfileState,
+} from "../domain";
 
 /**
  * profile 표를 만드는 옮기기 단계. 판 번호는 앱 composition 의 판 순서가 붙인다.
@@ -51,4 +57,20 @@ export async function finishOnboarding(db: SqlExecutor): Promise<void> {
 export async function saveBirthDate(db: SqlExecutor, value: string, today: string): Promise<void> {
   if (!isValidBirthDate(value, today)) throw new Error(`받을 수 없는 생년월일: ${value}`);
   await db.run("UPDATE profile SET birth_date = ? WHERE id = 1", [value]);
+}
+
+/** 「이름 정하기」 시트의 「저장」. 받을 수 없는 이름이면 던진다. */
+export async function saveDisplayName(db: SqlExecutor, value: string): Promise<void> {
+  const name = normalizeDisplayName(value);
+  if (name === null) throw new Error("이름은 1~20자로 써 주세요");
+  await db.run("UPDATE profile SET display_name = ? WHERE id = 1", [name]);
+}
+
+/** 고른 스타일 태그를 저장한다. 목록에 없거나 다섯 개를 넘으면 던진다. */
+export async function saveStyleTags(db: SqlExecutor, tags: readonly string[]): Promise<void> {
+  const known = tags.every((tag) => (STYLE_TAGS as readonly string[]).includes(tag));
+  if (!known || tags.length > STYLE_TAGS_MAX || new Set(tags).size !== tags.length) {
+    throw new Error(`저장할 수 없는 스타일 태그: ${tags.join(", ")}`);
+  }
+  await db.run("UPDATE profile SET style_tags = ? WHERE id = 1", [JSON.stringify(tags)]);
 }

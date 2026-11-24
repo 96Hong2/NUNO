@@ -1,5 +1,12 @@
 import { toKstDateString } from "@nuno/clock";
-import { readProfile, saveBirthDate, type ProfileState } from "@nuno/profile";
+import {
+  finishOnboarding,
+  readProfile,
+  saveBirthDate,
+  saveDisplayName,
+  saveStyleTags,
+  type ProfileState,
+} from "@nuno/profile";
 import { systemClock } from "../adapters/system-clock";
 import { getDeviceDb } from "./device-db";
 
@@ -16,4 +23,20 @@ export async function loadProfile(): Promise<ProfileState> {
 export async function submitBirthDate(value: string): Promise<void> {
   const { db } = await getDeviceDb();
   await saveBirthDate(db, value, todayKst());
+}
+
+/**
+ * 스타일 단계를 끝낸다. tags 가 있으면(「다음」) 함께 저장하고, 없으면(「나중에 고를게요」, 「건너뛰기」) 끝만 적는다.
+ */
+export async function finishStyleStep(tags: readonly string[] | null): Promise<void> {
+  const { db } = await getDeviceDb();
+  await db.transaction(async (tx) => {
+    if (tags !== null) await saveStyleTags(tx, tags);
+    await finishOnboarding(tx);
+  });
+}
+
+export async function submitDisplayName(value: string): Promise<void> {
+  const { db } = await getDeviceDb();
+  await saveDisplayName(db, value);
 }

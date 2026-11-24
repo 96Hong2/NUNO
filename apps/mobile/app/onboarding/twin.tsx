@@ -1,7 +1,8 @@
 import { PRESET_TWINS, presetTwin, type PresetKind, type PresetTwinKey } from "@nuno/twin";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { skipTwinPick, startWithTwin } from "../../src/composition/twin";
+import { pickTwin, skipTwinPick } from "../../src/composition/twin";
 import { withRo } from "../../src/ui/korean-particle";
 import { useProfile } from "../../src/ui/profile-gate";
 import { StepDots } from "../../src/ui/step-dots";
@@ -14,10 +15,11 @@ const KINDS: { kind: PresetKind; label: string }[] = [
   { kind: "doll", label: "인형" },
 ];
 
-// 온보딩 1단계. 왼쪽 위 X 는 기본 트윈으로 건너뛴다.
-// 저장하면 프로필을 다시 읽고, 루트의 Stack.Protected 가 다음 화면으로 보낸다.
+// 온보딩 1단계. 「<이름>으로 시작」 은 트윈을 저장하고 스타일 단계로 간다.
+// 왼쪽 위 X 는 기본 트윈으로 온보딩을 끝낸다. 프로필을 다시 읽으면 루트의 Stack.Protected 가 홈으로 보낸다.
 export default function TwinPickScreen() {
   const { refresh } = useProfile();
+  const router = useRouter();
   const toast = useToast();
   const [kind, setKind] = useState<PresetKind>("realistic");
   const [picked, setPicked] = useState<PresetTwinKey | null>(null);
@@ -28,9 +30,9 @@ export default function TwinPickScreen() {
     setSaving(true);
     try {
       await task();
-      await refresh();
     } catch (caught) {
       toast.show(caught instanceof Error ? caught.message : String(caught));
+    } finally {
       setSaving(false);
     }
   };
@@ -40,7 +42,10 @@ export default function TwinPickScreen() {
       toast.show("트윈을 하나 골라 주세요");
       return;
     }
-    void save(() => startWithTwin(picked));
+    void save(async () => {
+      await pickTwin(picked);
+      router.push("/onboarding/style");
+    });
   };
 
   return (
@@ -51,7 +56,12 @@ export default function TwinPickScreen() {
             role="button"
             aria-label="닫기"
             hitSlop={12}
-            onPress={() => void save(skipTwinPick)}
+            onPress={() =>
+              void save(async () => {
+                await skipTwinPick();
+                await refresh();
+              })
+            }
           >
             <Text style={styles.close}>✕</Text>
           </Pressable>
