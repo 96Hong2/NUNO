@@ -345,6 +345,7 @@ const styles = StyleSheet.create({
   field: { width: "48%", padding: 12, borderRadius: 12, backgroundColor: "#F2F1EF", gap: 4 },
   fieldLabel: { fontSize: 13, color: "#76736C" },
   fieldRow: { flexDirection: "row", alignItems: "center" },
-  fieldInput: { flex: 1, fontSize: 17, fontWeight: "700", color: "#151314" },
-  unit: { fontSize: 14, color: "#76736C" },
+  // 웹 TextInput 은 기본 폭을 가진 채 줄지 않는다. 폭을 0 에서 늘려 「cm」 자리를 남긴다.
+  fieldInput: { flex: 1, width: 0, minWidth: 0, fontSize: 17, fontWeight: "700", color: "#151314" },
+  unit: { flexShrink: 0, marginLeft: 4, fontSize: 14, color: "#76736C" },
 });

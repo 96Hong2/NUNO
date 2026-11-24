@@ -1,17 +1,29 @@
+import { outfitTitle, refKey, type OutfitPiece } from "@nuno/outfit";
 import { DEFAULT_PRESET_TWIN, presetTwin, type PresetTwinKey } from "@nuno/twin";
 import { categoryLabel } from "@nuno/wardrobe";
 import { Tabs, useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { wearTodayLook } from "../../src/composition/outfit";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ScrollViewInstance,
+} from "react-native";
+import { canGenerateLooks } from "../../src/composition/account";
+import { loadCoordi, onCoordiChange, wearTodayLook } from "../../src/composition/outfit";
 import { loadRecentLooks, type BookLook } from "../../src/composition/lookbook";
 import { completeTour } from "../../src/composition/profile";
 import { loadCurrentTwin, switchTwin } from "../../src/composition/twin";
 import {
+  loadClosetImages,
   loadRecentGarments,
   onClosetChange,
   type ClosetView,
 } from "../../src/composition/wardrobe";
+import { buildCatalog } from "../../src/ui/coordi-catalog";
 import { FirstTour } from "../../src/ui/first-tour";
 import { LookCard } from "../../src/ui/look-card";
 import { GarmentCard } from "../../src/ui/garment-card";
@@ -33,6 +45,9 @@ const CELLS = [
   { key: "recentGarments", label: "최근 넣은 옷", empty: "옷장에 옷을 넣으면 여기에 먼저 보여요." },
 ] as const;
 
+/** 서버가 있고 「이대로 입히기」 스위치가 켜져 있으면 룩북에 룩을 저장하는 길이 열려 있다 */
+const LOOKS_EMPTY_WITH_GENERATE = "피팅룸에서 코디를 입혀 보고 룩북에 저장하면 여기에 보여요.";
+
 type CellKey = (typeof CELLS)[number]["key"];
 
 /** 홈 「최근 저장한 룩」 카드 수(와이어프레임 8장) */
@@ -48,17 +63,40 @@ export default function HomeScreen() {
   const [cell, setCell] = useState<CellKey>("recentLooks");
   const [recent, setRecent] = useState<ClosetView | null>(null);
   const [looks, setLooks] = useState<BookLook[]>([]);
+  const [generateOn, setGenerateOn] = useState(false);
+  const [outfitName, setOutfitName] = useState("");
   const router = useRouter();
+
+  // 시트 탭을 누르면 시트 윗변까지 올린다. 시트가 화면 위에 닿으면 머리글이 트윈 얼굴, 이름, 코디 이름으로 바뀐다.
+  const scroll = useRef<ScrollViewInstance>(null);
+  const [sheetY, setSheetY] = useState<number | null>(null);
+  const [viewHeight, setViewHeight] = useState(0);
+  const [raised, setRaised] = useState(false);
+
+  const loadOutfitName = useCallback(() => {
+    void Promise.all([loadCoordi(), loadClosetImages("mine")]).then(([state, garments]) => {
+      const names = new Map(buildCatalog(garments).map((item) => [item.key, item.name]));
+      const nameOf = (piece: OutfitPiece) => names.get(refKey(piece.ref)) ?? "";
+      setOutfitName(outfitTitle(state.outfit, nameOf));
+    });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       const load = () => {
         void loadRecentGarments().then(setRecent);
         void loadRecentLooks().then(setLooks);
+        loadOutfitName();
       };
       load();
-      return onClosetChange(load);
-    }, []),
+      void canGenerateLooks().then(setGenerateOn, () => setGenerateOn(false));
+      const offCloset = onClosetChange(load);
+      const offCoordi = onCoordiChange(loadOutfitName);
+      return () => {
+        offCloset();
+        offCoordi();
+      };
+    }, [loadOutfitName]),
   );
 
   useEffect(() => {
@@ -82,11 +120,36 @@ export default function HomeScreen() {
   };
 
   const current = CELLS.find((item) => item.key === cell) ?? CELLS[0];
+  const emptyText =
+    current.key === "recentLooks" && generateOn ? LOOKS_EMPTY_WITH_GENERATE : current.empty;
+
+  const openCell = (key: CellKey) => {
+    setCell(key);
+    if (sheetY !== null) scroll.current?.scrollTo({ y: sheetY, animated: true });
+  };
 
   return (
     <View style={styles.screen}>
       <Tabs.Screen
         options={{
+          headerTitle:
+            raised && twin
+              ? () => (
+                  <View style={styles.headTwin}>
+                    <View style={styles.headFace}>
+                      <Image source={TWIN_ASSETS[twin].base} style={styles.headFaceImage} />
+                    </View>
+                    <View>
+                      <Text role="heading" aria-level={1} style={styles.headName}>
+                        {presetTwin(twin).name}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.headOutfit}>
+                        {outfitName}
+                      </Text>
+                    </View>
+                  </View>
+                )
+              : "홈",
           headerRight: () => (
             <Pressable
               role="button"
@@ -100,7 +163,16 @@ export default function HomeScreen() {
           ),
         }}
       />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView
+        ref={scroll}
+        contentContainerStyle={styles.body}
+        scrollEventThrottle={16}
+        onLayout={(event) => setViewHeight(event.nativeEvent.layout.height)}
+        onScroll={(event) => {
+          const y = event.nativeEvent.contentOffset.y;
+          setRaised(sheetY !== null && y >= sheetY - 8);
+        }}
+      >
         <View style={styles.stage}>
           {twin ? (
             <Image
@@ -132,14 +204,17 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.sheet}>
+        <View
+          style={[styles.sheet, { minHeight: viewHeight }]}
+          onLayout={(event) => setSheetY(event.nativeEvent.layout.y)}
+        >
           <View style={styles.cells}>
             {CELLS.map((item) => (
               <Pressable
                 key={item.key}
                 role="button"
                 aria-pressed={cell === item.key}
-                onPress={() => setCell(item.key)}
+                onPress={() => openCell(item.key)}
                 style={StyleSheet.flatten([styles.cell, cell === item.key && styles.cellOn])}
               >
                 <Text style={[styles.cellLabel, cell === item.key && styles.cellLabelOn]}>
@@ -199,7 +274,7 @@ export default function HomeScreen() {
               </View>
             </View>
           ) : (
-            <Text style={styles.empty}>{current.empty}</Text>
+            <Text style={styles.empty}>{emptyText}</Text>
           )}
         </View>
       </ScrollView>
@@ -230,6 +305,18 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   body: { paddingBottom: 32 },
   bell: { marginRight: 16 },
+  headTwin: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headFace: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: "hidden",
+    backgroundColor: "#F2F1EF",
+  },
+  // 기본 사진(900x1205)에서 얼굴이 동그라미 가운데에 오게 키워 옮긴다.
+  headFaceImage: { position: "absolute", width: 164, height: 220, left: -64, top: -10 },
+  headName: { fontSize: 16, fontWeight: "700", color: "#151314" },
+  headOutfit: { maxWidth: 240, fontSize: 13, color: "#76736C" },
   bellIcon: { fontSize: 20 },
   stage: { width: "100%", aspectRatio: 3 / 4, backgroundColor: "#fff" },
   stageImage: { width: "100%", height: "100%" },
