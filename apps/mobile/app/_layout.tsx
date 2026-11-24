@@ -17,6 +17,7 @@ const OVERLAY_SCREENS = [
   "garment/new/fit",
   "garment/[id]",
   "look/[id]",
+  "lookbook/[id]",
   "generate/consent",
   "generate/[jobId]",
   "gold",
@@ -40,7 +41,7 @@ export default function RootLayout() {
                   </Stack.Protected>
                   <Stack.Protected guard={done}>
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    {/* 옷 넣기, 옷 상세, 룩 크게 보기, 완성 룩, 내 골드, 설정은 탭 위로 덮어 연다. 화면마다 자기 위 줄을 그린다. */}
+                    {/* 옷 넣기, 옷 상세, 룩 크게 보기, 룩북 크게 보기, 완성 룩, 내 골드, 설정은 탭 위로 덮어 연다. 화면마다 자기 위 줄을 그린다. */}
                     {OVERLAY_SCREENS.map((name) => (
                       <Stack.Screen key={name} name={name} options={{ headerShown: false }} />
                     ))}

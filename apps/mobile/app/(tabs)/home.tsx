@@ -1,11 +1,10 @@
-import type { Look } from "@nuno/lookbook";
 import { DEFAULT_PRESET_TWIN, presetTwin, type PresetTwinKey } from "@nuno/twin";
 import { categoryLabel } from "@nuno/wardrobe";
 import { Tabs, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { wearTodayLook } from "../../src/composition/outfit";
-import { loadLookbook } from "../../src/composition/lookbook";
+import { loadRecentLooks, type BookLook } from "../../src/composition/lookbook";
 import { completeTour } from "../../src/composition/profile";
 import { loadCurrentTwin, switchTwin } from "../../src/composition/twin";
 import {
@@ -21,7 +20,8 @@ import { useAppToast } from "../../src/ui/app-toast";
 import { TWIN_ASSETS } from "../../src/ui/twin-assets";
 import { TwinSwitchSheet } from "../../src/ui/twin-switch-sheet";
 
-// 홈 시트 두 칸. 「최근 넣은 옷」 은 옷장 두 칸을 합쳐 마지막에 넣은 옷부터 12벌을 3열로 보인다. 룩은 T5 에서 생긴다.
+// 홈 시트 두 칸. 「최근 넣은 옷」 은 옷장 두 칸을 합쳐 마지막에 넣은 옷부터 12벌을 3열로 보인다.
+// 「최근 저장한 룩」 은 기기 견본 룩과 서버 완성 룩을 최근 저장 순으로 보인다. 완성 룩은 「모든 룩」 크게 보기로 연다.
 // 칸은 role tab 이 아니라 단추다. 하단 탭 셋만 tab 으로 센다.
 const CELLS = [
   {
@@ -47,14 +47,14 @@ export default function HomeScreen() {
   const [switching, setSwitching] = useState(false);
   const [cell, setCell] = useState<CellKey>("recentLooks");
   const [recent, setRecent] = useState<ClosetView | null>(null);
-  const [looks, setLooks] = useState<Look[]>([]);
+  const [looks, setLooks] = useState<BookLook[]>([]);
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
       const load = () => {
         void loadRecentGarments().then(setRecent);
-        void loadLookbook().then((view) => setLooks(view.looks));
+        void loadRecentLooks().then(setLooks);
       };
       load();
       return onClosetChange(load);
@@ -158,8 +158,18 @@ export default function HomeScreen() {
               </View>
               <View style={styles.recentGrid}>
                 {looks.slice(0, RECENT_LOOK_LIMIT).map((look) => (
-                  <View key={look.id} style={styles.lookCell}>
-                    <LookCard look={look} onPress={() => router.push(`/look/${look.id}`)} />
+                  <View key={look.key} style={styles.lookCell}>
+                    <LookCard
+                      look={look}
+                      onPress={() =>
+                        look.kind === "device"
+                          ? router.push(`/look/${look.look.id}`)
+                          : router.push({
+                              pathname: "/lookbook/[id]",
+                              params: { id: "all", look: look.key },
+                            })
+                      }
+                    />
                   </View>
                 ))}
               </View>
