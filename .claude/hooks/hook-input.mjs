@@ -3,19 +3,13 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-// Stop 이 verify:fast 통과 해시를 적는 파일. 자리는 git rev-parse --git-path 로 찾는다.
-export const VERIFY_OK_FILE = "nuno-verify-ok";
-
-// stdin 의 JSON 을 읽는다. 읽지 못하거나 객체가 아니면 input 은 null 이다.
+// stdin 의 JSON 객체. 읽지 못하거나 객체가 아니면 null 이다.
 export function readHookInput() {
   try {
     const input = JSON.parse(readFileSync(0, "utf8"));
-    if (input === null || typeof input !== "object" || Array.isArray(input)) {
-      return { input: null, error: new Error("입력이 JSON 객체가 아니다") };
-    }
-    return { input, error: null };
-  } catch (error) {
-    return { input: null, error };
+    return input !== null && typeof input === "object" && !Array.isArray(input) ? input : null;
+  } catch {
+    return null;
   }
 }
 
@@ -33,6 +27,5 @@ export function gitTopLevel(path) {
   }
   if (!dir) return null;
   const result = runGit(dir, ["rev-parse", "--show-toplevel"]);
-  if (result.status !== 0) return null;
-  return result.stdout.trim();
+  return result.status === 0 ? result.stdout.trim() : null;
 }

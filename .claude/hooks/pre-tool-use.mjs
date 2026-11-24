@@ -29,14 +29,20 @@ function realPath(path) {
 }
 
 function main() {
-  const { input } = readHookInput();
+  const input = readHookInput();
   if (input === null) deny(REASON.badInput);
   const toolInput = input.tool_input ?? {};
   const cwd = typeof input.cwd === "string" && input.cwd ? input.cwd : process.cwd();
 
   if (input.tool_name === "Bash") {
     if (typeof toolInput.command !== "string") deny(REASON.badInput);
-    const reason = commandReason(toolInput.command, mainTests(gitTopLevel(cwd)));
+    // 명령 속 상대 경로는 저장소 기준 cwd 에서 풀어 판정한다. 저장소 밖이면 cwd 는 null.
+    const top = gitTopLevel(cwd);
+    const root = top === null ? null : realPath(top);
+    const rel = root === null ? "" : relative(root, realPath(cwd)).split(sep).join("/");
+    const inside = root !== null && rel !== ".." && !rel.startsWith("../");
+    const context = { cwd: inside ? rel : null, root, mainTests: mainTests(top) };
+    const reason = commandReason(toolInput.command, context);
     if (reason) deny(reason);
     return;
   }

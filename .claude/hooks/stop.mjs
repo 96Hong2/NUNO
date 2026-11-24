@@ -4,7 +4,10 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { VERIFY_OK_FILE, gitTopLevel, readHookInput, runGit } from "./hook-input.mjs";
+import { gitTopLevel, readHookInput, runGit } from "./hook-input.mjs";
+
+// verify:fast 통과 해시를 적는 파일. 자리는 git rev-parse --git-path 로 찾는다(worktree 마다 따로).
+const VERIFY_OK_FILE = "nuno-verify-ok";
 
 const TIMEOUT_MS = 170_000;
 
@@ -22,18 +25,17 @@ function isDocsOnly(path) {
 }
 
 function main() {
-  const { input } = readHookInput();
+  const input = readHookInput();
   const root = gitTopLevel(typeof input?.cwd === "string" && input.cwd ? input.cwd : process.cwd());
   if (root === null) return;
 
   // 작업 트리 변경, 추적하지 않는 파일, 커밋했지만 origin/main 에 없는 변경.
+  // --no-renames 로 이름을 바꾼 파일의 옛 경로도 넣는다. 코드를 docs 로 옮겨도 검사가 돈다.
   const untracked = list(runGit(root, ["ls-files", "--others", "--exclude-standard", "-z"]));
   const base = runGit(root, ["merge-base", "HEAD", "origin/main"]).stdout.trim();
-  const paths = [
-    ...list(runGit(root, ["diff", "--name-only", "-z", "HEAD"])),
-    ...untracked,
-    ...(base ? list(runGit(root, ["diff", "--name-only", "-z", base, "HEAD"])) : []),
-  ];
+  const changed = (...range) =>
+    list(runGit(root, ["diff", "--name-only", "--no-renames", "-z", ...range]));
+  const paths = [...changed("HEAD"), ...untracked, ...(base ? changed(base, "HEAD") : [])];
   if (paths.every(isDocsOnly)) return;
 
   // 같은 상태로 이미 통과했으면 다시 돌리지 않는다.
@@ -72,11 +74,14 @@ function main() {
     );
   }
   if (result.status !== 0) {
+    // 실패한 단계의 머리줄(맨 마지막 "$ " 줄)부터 앞쪽 20줄. 시험 이름과 단언 줄이 앞에 나온다.
     const lines = result.stdout.replaceAll(`${root}/`, "").split("\n");
-    const tail = lines
+    const head = lines.findLastIndex((line) => line.startsWith("$ "));
+    const shown = lines
+      .slice(Math.max(head, 0))
       .filter((line) => line.trim() && !/ELIFECYCLE|ERR_PNPM/.test(line))
-      .slice(-20);
-    block(`verify:fast 실패. 마지막 줄:\n${tail.join("\n")}\n고친 뒤 끝낸다.`);
+      .slice(0, 20);
+    block(`verify:fast 실패:\n${shown.join("\n")}\n고친 뒤 끝낸다.`);
   }
   mkdirSync(dirname(okFile), { recursive: true });
   writeFileSync(okFile, `${digest}\n`);
