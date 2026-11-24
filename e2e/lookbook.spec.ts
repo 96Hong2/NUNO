@@ -28,6 +28,9 @@ const toast = (page: Page) => page.getByRole("alert");
 /** 코디 무대의 옷을 모두 벗기고 그 옷 한 벌만 입힌다. */
 async function wearOnly(page: Page, name: string) {
   await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
+  // 「되돌리기」 알림이 들어오는 순간 누르면 클릭이 그 단추에 맞는다. 알림이 뜬 뒤에 누른다.
+  await expect(toast(page)).toContainText("입은 옷을 모두 벗었어요");
+  await expect(page.getByTestId("stage-piece")).toHaveCount(0);
   await page
     .getByRole("list", { name: "옷 목록" })
     .getByRole("button", { name, exact: true })
