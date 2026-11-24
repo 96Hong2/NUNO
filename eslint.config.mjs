@@ -118,7 +118,7 @@ export default defineConfig(
 
   // 시험은 모두 돌고, 모두 무언가를 단언한다. 조건부 건너뛰기와 매처 없는 expect 도 막는다.
   {
-    files: ["**/*.test.{ts,tsx}"],
+    files: ["**/*.test.{ts,tsx,mjs}"],
     plugins: { vitest },
     rules: {
       "vitest/no-focused-tests": ["error", { fixable: false }],
