@@ -5,6 +5,9 @@ import { ONBOARDED_STATE } from "./e2e/storage-state";
 // 떠 있는 서버를 다시 쓰면 다른 작업 트리의 코드를 시험할 수 있다. worktree 둘이 함께 돌면 포트를 바꾼다.
 const PORT = Number(process.env.NUNO_E2E_PORT ?? 8091);
 const WEB_URL = `http://localhost:${PORT}`;
+// API 서버도 개발 API(8787)와 다른 포트에 nuno_e2e DB 로 새로 띄운다(scripts/e2e-api.mjs).
+const API_PORT = Number(process.env.NUNO_E2E_API_PORT ?? 8877);
+const API_URL = `http://localhost:${API_PORT}`;
 
 // Expo 웹(Metro)을 띄워 화면을 사용자처럼 눌러 본다. Metro 는 첫 요청 때 번들을 만들어 느리다.
 export default defineConfig({
@@ -35,13 +38,25 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], storageState: ONBOARDED_STATE },
     },
   ],
-  webServer: {
-    command: `pnpm --filter mobile exec expo start --port ${PORT}`,
-    url: WEB_URL,
-    timeout: 180_000,
-    reuseExistingServer: false,
-    // 번들 오류는 Metro stdout 에만 나온다. 버리면 실패 원인이 로그에 남지 않는다.
-    stdout: "pipe",
-    stderr: "pipe",
-  },
+  webServer: [
+    {
+      command: `pnpm --filter mobile exec expo start --port ${PORT}`,
+      url: WEB_URL,
+      env: { EXPO_PUBLIC_API_URL: API_URL },
+      timeout: 180_000,
+      reuseExistingServer: false,
+      // 번들 오류는 Metro stdout 에만 나온다. 버리면 실패 원인이 로그에 남지 않는다.
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+    {
+      command: "node scripts/e2e-api.mjs",
+      url: `${API_URL}/v1/health`,
+      env: { NUNO_E2E_API_PORT: String(API_PORT), NUNO_WEB_ORIGINS: WEB_URL },
+      timeout: 120_000,
+      reuseExistingServer: false,
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  ],
 });

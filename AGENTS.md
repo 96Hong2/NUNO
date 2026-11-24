@@ -11,6 +11,7 @@
 | `pnpm verify` | CI 필수 검사 `verify` 가 도는 전체 검사. `verify:fast` 뒤에 `test:db`, `e2e` 를 돈다 |
 | `pnpm test:db` | docker compose 로 시험용 Postgres 둘을 띄워 실제 DB 시험을 돌고, 덤프 복원본으로 한 번 더 돈다. Docker 가 켜져 있어야 한다 |
 | `pnpm db:local` | 로컬 개발 DB 를 띄우고 서버 역할과 판을 적용한다 |
+| `pnpm api:dev` | 로컬 Postgres 에 `nuno_dev` DB 가 없으면 만들고 개발 전용 주소를 켠 API 를 http://localhost:8787 에 띄운다 |
 | `pnpm web` | Expo 웹을 http://localhost:8090 에 띄운다. Claude 브라우저 창은 `.claude/launch.json` 의 `mobile-web` |
 | `pnpm e2e` | Playwright 로 Expo 웹을 열어 `e2e/*.spec.ts` 를 돈다 |
 | `pnpm new:context <이름>` | `packages/<이름>` 에 domain, application, 공개 면 틀을 만든다 |
@@ -24,8 +25,8 @@
 | 옷 정보, 옷장 두 칸 「내 옷」 `mine` 과 「담은 옷」 `wanted` | `packages/wardrobe`: T3 에서 new:context 로 만든다 |
 | 겹쳐 입히기 순서, 「내 코디」, 최근 입혀 본 코디 | `packages/outfit`: T4 에서 new:context 로 만든다 |
 | 룩북과 룩, 입은 옷 사본 | `packages/lookbook`: T5 에서 new:context 로 만든다 |
-| 골드 원장, 묶음, 충전 | `packages/gold`: T7 에서 new:context 로 만든다 |
-| 가입, 동의, 계정 삭제 | `packages/account`: T7 에서 new:context 로 만든다 |
+| 골드 원장, 묶음, 충전 | `apps/api/src/gold`: T7 에서 만든다(서버 업무 코드 자리, ADR 0002) |
+| 가입, 동의, 계정 삭제 | `apps/api/src/account`(서버 업무 코드 자리, ADR 0002) |
 | 신고, 차단 | `packages/safety`: T8 에서 new:context 로 만든다 |
 | 공유 링크와 링크 끊기 | `packages/share`: T9 에서 new:context 로 만든다 |
 | 시계 포트와 한국 날짜 헬퍼, ID 포트(시험용 고정 시계와 순번 ID 포함) | `packages/clock`, `packages/ids` |
