@@ -1,9 +1,12 @@
 import {
   consentNeeded,
+  freeLooksNow,
   makeSheetCopy,
+  payWithFor,
   SIGNUP_TRIAL_COUNT,
   stagePriceLabel,
   type ManifestGarment,
+  type PaymentKind,
 } from "@nuno/generation";
 import { refKey, type Outfit } from "@nuno/outfit";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -20,6 +23,10 @@ import { findUnsavedJob, hasPersonPhoto, submitGeneration } from "../composition
 import { useAppToast } from "./app-toast";
 import type { CatalogItem } from "./coordi-catalog";
 import { GENERATE_CHERRY, GoldConfirmSheet, JoinSheet, MakeLookSheet } from "./generate-sheets";
+
+/** 지금 무료로 접수할 수 있는 장 수. 오늘 무료 한도에 닿았으면 남은 장이 있어도 0 이다 */
+const freeLooksOf = (state: AccountState): number =>
+  state.gold ? freeLooksNow(state.gold.trialCount, state.gold.trialUsableToday) : 0;
 
 /** 시트가 열려 있으면 알림을 무대 위쪽에 띄운다 */
 const TOAST_OVER_SHEET = 560;
@@ -137,9 +144,9 @@ export function useGenerateFlow(
       proceed(await reload());
     });
 
-  const submit = () =>
+  const submit = (payWith: PaymentKind) =>
     void run(async () => {
-      const outcome = await submitGeneration(twinKey, items);
+      const outcome = await submitGeneration(twinKey, items, payWith);
       if (outcome.kind === "job") {
         setSheet(null);
         void reload();
@@ -161,18 +168,24 @@ export function useGenerateFlow(
         router.push("/generate/consent");
       } else if (next.kind === "goldShort") {
         setSheet("gold");
+      } else if (next.kind === "paymentChanged") {
+        // 그사이 무료 장이 바뀌었다. 다시 읽은 값으로 시트를 다시 고른다.
+        setSheet(freeLooksOf(state) > 0 ? "make" : "gold");
       } else {
         proceed(state);
       }
     });
 
+  const freeLooks = account ? freeLooksOf(account) : 0;
   const make = () => {
-    if (makeSheetCopy(account?.gold?.trialCount ?? 0).needsGold) setSheet("gold");
-    else submit();
+    if (makeSheetCopy(freeLooks).needsGold) setSheet("gold");
+    else submit(payWithFor(freeLooks));
   };
 
   const visible = Boolean(account?.server && account.generateOn);
-  const trialCount = account?.signedIn ? (account.gold?.trialCount ?? null) : SIGNUP_TRIAL_COUNT;
+  // 가입 전에는 가입하면 받을 무료 장 수, 가입 뒤 골드를 못 읽었으면 글자를 비운다.
+  let trialCount: number | null = SIGNUP_TRIAL_COUNT;
+  if (account?.signedIn) trialCount = account.gold ? freeLooks : null;
   const empty = items.length === 0;
 
   // 알림을 놓쳐도 저장하지 않은 결과로 돌아갈 수 있게 무대 단추 위에 둔다.
@@ -219,7 +232,7 @@ export function useGenerateFlow(
       />
       <MakeLookSheet
         visible={sheet === "make"}
-        trialCount={account?.gold?.trialCount ?? 0}
+        trialCount={freeLooks}
         busy={busy}
         onMake={make}
         onClose={() => setSheet(null)}
@@ -227,8 +240,9 @@ export function useGenerateFlow(
       <GoldConfirmSheet
         visible={sheet === "gold"}
         balance={account?.gold?.balance ?? 0}
+        trialCount={account?.gold?.trialCount ?? 0}
         busy={busy}
-        onSpend={submit}
+        onSpend={() => submit("gold")}
         onClose={() => setSheet(null)}
       />
     </>

@@ -42,7 +42,20 @@ export function isFinishedStatus(status: string): boolean {
   return FINISHED.includes(status);
 }
 
-/** 무대 「이대로 입히기」 안 작은 글자 */
+/**
+ * 지금 무료로 접수할 수 있는 장 수. 무료 장이 남아도 오늘 무료 접수가 하루 한도에 닿았으면 0 이다.
+ * 무대 단추, 만들기 시트, 접수 결제 선택이 모두 이 값으로 판단한다.
+ */
+export function freeLooksNow(trialCount: number, trialUsableToday: boolean): number {
+  return trialUsableToday ? trialCount : 0;
+}
+
+/** 접수 본문의 결제 선택. 화면이 무료 장을 보였으면 trial, 골드 확인 시트를 거쳤으면 gold 다 */
+export function payWithFor(freeLooks: number): PaymentKind {
+  return freeLooks > 0 ? "trial" : "gold";
+}
+
+/** 무대 「이대로 입히기」 안 작은 글자. trialCount 는 `freeLooksNow` 값이다 */
 export function stagePriceLabel(trialCount: number): string {
   return trialCount > 0 ? `무료 ${trialCount}장 남음` : `${LOOK_PRICE_GOLD}골드`;
 }
@@ -54,7 +67,7 @@ export interface MakeSheetCopy {
   needsGold: boolean;
 }
 
-/** 「완성 룩 만들기」 시트의 아래 줄과 단추 글자 */
+/** 「완성 룩 만들기」 시트의 아래 줄과 단추 글자. trialCount 는 `freeLooksNow` 값이다 */
 export function makeSheetCopy(trialCount: number): MakeSheetCopy {
   if (trialCount > 0) {
     return {
@@ -71,15 +84,21 @@ export function makeSheetCopy(trialCount: number): MakeSheetCopy {
 }
 
 export interface GoldConfirmCopy {
+  /** 왜 골드로 만드는지. 무료 장이 남았으면 오늘 무료 한도에 닿은 것이다 */
+  lead: string;
   balanceLine: string;
   short: boolean;
 }
 
-/** 골드 확인 시트의 「내 골드」 줄. 모자라면 체리색 줄이고 쓰기 단추가 없다. */
-export function goldConfirmCopy(balance: number): GoldConfirmCopy {
+/** 골드 확인 시트의 첫 줄과 「내 골드」 줄. 모자라면 체리색 줄이고 쓰기 단추가 없다. */
+export function goldConfirmCopy(balance: number, trialCount = 0): GoldConfirmCopy {
+  const lead =
+    trialCount > 0
+      ? "오늘은 무료로 더 만들 수 없어요. 골드로 만들어요"
+      : "첫 체험 무료를 다 썼어요. 골드로 만들어요";
   const need = LOOK_PRICE_GOLD - balance;
-  if (need > 0) return { balanceLine: `${balance}골드, ${need}골드 모자라요`, short: true };
-  return { balanceLine: `${balance} → ${balance - LOOK_PRICE_GOLD}골드`, short: false };
+  if (need > 0) return { lead, balanceLine: `${balance}골드, ${need}골드 모자라요`, short: true };
+  return { lead, balanceLine: `${balance} → ${balance - LOOK_PRICE_GOLD}골드`, short: false };
 }
 
 export interface ProgressStep {
@@ -98,6 +117,7 @@ export function progressStep(status: string): ProgressStep {
 export type SubmitNext =
   | { kind: "consent" }
   | { kind: "goldShort" }
+  | { kind: "paymentChanged" }
   | { kind: "signIn" }
   | { kind: "notice"; message: string };
 
@@ -108,6 +128,8 @@ export function nextAfterRejection(code: string): SubmitNext {
       return { kind: "consent" };
     case "insufficient_gold":
       return { kind: "goldShort" };
+    case "payment_changed":
+      return { kind: "paymentChanged" };
     case "unauthorized":
       return { kind: "signIn" };
     case "consent_text_outdated":
@@ -125,6 +147,31 @@ export function nextAfterRejection(code: string): SubmitNext {
       return { kind: "notice", message: "보내지 못했어요. 잠시 뒤에 다시 해 주세요" };
   }
 }
+
+/** 서버가 일부러 준 접수 거절 코드. 이 코드면 5xx 라도 서버가 작업을 받지 않았다(switch_off 는 503) */
+const SERVER_REJECTIONS: ReadonlySet<string> = new Set([
+  "consent_required",
+  "payment_changed",
+  "account_inactive",
+  "insufficient_gold",
+  "switch_off",
+  "trial_daily_limit",
+  "request_mismatch",
+]);
+
+/**
+ * 접수 응답이 이렇게 오면 서버가 이미 받았을 수 있다. 기기 요청 줄을 남기고 작업 감시가 요청 ID 로 다시 묻는다.
+ * 닿지 못했거나(status 0) 서버 오류(5xx)이면서 서버가 일부러 준 거절 코드가 아닐 때다.
+ */
+export function mayHaveBeenAccepted(status: number, code: string): boolean {
+  return status === 0 || (status >= 500 && !SERVER_REJECTIONS.has(code));
+}
+
+/** 서버가 받았는지 아직 모를 때의 알림. 바로 다시 눌러 같은 코디를 또 보내지 않게 한다 */
+export const UNANSWERED_NOTICE: SubmitNext = {
+  kind: "notice",
+  message: "확인하고 있어요. 잠시 뒤에 결과를 알려 드릴게요",
+};
 
 export interface FailureCopy {
   title: string;

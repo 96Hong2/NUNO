@@ -82,20 +82,23 @@ export function MakeLookSheet({
 export function GoldConfirmSheet({
   visible,
   balance,
+  trialCount,
   busy,
   onSpend,
   onClose,
 }: {
   visible: boolean;
   balance: number;
+  /** 남은 무료 장. 남았는데 이 시트가 뜨면 오늘 무료 한도에 닿은 것이다 */
+  trialCount: number;
   busy: boolean;
   onSpend: () => void;
   onClose: () => void;
 }) {
-  const copy = goldConfirmCopy(balance);
+  const copy = goldConfirmCopy(balance, trialCount);
   return (
     <OverlaySheet visible={visible} title="완성 룩 1장 만들기" onClose={onClose} hideClose>
-      <Text style={styles.body}>첫 체험 무료를 다 썼어요. 골드로 만들어요</Text>
+      <Text style={styles.body}>{copy.lead}</Text>
       <View style={styles.rule} />
       <View style={styles.row}>
         <Text style={styles.rowLabel}>필요한 골드</Text>

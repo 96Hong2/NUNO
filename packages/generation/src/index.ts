@@ -5,6 +5,7 @@ export {
   consentNeeded,
   CONSENT_TEXT_VERSION,
   failureCopy,
+  freeLooksNow,
   goldAmountLabel,
   goldConfirmCopy,
   goldWonLabel,
@@ -12,12 +13,15 @@ export {
   ledgerDateLabel,
   LOOK_PRICE_GOLD,
   makeSheetCopy,
+  mayHaveBeenAccepted,
   nextAfterRejection,
   outfitKeyOf,
+  payWithFor,
   progressStep,
   PROVIDER_RETENTION_DAYS,
   SIGNUP_TRIAL_COUNT,
   stagePriceLabel,
+  UNANSWERED_NOTICE,
 } from "./domain";
 export type {
   GenerationManifest,

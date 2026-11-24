@@ -259,3 +259,58 @@ test("D11: 무료 장을 다 쓴 뒤 골드로 만든 작업이 거절되면 4�
   await expect(ledger.getByText("완성 룩 환불")).toBeVisible();
   await expect(ledger.getByText("+4골드")).toBeVisible();
 });
+
+test("무료 하루 한도에 닿으면 무료 장이 남아도 무대 단추가 4골드이고, 「4골드 쓰기」 로 골드 작업이 접수된다", async ({
+  page,
+}) => {
+  await wearCoat(page);
+  await signUpFromStage(page);
+  const subject = await subjectOf(page);
+  const userId = sql(
+    `SELECT user_id FROM auth_identities WHERE provider = 'dev' AND subject = '${subject}'`,
+  );
+  // 오늘 무료 접수 네 건이 실패로 끝났다. 무료 장은 돌려받아 2장 그대로다.
+  sql(`INSERT INTO generation_jobs
+         (user_id, idempotency_key, request_hash, input_manifest, payment_kind, status,
+          failure_code, created_at, finished_at)
+       SELECT '${userId}', 'e2e-limit-' || g, 'hash', '{}', 'trial', 'failed',
+              'provider_refused', now(), now()
+       FROM generate_series(1, 4) AS g`);
+  await dev(page, "gold", { amount: 20 });
+  await page.getByRole("button", { name: "모두 동의하기" }).click();
+  await page.getByRole("button", { name: "동의하고 만들기" }).click();
+
+  await expect(makeSheet(page)).toContainText("이번에는 내 골드에서 4골드를 써요");
+  await expect(stageButton(page)).toContainText("4골드");
+  await expect(stageButton(page)).not.toContainText("무료");
+  await makeSheet(page).getByRole("button", { name: "만들기", exact: true }).click();
+  const confirm = page.getByRole("dialog", { name: "완성 룩 1장 만들기" });
+  await expect(confirm).toContainText("오늘은 무료로 더 만들 수 없어요. 골드로 만들어요");
+  await expect(confirm).toContainText("20 → 16골드");
+  await confirm.getByRole("button", { name: "4골드 쓰기" }).click();
+
+  await expect(page.getByRole("progressbar", { name: "만드는 중" })).toBeVisible();
+  expect(
+    sql(`SELECT payment_kind FROM generation_jobs
+         WHERE user_id = '${userId}' AND idempotency_key NOT LIKE 'e2e-limit-%'`),
+  ).toBe("gold");
+});
+
+test("동의 화면이 받는 곳을 불러오지 못하면 체크 줄과 아래 단추를 막고, 「다시 불러오기」 로 받는 곳이 보이면 동의할 수 있다", async ({
+  page,
+}) => {
+  await wearCoat(page);
+  sql("UPDATE provider_configs SET enabled = false WHERE provider = 'fake'");
+  try {
+    await signUpFromStage(page);
+    await expect(page.getByText("받는 곳을 불러오지 못했어요")).toBeVisible();
+    await expect(page.getByRole("checkbox").first()).toBeDisabled();
+    await expect(page.getByRole("button", { name: "모두 동의하기" })).toBeDisabled();
+  } finally {
+    sql("UPDATE provider_configs SET enabled = true WHERE provider = 'fake'");
+  }
+  await page.getByRole("button", { name: "다시 불러오기" }).click();
+  await expect(page.getByText("받는 곳은 fake(대한민국)예요")).toBeVisible();
+  await expect(page.getByText("받는 곳을 불러오지 못했어요")).toHaveCount(0);
+  await agree(page);
+});
