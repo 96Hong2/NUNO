@@ -114,16 +114,19 @@ export async function saveGarmentFit(id: string, fit: GarmentFit): Promise<void>
   closetChanged();
 }
 
+/** 화면들이 새 목록을 읽기 전에 낡은 그림 주소를 한 번 더 그릴 수 있어, 그림 파일은 이만큼 뒤에 지운다. */
+const FILE_REMOVE_DELAY_MS = 3000;
+
 /** 「옷 지우기」: 기록을 먼저 지우고 그림 파일을 지운다. 파일이 남아도 옷장에는 보이지 않는다. */
 export async function removeGarment(id: string): Promise<void> {
   const { db } = await getDeviceDb();
   // 옷장에서 지운 옷은 지금 코디, 내 코디, 최근 코디에서도 뺀다.
   await db.transaction(async (tx) => {
     await deleteGarment(tx, id);
-    await removeGarmentFromOutfits(tx, id);
+    await removeGarmentFromOutfits(tx, id, now());
   });
-  await garmentMedia.remove(id);
   closetChanged();
+  setTimeout(() => void garmentMedia.remove(id), FILE_REMOVE_DELAY_MS);
 }
 
 // ── 옷 넣기 네 단계 ─────────────────────────────────────────────

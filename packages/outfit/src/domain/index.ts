@@ -28,6 +28,7 @@ export {
   SAMPLE_GARMENTS,
   samplePiece,
   todayLook,
+  type SampleFit,
   type SampleGarment,
   type SampleGarmentKey,
 } from "./samples";

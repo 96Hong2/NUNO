@@ -32,6 +32,7 @@ export type {
   OutfitPiece,
   OutfitSlot,
   RecentOutfit,
+  SampleFit,
   SampleGarment,
   SampleGarmentKey,
   SuggestCandidate,

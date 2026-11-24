@@ -9,7 +9,7 @@ import {
   type OutfitSlot,
 } from "./outfit";
 import { recordRecent, MAX_RECENT } from "./recent";
-import { todayLook } from "./samples";
+import { RECOMMENDED_LOOKS, samplePiece, todayLook } from "./samples";
 
 const piece = (id: string, category: OutfitCategory, slot?: OutfitSlot): OutfitPiece => ({
   ref: { kind: "garment", id },
@@ -108,5 +108,18 @@ describe("오늘 코디", () => {
     expect(new Set([first, second])).toEqual(new Set(["harin-p07", "harin-co"]));
     expect(todayLook("harin", "2026-11-25")?.key).toBe(first);
     expect(todayLook("nobody", "2026-11-25")).toBeUndefined();
+  });
+});
+
+describe("추천 코디 목록", () => {
+  it("추천 코디마다 액세서리가 아닌 종류는 한 벌씩, 액세서리는 셋 이하다", () => {
+    for (const looks of Object.values(RECOMMENDED_LOOKS)) {
+      for (const look of looks) {
+        const pieces = look.items.map(samplePiece);
+        const main = pieces.filter((p) => p.category !== "acc").map((p) => p.category);
+        expect(new Set(main).size, look.key).toBe(main.length);
+        expect(pieces.filter((p) => p.category === "acc").length, look.key).toBeLessThanOrEqual(3);
+      }
+    }
   });
 });

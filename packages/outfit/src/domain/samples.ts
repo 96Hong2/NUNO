@@ -8,10 +8,22 @@ export interface SampleGarment {
   category: OutfitCategory;
   /** 액세서리를 두르는 자리 */
   slot?: OutfitSlot;
+  /** 기준 상자를 벗어나는 옷(롱부츠 등)의 배치. 옷장 옷의 placement 와 같은 뜻이다. */
+  fit?: SampleFit;
 }
 
+/** 기준 상자 가운데에서 옷 가운데까지 거리(상자 폭, 높이 대비)와 상자에 맞춘 크기 대비 배율 */
+export interface SampleFit {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+const LONG_BOOTS: SampleFit = { x: 0, y: -0.5, scale: 2.8 };
+const HAT: SampleFit = { x: 0, y: -0.3, scale: 0.85 };
+
 export const SAMPLE_GARMENTS = {
-  w01: { name: "아이보리 울 뉴스보이 캡", category: "acc", slot: "head" },
+  w01: { name: "아이보리 울 뉴스보이 캡", category: "acc", slot: "head", fit: HAT },
   w02: { name: "아이보리 퍼 칼라 벨티드 롱패딩", category: "outer" },
   w03: { name: "아이보리 퍼 와이드 팬츠", category: "bottom" },
   w04: { name: "아이보리 퍼 레이스업 부츠", category: "shoes" },
@@ -20,16 +32,16 @@ export const SAMPLE_GARMENTS = {
   w07: { name: "베이지 골지 터틀넥 니트", category: "top" },
   w08: { name: "블랙 울 H라인 롱스커트", category: "bottom" },
   w09: { name: "블랙 불투명 타이츠", category: "acc", slot: "legwear" },
-  w10: { name: "블랙 레더 롱부츠", category: "shoes" },
+  w10: { name: "블랙 레더 롱부츠", category: "shoes", fit: LONG_BOOTS },
   w11: { name: "블랙 레더 미니 숄더백", category: "bag" },
   w14: { name: "화이트 코튼 미니스커트", category: "bottom" },
   w18: { name: "아이보리 케이프 벨티드 코트", category: "outer" },
-  w19: { name: "블랙 레더 니하이 부츠", category: "shoes" },
+  w19: { name: "블랙 레더 니하이 부츠", category: "shoes", fit: LONG_BOOTS },
   w20: { name: "아이보리 울 패딩 머리띠", category: "acc", slot: "head" },
   w21: { name: "그레이 더블 울 하프코트", category: "outer" },
-  w22: { name: "차콜 단추 뉴스보이 캡", category: "acc", slot: "head" },
+  w22: { name: "차콜 단추 뉴스보이 캡", category: "acc", slot: "head", fit: HAT },
   w23: { name: "차콜 레깅스", category: "acc", slot: "legwear" },
-  w24: { name: "블랙 단추 스트랩 롱부츠", category: "shoes" },
+  w24: { name: "블랙 단추 스트랩 롱부츠", category: "shoes", fit: LONG_BOOTS },
   w25: { name: "베이지 스웨이드 무스탕 자켓", category: "outer" },
   w26: { name: "크림 라운드넥 니트", category: "top" },
   w27: { name: "크림 프린지 머플러", category: "acc", slot: "neck" },
@@ -38,19 +50,19 @@ export const SAMPLE_GARMENTS = {
   w32: { name: "아이보리 핀턱 와이드 팬츠", category: "bottom" },
   w36: { name: "라벤더 후드 숏패딩", category: "outer" },
   w37: { name: "아이보리 니트 플리츠 미니", category: "bottom" },
-  w38: { name: "차콜 기모 레깅스", category: "bottom" },
+  w38: { name: "차콜 기모 레깅스", category: "acc", slot: "legwear" },
   w39: { name: "아이보리 니트 레그워머", category: "acc", slot: "legwear" },
   w40: { name: "베이지 퍼 트리밍 부츠", category: "shoes" },
-  w41: { name: "크림 청키 니트 비니", category: "acc", slot: "head" },
+  w41: { name: "크림 청키 니트 비니", category: "acc", slot: "head", fit: HAT },
   w42: { name: "베이지 스웨이드 시어링 코트", category: "outer" },
   w43: { name: "블랙 기모 레깅스", category: "bottom" },
   w44: { name: "베이지 양털 부츠", category: "shoes" },
   w45: { name: "크림 퍼 장갑", category: "acc", slot: "hands" },
-  w46: { name: "블랙 울 베레모", category: "acc", slot: "head" },
+  w46: { name: "블랙 울 베레모", category: "acc", slot: "head", fit: HAT },
   w47: { name: "차콜 더플 숏코트", category: "outer" },
   w48: { name: "블랙 플리츠 미니스커트", category: "bottom" },
   w49: { name: "라이트그레이 타이츠", category: "acc", slot: "legwear" },
-  w50: { name: "블랙 스웨이드 벨트 롱부츠", category: "shoes" },
+  w50: { name: "블랙 스웨이드 벨트 롱부츠", category: "shoes", fit: LONG_BOOTS },
   w51: { name: "브라운 트위드 재킷", category: "outer" },
   w52: { name: "아이보리 골지 니트", category: "top" },
   w53: { name: "화이트 티어드 레이스 롱스커트", category: "bottom" },

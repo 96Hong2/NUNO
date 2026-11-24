@@ -1,4 +1,5 @@
 import type { Migration, SqlExecutor } from "@nuno/device-db";
+import { sameOutfit } from "../domain";
 import type { Outfit, OutfitCategory, OutfitPiece, OutfitSlot, RecentOutfit } from "../domain";
 
 /**
@@ -237,7 +238,27 @@ export async function replaceRecentOutfits(
   }
 }
 
-/** 옷장에서 옷을 지우면 그 옷이 든 코디에서도 뺀다. */
-export async function removeGarmentFromOutfits(db: SqlExecutor, garmentId: string): Promise<void> {
+/**
+ * 옷장에서 옷을 지우면 그 옷이 든 코디에서도 뺀다. 부르는 쪽이 트랜잭션으로 묶는다.
+ * 비게 된 내 코디 칸은 지우고 뒤 칸을 당긴다. 최근 줄은 1벌 이하 카드와 같은 조합 카드를 뺀다.
+ */
+export async function removeGarmentFromOutfits(
+  db: SqlExecutor,
+  garmentId: string,
+  now: string,
+): Promise<void> {
   await db.run("DELETE FROM outfit_items WHERE garment_id = ?", [garmentId]);
+  const emptySaved = await db.all<{ id: string }>(
+    "SELECT o.id FROM outfits o WHERE o.kind = 'saved' AND NOT EXISTS (SELECT 1 FROM outfit_items i WHERE i.outfit_id = o.id) ORDER BY o.position DESC",
+  );
+  for (const row of emptySaved) await deleteSavedOutfit(db, row.id);
+  const recents = await listRecentOutfits(db);
+  const kept = recents.filter(
+    (item, index) =>
+      item.outfit.length > 1 &&
+      recents.findIndex(
+        (other) => other.twinKey === item.twinKey && sameOutfit(other.outfit, item.outfit),
+      ) === index,
+  );
+  if (kept.length !== recents.length) await replaceRecentOutfits(db, kept, now);
 }

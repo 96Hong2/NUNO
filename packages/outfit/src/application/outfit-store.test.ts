@@ -5,9 +5,11 @@ import type { OutfitPiece } from "../domain";
 import {
   createOutfitTables,
   deleteSavedOutfit,
+  listRecentOutfits,
   listSavedOutfits,
   readCurrentOutfit,
   removeGarmentFromOutfits,
+  replaceRecentOutfits,
   saveOutfitToSlot,
   writeCurrentOutfit,
 } from "./outfit-store";
@@ -51,7 +53,37 @@ describe("코디 표", () => {
       ["s2", 1],
       ["s3", 2],
     ]);
-    await removeGarmentFromOutfits(db, "g1");
+    await removeGarmentFromOutfits(db, "g1", NOW);
     expect((await listSavedOutfits(db))[0]?.outfit).toEqual([tights]);
+  });
+
+  it("지운 옷만 든 내 코디 칸은 사라지고, 최근 줄은 1벌 이하와 같은 조합 카드가 빠진다", async () => {
+    const skirt: OutfitPiece = {
+      ref: { kind: "sample", key: "w14" },
+      category: "bottom",
+      slot: "bottom",
+    };
+    await saveOutfitToSlot(
+      db,
+      { id: "s1", slot: 1, title: "a", twinKey: "harin", outfit: [coat] },
+      NOW,
+    );
+    await saveOutfitToSlot(
+      db,
+      { id: "s2", slot: 2, title: "b", twinKey: "harin", outfit: [tights] },
+      NOW,
+    );
+    await replaceRecentOutfits(
+      db,
+      [
+        { id: "r1", twinKey: "harin", outfit: [coat, tights, skirt] },
+        { id: "r2", twinKey: "harin", outfit: [tights, skirt] },
+        { id: "r3", twinKey: "harin", outfit: [coat, tights] },
+      ],
+      NOW,
+    );
+    await removeGarmentFromOutfits(db, "g1", NOW);
+    expect((await listSavedOutfits(db)).map((s) => [s.id, s.slot])).toEqual([["s2", 1]]);
+    expect((await listRecentOutfits(db)).map((r) => r.id)).toEqual(["r1"]);
   });
 });
