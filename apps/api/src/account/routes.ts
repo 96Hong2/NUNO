@@ -69,6 +69,10 @@ export function accountRoutes({ db, now, apple }: AccountDeps): Hono<AuthEnv> {
     if (body.textVersion !== CONSENT_TEXT_VERSION) {
       return c.json({ error: "consent_text_outdated" }, 409);
     }
+    // 받는 곳을 화면에 적지 못했으면 동의를 받지 않는다.
+    if ((await consentProvider(db)).provider === null) {
+      return c.json({ error: "provider_unavailable" }, 409);
+    }
     const [row] = await db.query<{ id: string }>(
       "SELECT nuno_agree_consent($1, $2, $3, $4) AS id",
       [c.get("userId"), CONSENT_KIND, CONSENT_TEXT_VERSION, now()],

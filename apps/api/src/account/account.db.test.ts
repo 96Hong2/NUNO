@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { openPostgres } from "../adapters/postgres.ts";
-import { createApp } from "../app.ts";
+import { createApp, MAX_BODY_BYTES } from "../app.ts";
 import { CONSENT_KIND, CONSENT_TEXT_VERSION } from "./consent.ts";
 import { SESSION_DAYS } from "./session.ts";
 
@@ -15,7 +15,23 @@ if (!apiUrl || !adminUrl) {
 }
 const api = openPostgres(apiUrl);
 const admin = openPostgres(adminUrl);
+// 동의는 켜 둔 공급사가 있어야 받는다. 이 파일 동안만 켜 둔 공급사 한 줄을 둔다.
+const SEED_PROVIDER = `db-test-seed-${randomUUID()}`;
+const setSeedEnabled = (enabled: boolean) =>
+  admin.query("UPDATE provider_configs SET enabled = $2 WHERE provider = $1", [
+    SEED_PROVIDER,
+    enabled,
+  ]);
+beforeAll(async () => {
+  await admin.query(
+    `INSERT INTO provider_configs
+       (provider, model, model_version, mode, priority, country, max_concurrency, price_usd, enabled)
+     VALUES ($1, 'm', '1', 'sync', 2, '시험 나라', 1, 0, true)`,
+    [SEED_PROVIDER],
+  );
+});
 afterAll(async () => {
+  await admin.query("DELETE FROM provider_configs WHERE provider = $1", [SEED_PROVIDER]);
   await api.close();
   await admin.close();
 });
@@ -144,6 +160,18 @@ describe("가입과 로그인", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "apple_not_configured" });
   });
+
+  it("상한을 넘는 본문은 로그인 없는 주소에서도 413 body_too_large 이고 사용자가 생기지 않는다", async () => {
+    const before = await userCount();
+    const response = await app.request("/v1/dev/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject: newSubject(), pad: "x".repeat(MAX_BODY_BYTES) }),
+    });
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: "body_too_large" });
+    expect(await userCount()).toBe(before);
+  });
 });
 
 describe("완성 룩 만들기 동의", () => {
@@ -202,6 +230,23 @@ describe("완성 룩 만들기 동의", () => {
     expect(await (await call("/v1/me", token)).json()).toMatchObject({ consent: { agreed: true } });
   });
 
+  it("켜 둔 공급사가 없으면 409 provider_unavailable 이고 동의 행이 생기지 않는다", async () => {
+    const { token, userId } = await devLogin(newSubject());
+    await setSeedEnabled(false);
+    try {
+      const response = await call("/v1/consents", token, {
+        method: "POST",
+        body: { kind: CONSENT_KIND, textVersion: CONSENT_TEXT_VERSION },
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: "provider_unavailable" });
+    } finally {
+      await setSeedEnabled(true);
+    }
+    const rows = await admin.query("SELECT id FROM consents WHERE user_id = $1", [userId]);
+    expect(rows).toHaveLength(0);
+  });
+
   it("동의 화면의 받는 곳은 켜 둔 공급사 가운데 우선순위가 가장 앞선 줄이다", async () => {
     const tag = randomUUID();
     const insert = (priority: number, country: string, enabled: boolean) =>
@@ -212,6 +257,7 @@ describe("완성 룩 만들기 동의", () => {
         [`db-test-${tag}-${priority}`, priority, country, enabled],
       );
     const { token } = await devLogin(newSubject());
+    await setSeedEnabled(false);
     try {
       await insert(1, "꺼진 나라", false);
       await insert(2, "켜진 나라", true);
@@ -225,6 +271,7 @@ describe("완성 룩 만들기 동의", () => {
       await admin.query("DELETE FROM provider_configs WHERE provider LIKE $1", [
         `db-test-${tag}-%`,
       ]);
+      await setSeedEnabled(true);
     }
   });
 });
