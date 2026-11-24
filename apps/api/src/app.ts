@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import type { AppleAuth } from "./account/apple.ts";
 import { accountRoutes, devAccountRoutes } from "./account/routes.ts";
@@ -14,6 +15,9 @@ interface FeatureSwitchRow {
   key: string;
   enabled: boolean;
 }
+
+/** 요청 본문 상한. 로그인 없이 부르는 주소도 큰 본문을 메모리에 올리지 않게 라우트 앞에서 막는다. */
+export const MAX_BODY_BYTES = 64 * 1024;
 
 export interface AppOptions {
   /** 개발 전용 주소(`/v1/dev`)를 단다. 기본은 꺼짐이라 운영에서는 그 주소가 404 다. */
@@ -56,6 +60,14 @@ export function createApp(db: SqlClient, options: AppOptions = {}): Hono {
       }),
     );
   }
+
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: MAX_BODY_BYTES,
+      onError: (c) => c.json({ error: "body_too_large" }, 413),
+    }),
+  );
 
   app.get("/v1/health", async (c) => c.json({ ok: true, schemaVersion: await schemaVersion(db) }));
 

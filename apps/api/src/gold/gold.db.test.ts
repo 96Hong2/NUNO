@@ -20,6 +20,8 @@ if (!apiUrl || !adminUrl) {
 const api = openPostgres(apiUrl, 10);
 const admin = openPostgres(adminUrl);
 
+// 동의는 켜 둔 공급사가 있어야 받는다. 이 파일 동안만 켜 둔 공급사 한 줄을 둔다.
+const SEED_PROVIDER = `db-test-seed-${randomUUID()}`;
 const NOW = new Date("2030-04-01T03:00:00Z");
 let resultDir = "";
 let app: ReturnType<typeof createApp>;
@@ -33,10 +35,17 @@ beforeAll(async () => {
   });
   app = createApp(api, { devRoutes: true, now: () => NOW, results: store });
   await setSwitch(true);
+  await admin.query(
+    `INSERT INTO provider_configs
+       (provider, model, model_version, mode, priority, country, max_concurrency, price_usd, enabled)
+     VALUES ($1, 'm', '1', 'sync', 2, '시험 나라', 1, 0, true)`,
+    [SEED_PROVIDER],
+  );
 });
 
 afterAll(async () => {
   await setSwitch(false);
+  await admin.query("DELETE FROM provider_configs WHERE provider = $1", [SEED_PROVIDER]);
   await api.close();
   await admin.close();
   await rm(resultDir, { recursive: true, force: true });
@@ -93,10 +102,15 @@ async function readyUser(): Promise<SignedIn> {
 const manifest = (tag = "a") => ({ twin: { preset: "harin", version: 1 }, items: [tag] });
 const newRequestId = () => `req-${randomUUID()}`;
 
-const submit = (token: string, requestId = newRequestId(), body: object = manifest()) =>
+const submit = (
+  token: string,
+  requestId = newRequestId(),
+  body: object = manifest(),
+  payWith?: "trial" | "gold",
+) =>
   call("/v1/generation-jobs", token, {
     method: "POST",
-    body: { requestId, manifest: body, consentVersion: CONSENT_TEXT_VERSION },
+    body: { requestId, manifest: body, consentVersion: CONSENT_TEXT_VERSION, payWith },
   });
 
 async function gold(token: string) {
@@ -104,6 +118,7 @@ async function gold(token: string) {
   expect(response.status).toBe(200);
   return (await response.json()) as {
     trialCount: number;
+    trialUsableToday: boolean;
     balance: number;
     entries: { at: string; label: string; amount: number }[];
   };
@@ -154,11 +169,12 @@ describe("가입 때 무료 2장과 시험용 골드", () => {
   it("가입하면 trial 에 8골드(무료 2장)가 한 번 들어가고, 다시 로그인해도 8 그대로다", async () => {
     const subject = `db-test-${randomUUID()}`;
     const first = await devLogin(subject);
-    expect(await gold(first.token)).toEqual({ trialCount: 2, balance: 0, entries: [] });
+    const fresh = { trialCount: 2, trialUsableToday: true, balance: 0, entries: [] };
+    expect(await gold(first.token)).toEqual(fresh);
 
     const again = await devLogin(subject);
     expect(again.userId).toBe(first.userId);
-    expect(await gold(again.token)).toEqual({ trialCount: 2, balance: 0, entries: [] });
+    expect(await gold(again.token)).toEqual(fresh);
     expect(await balance(first.userId, "trial")).toBe(8);
     expect(
       await count(
@@ -176,6 +192,7 @@ describe("가입 때 무료 2장과 시험용 골드", () => {
     expect(await (await grant(50)).json()).toEqual({ granted: false });
     expect(await gold(token)).toEqual({
       trialCount: 2,
+      trialUsableToday: true,
       balance: 20,
       entries: [{ at: NOW.toISOString(), label: "시험용 골드", amount: 20 }],
     });
@@ -310,6 +327,21 @@ describe("접수 거절", () => {
     const other = await submit(token, requestId, { a: [2, 1], b: 1 });
     expect(other.status).toBe(409);
     expect(await other.json()).toEqual({ error: "request_mismatch" });
+  });
+
+  it("무료 장이 없는데 화면이 무료로 보냈으면 409 payment_changed 이고 골드를 묶지 않는다", async () => {
+    const { token, userId } = await readyUser();
+    await useUpTrial(token);
+    await call("/v1/dev/gold", token, { method: "POST", body: { amount: 20 } });
+    expect((await gold(token)).trialUsableToday).toBe(false);
+
+    const response = await submit(token, newRequestId(), manifest(), "trial");
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "payment_changed" });
+    expect((await gold(token)).balance).toBe(20);
+    expect(
+      await count("SELECT count(*)::int AS n FROM generation_jobs WHERE user_id = $1", [userId]),
+    ).toBe(2);
   });
 
   it("무료 장도 골드도 없으면 402 insufficient_gold 다", async () => {

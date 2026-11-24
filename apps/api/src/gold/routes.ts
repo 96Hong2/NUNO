@@ -15,7 +15,7 @@ const TEST_GOLD_MAX = 10_000;
 export function goldRoutes({ db, now }: GoldDeps): Hono<AuthEnv> {
   const routes = new Hono<AuthEnv>();
   routes.get("/v1/gold", requireUser(db, now), async (c) =>
-    c.json(await goldSummary(db, c.get("userId"))),
+    c.json(await goldSummary(db, c.get("userId"), now())),
   );
   return routes;
 }

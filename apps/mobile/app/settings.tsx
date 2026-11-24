@@ -14,6 +14,8 @@ import { ConfirmSheet } from "../src/ui/generate-sheets";
 
 const INK = "#151314";
 const SUB = "#76736C";
+/** 확인 시트가 열린 채 띄우는 실패 알림은 시트 위쪽에 둔다 */
+const TOAST_OVER_SHEET = 320;
 
 // 설정: 「개인정보와 안전」 의 완성 룩 만들기 동의, 「계정」 의 로그아웃. 가입 전에는 두 칸 모두 숨긴다.
 export default function SettingsScreen() {
@@ -30,13 +32,24 @@ export default function SettingsScreen() {
   const agreed = account?.signedIn ? !consentNeeded(account.consent) : false;
   const back = () => (router.canGoBack() ? router.back() : router.replace("/my"));
 
-  const confirm = async (task: () => Promise<unknown>, message: string) => {
+  // 성공일 때만 시트를 닫고 성공 알림을 띄운다. 실패하면 시트를 열어 둔 채 실패 알림이다.
+  const confirm = async (task: () => Promise<boolean>, ok: string, fail: string) => {
     if (busy) return;
     setBusy(true);
-    await task();
-    setBusy(false);
+    let done: boolean;
+    try {
+      done = await task();
+    } catch {
+      done = false;
+    } finally {
+      setBusy(false);
+    }
+    if (!done) {
+      toast.show(fail, undefined, { bottom: TOAST_OVER_SHEET });
+      return;
+    }
     setSheet(null);
-    toast.show(message);
+    toast.show(ok);
   };
 
   return (
@@ -89,7 +102,13 @@ export default function SettingsScreen() {
         body="거두면 다음 「이대로 입히기」 때 다시 물어요. 이미 만든 완성 룩은 그대로예요"
         action="동의 거두기"
         busy={busy}
-        onConfirm={() => void confirm(withdrawConsent, "동의를 거뒀어요")}
+        onConfirm={() =>
+          void confirm(
+            withdrawConsent,
+            "동의를 거뒀어요",
+            "동의를 거두지 못했어요. 잠시 뒤에 다시 해 주세요",
+          )
+        }
         onClose={() => setSheet(null)}
       />
       <ConfirmSheet
@@ -98,7 +117,9 @@ export default function SettingsScreen() {
         body="옷장과 「내 코디」 는 이 휴대폰에 남아요"
         action="로그아웃"
         busy={busy}
-        onConfirm={() => void confirm(signOut, "로그아웃했어요")}
+        onConfirm={() =>
+          void confirm(signOut, "로그아웃했어요", "로그아웃하지 못했어요. 잠시 뒤에 다시 해 주세요")
+        }
         onClose={() => setSheet(null)}
       />
     </View>

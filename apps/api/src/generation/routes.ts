@@ -16,6 +16,7 @@ export interface GenerationDeps {
 /** 접수 거절 코드와 HTTP 상태. */
 const REJECTIONS: Record<string, 402 | 403 | 409 | 429 | 503> = {
   consent_required: 403,
+  payment_changed: 409,
   account_inactive: 403,
   insufficient_gold: 402,
   switch_off: 503,
@@ -24,6 +25,8 @@ const REJECTIONS: Record<string, 402 | 403 | 409 | 429 | 503> = {
 };
 
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,100}$/;
+/** 화면이 보여 준 결제. 없으면 접수 함수가 무료 잔액으로 고른다. */
+const PAY_WITH = new Set(["trial", "gold"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** 입력 목록 JSON 글자 수 상한. 트윈 판과 옷 몇 벌이면 이보다 훨씬 작다. */
 const MANIFEST_MAX_CHARS = 16_384;
@@ -79,6 +82,7 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
     const requestId = body?.requestId;
     const manifest = body?.manifest;
     const consentVersion = body?.consentVersion;
+    const payWith = body?.payWith ?? null;
     if (typeof requestId !== "string" || !REQUEST_ID.test(requestId)) {
       return badRequest(c, "invalid_body");
     }
@@ -88,6 +92,9 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
     const manifestJson = JSON.stringify(manifest);
     if (manifestJson.length > MANIFEST_MAX_CHARS) return badRequest(c, "invalid_body");
     if (!Number.isInteger(consentVersion)) return badRequest(c, "invalid_body");
+    if (payWith !== null && (typeof payWith !== "string" || !PAY_WITH.has(payWith))) {
+      return badRequest(c, "invalid_body");
+    }
     // 앱 번들 문구가 서버 판과 다르면 동의 주소와 같은 409 를 준다. DB 에는 서버 판을 넘긴다.
     if (consentVersion !== CONSENT_TEXT_VERSION) {
       return c.json({ error: "consent_text_outdated" }, 409);
@@ -98,13 +105,14 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
       status: string | null;
       payment_kind: string | null;
       error_code: string | null;
-    }>("SELECT * FROM nuno_submit_job($1, $2, $3, $4, $5, $6)", [
+    }>("SELECT * FROM nuno_submit_job($1, $2, $3, $4, $5, $6, $7)", [
       c.get("userId"),
       requestId,
       requestHash(manifest),
       manifestJson,
       CONSENT_TEXT_VERSION,
       now(),
+      payWith,
     ]);
     if (!row) throw new Error("nuno_submit_job 이 행을 주지 않았다");
     if (row.error_code) {

@@ -24,6 +24,8 @@ export interface GoldEntry {
 
 export interface GoldSummary {
   trialCount: number;
+  /** 무료 장이 남았고 오늘 무료 접수가 하루 한도 아래다. 거짓이면 무대 단추가 골드 흐름으로 간다 */
+  trialUsableToday: boolean;
   balance: number;
   entries: GoldEntry[];
 }
@@ -123,14 +125,20 @@ export async function devSignIn(): Promise<boolean> {
 /**
  * 로그아웃: 서버 세션을 끊고, 기기 토큰과 생성 요청을 지운 뒤 화면이 들고 있던 서버 값을 비우게 한다.
  * 옷장, 「내 코디」, 견본 룩은 기기에 그대로 둔다. 서버에 닿지 못해도 기기 쪽은 로그아웃한다.
+ * 기기 토큰이나 요청 줄을 지우지 못하면 false 다.
  */
-export async function signOut(): Promise<void> {
+export async function signOut(): Promise<boolean> {
   const token = await sessionToken();
   if (token) await apiRequest("/v1/auth/sign-out", { method: "POST", token });
-  await sessionStore.clear().catch(() => undefined);
-  const { db } = await getDeviceDb();
-  await deleteAllGenerationRequests(db);
+  try {
+    await sessionStore.clear();
+    const { db } = await getDeviceDb();
+    await deleteAllGenerationRequests(db);
+  } catch {
+    return false;
+  }
   accountChanged();
+  return true;
 }
 
 export interface ConsentProvider {
@@ -146,9 +154,9 @@ export async function loadConsentProvider(): Promise<ConsentProvider | null> {
   return result.ok ? { provider: result.data.provider, country: result.data.country } : null;
 }
 
-export type ConsentResult = "agreed" | "outdated" | "failed";
+export type ConsentResult = "agreed" | "outdated" | "unavailable" | "failed";
 
-/** 「동의하고 만들기」: 앱 문구의 판으로 동의한다. 서버 판과 다르면 outdated */
+/** 「동의하고 만들기」: 앱 문구의 판으로 동의한다. 서버 판과 다르면 outdated, 켜 둔 공급사가 없으면 unavailable */
 export async function agreeConsent(): Promise<ConsentResult> {
   const token = await sessionToken();
   if (!token) return "failed";
@@ -161,7 +169,8 @@ export async function agreeConsent(): Promise<ConsentResult> {
     accountChanged();
     return "agreed";
   }
-  return result.error === "consent_text_outdated" ? "outdated" : "failed";
+  if (result.error === "consent_text_outdated") return "outdated";
+  return result.error === "provider_unavailable" ? "unavailable" : "failed";
 }
 
 /** 설정 「동의 거두기」 */

@@ -10,9 +10,11 @@ import {
   isFinishedStatus,
   listWatchedRequests,
   markGenerationSeen,
+  mayHaveBeenAccepted,
   nextAfterRejection,
   outfitKeyOf,
   readGenerationRequestByJob,
+  UNANSWERED_NOTICE,
   updateGenerationStatus,
   type GenerationManifest,
   type ManifestGarment,
@@ -66,11 +68,12 @@ async function post(
   token: string,
   requestId: string,
   manifest: GenerationManifest,
+  payWith: PaymentKind,
 ): Promise<ApiResult<SubmitResponse>> {
   return apiRequest<SubmitResponse>("/v1/generation-jobs", {
     method: "POST",
     token,
-    body: { requestId, manifest, consentVersion: CONSENT_TEXT_VERSION },
+    body: { requestId, manifest, consentVersion: CONSENT_TEXT_VERSION, payWith },
   });
 }
 
@@ -83,12 +86,13 @@ export async function hasPersonPhoto(items: readonly ManifestGarment[]): Promise
 }
 
 /**
- * 「무료로 만들기」, 「4골드 쓰기」: 지금 무대 코디로 완성 룩을 접수한다.
+ * 「무료로 만들기」(payWith trial), 「4골드 쓰기」(payWith gold): 지금 무대 코디로 완성 룩을 접수한다.
  * 사람이 함께 찍힌 옷이 있으면 보내지 않는다. 거절되면 domain 이 고른 다음 화면을 돌려준다.
  */
 export async function submitGeneration(
   twinKey: string,
   items: readonly ManifestGarment[],
+  payWith: PaymentKind,
 ): Promise<SubmitOutcome> {
   if (await hasPersonPhoto(items)) return { kind: "hadPerson" };
   const { db } = await getDeviceDb();
@@ -106,7 +110,7 @@ export async function submitGeneration(
     return id;
   };
   try {
-    return await sendRequest(db, token, manifest, outfitKey, hold);
+    return await sendRequest(db, token, manifest, outfitKey, payWith, hold);
   } finally {
     for (const id of mine) inFlight.delete(id);
   }
@@ -117,6 +121,7 @@ async function sendRequest(
   token: string,
   manifest: GenerationManifest,
   outfitKey: string,
+  payWith: PaymentKind,
   hold: (id: string) => string,
 ): Promise<SubmitOutcome> {
   // 같은 코디로 보냈다가 응답을 받지 못한 요청이 있으면 서버가 받았는지 먼저 묻는다.
@@ -129,7 +134,15 @@ async function sendRequest(
       await attachGenerationJob(db, leftover.requestId, found.data.jobId, found.data.status);
       return { kind: "job", jobId: found.data.jobId };
     }
-    if (found.status === 404) requestId = leftover.requestId;
+    if (found.status !== 404) {
+      // 서버가 받았는지 아직 모른다. 새 ID 로 보내면 두 번 묶일 수 있어 멈추고, 옛 줄은 작업 감시가 다시 묻는다.
+      if (found.status === 401) {
+        await forgetSession();
+        return { kind: "rejected", next: nextAfterRejection("unauthorized") };
+      }
+      return { kind: "rejected", next: UNANSWERED_NOTICE };
+    }
+    requestId = leftover.requestId;
   }
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -137,14 +150,14 @@ async function sendRequest(
       requestId = hold(uuidGenerator.next());
       await insertGenerationRequest(db, { requestId, outfitKey, manifest }, now());
     }
-    const result = await post(token, requestId, manifest);
+    const result = await post(token, requestId, manifest, payWith);
     if (result.ok) {
       await attachGenerationJob(db, requestId, result.data.jobId, result.data.status);
       return { kind: "job", jobId: result.data.jobId };
     }
-    if (result.status === 0) {
-      // 닿지 못했다. 서버가 받았을 수 있어 줄을 남기고 작업 감시가 요청 ID 로 다시 묻는다.
-      return { kind: "rejected", next: nextAfterRejection(result.error) };
+    if (mayHaveBeenAccepted(result.status, result.error)) {
+      // 닿지 못했거나 서버 오류다. 서버가 받았을 수 있어 줄을 남기고 작업 감시가 요청 ID 로 다시 묻는다.
+      return { kind: "rejected", next: UNANSWERED_NOTICE };
     }
     await deleteGenerationRequest(db, requestId);
     if (result.status === 401) await forgetSession();

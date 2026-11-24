@@ -1,35 +1,46 @@
 import { PROVIDER_RETENTION_DAYS } from "@nuno/generation";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import {
-  agreeConsent,
-  loadConsentProvider,
-  type ConsentProvider,
-} from "../../src/composition/account";
+import { agreeConsent, loadConsentProvider } from "../../src/composition/account";
 import { useAppToast } from "../../src/ui/app-toast";
 
 const INK = "#151314";
 const SUB = "#76736C";
 
 // 첫 사용 동의: 「이대로 입히기」 전에 한 번. 체크 줄 셋을 다 골라야 「동의하고 만들기」 가 된다.
-// 받는 곳(공급사 이름과 나라)은 서버가 켜 둔 공급사 줄에서 읽는다.
+// 받는 곳(공급사 이름과 나라)은 서버가 켜 둔 공급사 줄에서 읽는다. 못 읽으면 동의를 받지 않는다.
+
+type ReceiverLoad =
+  | { kind: "loading" }
+  | { kind: "ready"; provider: string; country: string | null }
+  | { kind: "missing" };
+
 export default function ConsentScreen() {
   const router = useRouter();
   const toast = useAppToast();
   // 설정에서 열면 동의한 뒤 설정으로 돌아간다. 「이대로 입히기」 에서 열면 「완성 룩 만들기」 시트로 간다.
   const { from } = useLocalSearchParams<{ from?: string }>();
-  const [provider, setProvider] = useState<ConsentProvider | null>(null);
+  const [load, setLoad] = useState<ReceiverLoad>({ kind: "loading" });
   const [checked, setChecked] = useState([false, false, false]);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    void loadConsentProvider().then(setProvider);
+  const loadReceiver = useCallback(() => {
+    setLoad({ kind: "loading" });
+    void loadConsentProvider().then(
+      (found) =>
+        setLoad(
+          found?.provider
+            ? { kind: "ready", provider: found.provider, country: found.country }
+            : { kind: "missing" },
+        ),
+      () => setLoad({ kind: "missing" }),
+    );
   }, []);
+  useEffect(loadReceiver, [loadReceiver]);
 
-  const receiver = provider?.provider
-    ? `${provider.provider}${provider.country ? `(${provider.country})` : ""}`
-    : "AI 업체";
+  const ready = load.kind === "ready";
+  const receiver = ready ? `${load.provider}${load.country ? `(${load.country})` : ""}` : "AI 업체";
   const rows = [
     {
       title: "트윈 그림과 고른 옷 사진을 AI 업체로 보내요",
@@ -46,6 +57,7 @@ export default function ConsentScreen() {
   const back = () => (router.canGoBack() ? router.back() : router.replace("/fitting/coordi"));
 
   const submit = async () => {
+    if (!ready) return;
     if (!all) {
       setChecked([true, true, true]);
       return;
@@ -62,6 +74,8 @@ export default function ConsentScreen() {
       router.navigate({ pathname: "/fitting/coordi", params: { make: "1" } });
     } else if (result === "outdated") {
       toast.show("앱을 업데이트해 주세요");
+    } else if (result === "unavailable") {
+      setLoad({ kind: "missing" });
     } else {
       toast.show("동의를 보내지 못했어요. 잠시 뒤에 다시 해 주세요");
     }
@@ -78,14 +92,24 @@ export default function ConsentScreen() {
         <Text role="heading" aria-level={1} style={styles.title}>
           완성 룩을 만들기 전에 확인해 주세요
         </Text>
+        {load.kind === "missing" ? (
+          <View style={styles.missing}>
+            <Text style={styles.missingText}>받는 곳을 불러오지 못했어요</Text>
+            <Pressable role="button" onPress={loadReceiver} style={styles.retry}>
+              <Text style={styles.retryLabel}>다시 불러오기</Text>
+            </Pressable>
+          </View>
+        ) : null}
         {rows.map((row, index) => (
           <Pressable
             key={row.title}
             role="checkbox"
             aria-checked={checked[index]}
             aria-label={row.title}
+            aria-disabled={!ready}
+            disabled={!ready}
             onPress={() => setChecked(checked.map((value, at) => (at === index ? !value : value)))}
-            style={styles.row}
+            style={[styles.row, !ready && styles.busy]}
           >
             <View style={[styles.box, checked[index] && styles.boxOn]}>
               {checked[index] ? <Text style={styles.mark}>✓</Text> : null}
@@ -103,9 +127,10 @@ export default function ConsentScreen() {
       <View style={styles.bar}>
         <Pressable
           role="button"
-          disabled={busy}
+          aria-disabled={busy || !ready}
+          disabled={busy || !ready}
           onPress={() => void submit()}
-          style={[styles.primary, busy && styles.busy]}
+          style={[styles.primary, (busy || !ready) && styles.busy]}
         >
           <Text style={styles.primaryLabel}>{all ? "동의하고 만들기" : "모두 동의하기"}</Text>
         </Pressable>
@@ -144,6 +169,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#F4F3F1",
   },
+  missing: {
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#EDECEA",
+  },
+  missingText: { fontSize: 15, lineHeight: 21, fontWeight: "700", color: INK },
+  retry: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#F4F3F1",
+  },
+  retryLabel: { fontSize: 14, fontWeight: "700", color: INK },
   bar: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: "#fff" },
   primary: {
     alignItems: "center",
