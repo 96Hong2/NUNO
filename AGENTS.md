@@ -12,6 +12,7 @@
 | `pnpm test:db` | docker compose 로 시험용 Postgres 둘을 띄워 실제 DB 시험을 돌고, 덤프 복원본으로 한 번 더 돈다. Docker 가 켜져 있어야 한다 |
 | `pnpm db:local` | 로컬 개발 DB 를 띄우고 서버 역할과 판을 적용한다 |
 | `pnpm api:dev` | 로컬 Postgres 에 `nuno_dev` DB 가 없으면 만들고 개발 전용 주소를 켠 API 를 http://localhost:8787 에 띄운다 |
+| `pnpm api:rds` | 개발 서버 DB(AWS RDS, DB `nuno`)에 판을 옮기고 API 와 worker 를 8787 에 띄운다. 주소와 비밀번호는 저장소 밖 `~/.config/nuno/rds.env` |
 | `pnpm web` | Expo 웹을 http://localhost:8090 에 띄운다. Claude 브라우저 창은 `.claude/launch.json` 의 `mobile-web` |
 | `pnpm e2e` | Playwright 로 Expo 웹을 열어 `e2e/*.spec.ts` 를 돈다 |
 | `pnpm new:context <이름>` | `packages/<이름>` 에 domain, application, 공개 면 틀을 만든다 |

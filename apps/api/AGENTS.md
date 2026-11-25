@@ -13,6 +13,7 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 | `pnpm --filter api start` | `DATABASE_URL`(nuno_api) 로 서버를 띄운다. 포트는 `PORT`, 없으면 8787 |
 | `pnpm --filter api worker` | 작업 worker 를 띄운다. API 와 같은 `DATABASE_URL`, 결과 폴더, 서명 키를 쓴다 |
 | `pnpm api:dev` (루트) | 로컬 DB `nuno_dev` 에 판을 옮기고 개발 전용 주소를 켠 API 와 worker 를 8787 에 띄운다. e2e 는 같은 스크립트가 `nuno_e2e` 로 띄운다 |
+| `pnpm api:rds` (루트) | 개발 서버 DB(RDS Postgres 18, DB `nuno`)를 쓴다. 판 옮기기는 관리 계정 `nuno`, API 는 `nuno_api`. 접속 주소는 `NUNO_RDS_ENV`(기본 `~/.config/nuno/rds.env`)에서 읽는다. RDS 는 SSL 이 강제라 주소에 `sslmode` 를 붙인다 |
 
 ## 규칙
 
