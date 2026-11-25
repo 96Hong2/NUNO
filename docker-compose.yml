@@ -1,10 +1,10 @@
-# Postgres 컨테이너. 비밀번호는 이 컨테이너에서만 쓰는 로컬 값이다.
+# Postgres 컨테이너. 개발 서버 DB(RDS)와 같은 판 18 이다. 비밀번호는 이 컨테이너에서만 쓰는 로컬 값이다.
 # 개발 서버와 출시용 DB 주소와 비밀번호는 환경 변수로만 넣고 저장소에 두지 않는다.
 #   postgres:      로컬 개발 DB(nuno). pnpm db:local 이 역할과 판을 적용한다.
 #   test-a, test-b: pnpm test:db 가 프로젝트 이름 nuno-test 로 띄우고 끝나면 지운다.
 #                   test-b 는 역할만 만든 「다른 Postgres」 로, test-a 의 덤프를 넣어 본다.
 x-postgres: &postgres
-  image: postgres:17.12-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73
+  image: postgres:18.3-alpine@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
   environment:
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: nuno-local
