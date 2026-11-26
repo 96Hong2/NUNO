@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   receiptBody: { flexDirection: "row", gap: 12 },
   photoColumn: { width: 120, gap: 4 },
   photo: { width: 120, height: 160, overflow: "hidden", borderRadius: 10 },
-  caption: { fontSize: 10, lineHeight: 14, color: "#76736C" },
+  caption: { fontSize: 10, lineHeight: 14, color: "#5F5C56" },
   lines: { flex: 1, gap: 8 },
   lookTitle: {
     fontSize: 17,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   },
   line: { fontSize: 13, color: "#151314" },
   receiptFoot: { flexDirection: "row", justifyContent: "space-between" },
-  muted: { fontSize: 12, color: "#76736C" },
+  muted: { fontSize: 12, color: "#5F5C56" },
   brand: { fontSize: 12, fontWeight: "800", color: "#151314" },
   label: { fontSize: 13, fontWeight: "700", color: "#151314" },
   input: {

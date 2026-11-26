@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   todayPhoto: { width: 74, overflow: "hidden", borderRadius: 10, backgroundColor: STAGE_PINK },
   todayText: { flex: 1, gap: 4, justifyContent: "center" },
   todayTitle: { fontSize: 14, fontWeight: "700", color: "#151314" },
-  todaySub: { fontSize: 12, lineHeight: 17, color: "#76736C" },
+  todaySub: { fontSize: 12, lineHeight: 17, color: "#5F5C56" },
   slot: { width: 82, gap: 4 },
   slotPhoto: { width: 82, height: 110, overflow: "hidden", borderRadius: 12 },
   empty: {
@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
   },
   primaryOff: { backgroundColor: "#E7E6E3" },
   primaryLabel: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  primaryLabelOff: { color: "#76736C" },
-  note: { fontSize: 12, color: "#76736C", textAlign: "center" },
+  primaryLabelOff: { color: "#5F5C56" },
+  note: { fontSize: 12, color: "#5F5C56", textAlign: "center" },
   renameRow: { flexDirection: "row", gap: 8 },
   input: {
     flex: 1,

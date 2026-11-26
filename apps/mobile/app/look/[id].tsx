@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   wornPillLabel: { fontSize: 12, fontWeight: "700", color: "#151314" },
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   title: { fontSize: 18, fontWeight: "800", color: "#151314" },
-  muted: { fontSize: 12, color: "#76736C" },
+  muted: { fontSize: 12, color: "#5F5C56" },
   link: { fontSize: 14, fontWeight: "700", color: "#151314" },
   section: { fontSize: 15, fontWeight: "700", color: "#151314" },
   items: { gap: 10 },

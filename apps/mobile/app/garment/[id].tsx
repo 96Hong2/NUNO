@@ -236,9 +236,9 @@ export default function GarmentDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FCFCFC" },
+  screen: { flex: 1, backgroundColor: "#FCFBFA" },
   center: { alignItems: "center", justifyContent: "center", gap: 12 },
-  missing: { fontSize: 16, color: "#76736C" },
+  missing: { fontSize: 16, color: "#5F5C56" },
   link: { fontSize: 15, fontWeight: "700", color: "#151314" },
   top: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   back: { fontSize: 28, lineHeight: 30, color: "#151314" },
@@ -249,10 +249,10 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   price: { fontSize: 22, fontWeight: "800", color: "#151314" },
   closet: { fontSize: 14, fontWeight: "600", color: CHERRY },
-  brand: { fontSize: 14, color: "#76736C" },
+  brand: { fontSize: 14, color: "#5F5C56" },
   facts: { gap: 6, paddingTop: 6 },
   fact: { flexDirection: "row", gap: 12 },
-  factLabel: { width: 52, fontSize: 14, color: "#76736C" },
+  factLabel: { width: 52, fontSize: 14, color: "#5F5C56" },
   factValue: { fontSize: 14, color: "#151314" },
   fit: { gap: 6, marginTop: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: "#E7E6E3" },
   fitHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -264,9 +264,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2F1EF",
   },
   fitEditLabel: { fontSize: 13, fontWeight: "600", color: "#151314" },
-  fitNote: { fontSize: 13, color: "#76736C" },
+  fitNote: { fontSize: 13, color: "#5F5C56" },
   delete: { alignSelf: "flex-start", paddingVertical: 10 },
-  deleteLabel: { fontSize: 14, color: "#76736C", textDecorationLine: "underline" },
+  deleteLabel: { fontSize: 14, color: "#5F5C56", textDecorationLine: "underline" },
   // 화면 바탕을 깔아 뒤의 글자가 단추 사이로 비치지 않게 한다.
   footer: {
     position: "absolute",
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#FCFCFC",
+    backgroundColor: "#FCFBFA",
   },
   footerRow: { flexDirection: "row", gap: 8 },
   wear: {
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     borderColor: "#E7E6E3",
   },
   shopLabel: { fontSize: 15, fontWeight: "700", color: "#151314" },
-  shopHost: { fontSize: 13, fontWeight: "400", color: "#76736C" },
+  shopHost: { fontSize: 13, fontWeight: "400", color: "#5F5C56" },
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
   sheet: {
     padding: 24,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   sheetTitle: { fontSize: 19, fontWeight: "700", color: "#151314" },
-  sheetBody: { fontSize: 15, color: "#76736C" },
+  sheetBody: { fontSize: 15, color: "#5F5C56" },
   sheetDanger: {
     alignItems: "center",
     paddingVertical: 15,

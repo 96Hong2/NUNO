@@ -271,8 +271,8 @@ const styles = StyleSheet.create({
   dark: { backgroundColor: "#2B2829" },
   image: { position: "absolute" },
   brush: { position: "absolute", opacity: 0.45 },
-  mark: { position: "absolute", backgroundColor: "#76736C" },
-  brushErase: { backgroundColor: "#D9304F" },
+  mark: { position: "absolute", backgroundColor: "#5F5C56" },
+  brushErase: { backgroundColor: "#B42318" },
   brushRestore: { backgroundColor: "#3D7BF5" },
   cropBox: {
     position: "absolute",

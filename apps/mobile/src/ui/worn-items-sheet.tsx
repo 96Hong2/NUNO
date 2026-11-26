@@ -129,7 +129,7 @@ export function WornItemsSheet(props: WornItemsSheetProps) {
 
 const styles = StyleSheet.create({
   fill: { width: "100%", height: "100%" },
-  muted: { fontSize: 12, color: "#76736C" },
+  muted: { fontSize: 12, color: "#5F5C56" },
   itemName: { fontSize: 13, fontWeight: "600", color: "#151314" },
   pickAll: {
     paddingHorizontal: 10,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   rowPhoto: { width: 52, height: 52, padding: 4, borderRadius: 8, backgroundColor: "#F4F3F1" },
   rowText: { flex: 1, gap: 2 },
   inCloset: { fontSize: 12, fontWeight: "700", color: CHERRY },
-  line: { fontSize: 13, color: "#76736C" },
+  line: { fontSize: 13, color: "#5F5C56" },
   sheetButtons: { flexDirection: "row", gap: 8 },
   half: { flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 12 },
   outline: { borderWidth: 1.5, borderColor: "#151314", backgroundColor: "#fff" },
@@ -162,5 +162,5 @@ const styles = StyleSheet.create({
   idle: { backgroundColor: "#E7E6E3" },
   halfLabel: { fontSize: 14, fontWeight: "700", color: "#151314" },
   white: { color: "#fff" },
-  idleLabel: { color: "#76736C" },
+  idleLabel: { color: "#5F5C56" },
 });

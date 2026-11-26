@@ -12,7 +12,7 @@ import { CoordiStage } from "../../src/ui/coordi-stage";
 import { CHERRY } from "../../src/ui/garment-card";
 import { useProfile } from "../../src/ui/profile-gate";
 import { SAMPLE_GARMENT_IMAGES } from "../../src/ui/sample-assets";
-import { StepDots } from "../../src/ui/step-dots";
+import { OnboardingHead } from "../../src/ui/onboarding-head";
 
 const ROWS = [
   { key: "outer", label: categoryLabel("outer"), items: ONBOARDING_SAMPLES.outer },
@@ -67,12 +67,7 @@ export default function OnboardingOutfitScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.topRow}>
-          <StepDots current={3} />
-          <Pressable role="button" hitSlop={12} onPress={() => void skip()}>
-            <Text style={styles.skip}>건너뛰기</Text>
-          </Pressable>
-        </View>
+        <OnboardingHead step={3} previous="/onboarding/style" onSkip={() => void skip()} />
         <Text role="heading" aria-level={1} style={styles.title}>
           입고 싶은 옷을 골라 보세요
         </Text>
@@ -123,10 +118,8 @@ export default function OnboardingOutfitScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-  body: { padding: 24, gap: 12 },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  skip: { fontSize: 15, color: "#555" },
+  screen: { flex: 1, backgroundColor: "#FCFBFA" },
+  body: { paddingHorizontal: 20, paddingBottom: 24, gap: 12 },
   title: { fontSize: 24, fontWeight: "700" },
   subtitle: { fontSize: 14, color: "#777" },
   stage: { height: 300, overflow: "hidden", borderRadius: 16 },
@@ -148,7 +141,7 @@ const styles = StyleSheet.create({
   cardLabel: { fontSize: 13, color: "#151314" },
   cardLabelOn: { fontWeight: "700" },
   button: {
-    margin: 24,
+    margin: 20,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
@@ -156,5 +149,5 @@ const styles = StyleSheet.create({
   },
   buttonIdle: { backgroundColor: "#E7E6E3" },
   buttonLabel: { color: "#fff", fontSize: 17, fontWeight: "600" },
-  buttonLabelIdle: { color: "#76736C" },
+  buttonLabelIdle: { color: "#5F5C56" },
 });

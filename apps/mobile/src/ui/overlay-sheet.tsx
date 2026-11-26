@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useToastOverSheet } from "./app-toast";
+import { CloseIcon } from "./line-icon";
+
+const INK = "#151314";
 
 interface OverlaySheetProps {
   visible: boolean;
@@ -38,8 +41,8 @@ export function OverlaySheet({
           </Text>
           {headerAction}
           {hideClose ? null : (
-            <Pressable role="button" aria-label="닫기" hitSlop={12} onPress={onClose}>
-              <Text style={styles.close}>✕</Text>
+            <Pressable role="button" aria-label="닫기" onPress={onClose} style={styles.close}>
+              <CloseIcon color={INK} />
             </Pressable>
           )}
         </View>
@@ -51,24 +54,34 @@ export function OverlaySheet({
 
 const styles = StyleSheet.create({
   layer: { ...StyleSheet.absoluteFill, zIndex: 20, justifyContent: "flex-end" },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.35)" },
+  // 뒤 화면은 ink 40% 로 덮는다.
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(21,19,20,0.4)" },
   sheet: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 24,
     gap: 14,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     backgroundColor: "#fff",
+    boxShadow: "0px -2px 12px rgba(21,19,20,0.06)",
   },
   grip: {
     alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E7E6E3",
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(21,19,20,0.2)",
   },
-  head: { flexDirection: "row", alignItems: "center", gap: 10 },
-  title: { flex: 1, fontSize: 18, fontWeight: "700", color: "#151314" },
-  close: { fontSize: 18, color: "#151314" },
+  // 손잡이 아래 12 에 높이 44 제목 줄. 시트 칸 사이(14)보다 2 당긴다.
+  head: { minHeight: 44, marginTop: -2, flexDirection: "row", alignItems: "center", gap: 10 },
+  title: { flex: 1, fontSize: 20, lineHeight: 28, fontWeight: "700", color: INK },
+  // X 24 아이콘, 누르는 영역 44. 오른쪽 끝을 시트 안쪽 여백에 맞춘다.
+  close: {
+    width: 44,
+    height: 44,
+    marginRight: -10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

@@ -11,7 +11,7 @@ import { LookImage, lookCaption } from "../../src/ui/look-image";
 import { LookSaveSheet } from "../../src/ui/look-save-sheet";
 import { useProfile } from "../../src/ui/profile-gate";
 import { ONBOARDING_LOOK_PHOTOS } from "../../src/ui/sample-assets";
-import { StepDots } from "../../src/ui/step-dots";
+import { OnboardingHead } from "../../src/ui/onboarding-head";
 
 /** 「트윈에 입히고 있어요」 를 보이는 시간(와이어프레임 0.9초) */
 const MAKING_MS = 900;
@@ -81,12 +81,7 @@ export default function OnboardingLookScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.topRow}>
-        <StepDots current={4} />
-        <Pressable role="button" hitSlop={12} onPress={() => void finish(null)}>
-          <Text style={styles.skip}>건너뛰기</Text>
-        </Pressable>
-      </View>
+      <OnboardingHead step={4} previous="/onboarding/outfit" onSkip={() => void finish(null)} />
       <Text role="heading" aria-level={1} style={styles.title}>
         완성 룩이에요
       </Text>
@@ -127,15 +122,13 @@ export default function OnboardingLookScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 24, gap: 14, backgroundColor: "#fff" },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  skip: { fontSize: 15, color: "#555" },
+  screen: { flex: 1, paddingHorizontal: 20, paddingBottom: 24, gap: 14, backgroundColor: "#FCFBFA" },
   title: { fontSize: 24, fontWeight: "700" },
   body: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   making: { alignItems: "center", gap: 14 },
   makingLabel: { fontSize: 15, fontWeight: "700", color: "#151314" },
   photo: { aspectRatio: 900 / 1205, overflow: "hidden", borderRadius: 20 },
-  caption: { fontSize: 12, color: "#76736C" },
+  caption: { fontSize: 12, color: "#5F5C56" },
   button: {
     paddingVertical: 16,
     borderRadius: 12,
@@ -144,5 +137,5 @@ const styles = StyleSheet.create({
   },
   buttonIdle: { backgroundColor: "#E7E6E3" },
   buttonLabel: { color: "#fff", fontSize: 17, fontWeight: "600" },
-  buttonLabelIdle: { color: "#76736C" },
+  buttonLabelIdle: { color: "#5F5C56" },
 });

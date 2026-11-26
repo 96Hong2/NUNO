@@ -41,5 +41,5 @@ const styles = StyleSheet.create({
   },
   countLabel: { fontSize: 11, fontWeight: "700", color: "#151314" },
   title: { fontSize: 14, fontWeight: "700", color: "#151314" },
-  ago: { fontSize: 12, color: "#76736C" },
+  ago: { fontSize: 12, color: "#5F5C56" },
 });
