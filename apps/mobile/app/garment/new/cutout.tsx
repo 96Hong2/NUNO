@@ -1,8 +1,15 @@
 import { faceStillVisible, type BrushStroke, type GarmentEdits } from "@nuno/wardrobe";
-import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Redirect,
+  useIsFocused,
+  useLocalSearchParams,
+  usePreventRemove,
+  useRouter,
+} from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
+  clearDraft,
   currentDraft,
   garmentEditable,
   renderDraft,
@@ -14,6 +21,7 @@ import {
 import { useAppToast } from "../../../src/ui/app-toast";
 import { EditSurface, type EditMode } from "../../../src/ui/edit-surface";
 import { FlowScreen, PrimaryButton } from "../../../src/ui/flow-screen";
+import { OverlaySheet } from "../../../src/ui/overlay-sheet";
 
 type Tool = "erase" | "restore" | "crop" | "rotate";
 
@@ -51,6 +59,36 @@ export default function CutoutScreen() {
   // 배경을 지우지 못한 사진(웹에서 바탕이 고르지 않은 사진 등)은 실패 화면부터 보인다.
   const [failed, setFailed] = useState(draft?.photo.cutoutSource === "none");
   const toast = useAppToast();
+  const focused = useIsFocused();
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [discarded, setDiscarded] = useState(false);
+  const pendingLeave = useRef<(() => void) | null>(null);
+
+  // 이 화면을 닫으면 사진 고르기로 돌아가 넣던 옷이 사라지므로 먼저 묻는다.
+  // 사람이 든 사진은 자르기 화면으로 돌아갈 뿐이라 묻지 않는다.
+  // 다음 단계가 위에 있을 때(담기를 마치고 단계 화면을 모두 닫을 때)는 묻지 않는다.
+  const guard = focused && !discarded && draft !== null && !draft.photo.hadPerson;
+  const allowLeave = usePreventRemove(guard, ({ repeat }) => {
+    pendingLeave.current = repeat;
+    setDiscardOpen(true);
+  });
+
+  // 초안은 화면이 닫힌 뒤에 비운다. 먼저 비우면 닫히는 동안 다시 그릴 때 옷장으로 다시 보낸다.
+  const clearOnLeave = useRef(false);
+  useEffect(
+    () => () => {
+      if (clearOnLeave.current) clearDraft();
+    },
+    [],
+  );
+  const discard = () => {
+    const leave = pendingLeave.current ?? (() => router.back());
+    pendingLeave.current = null;
+    clearOnLeave.current = true;
+    setDiscarded(true);
+    allowLeave();
+    leave();
+  };
 
   // 도구를 고르면 자르기 전 전체 그림, 아니면 자르고 돌린 그림을 굽는다.
   // 자르기 도구를 쓰는 동안은 네모가 바뀌어도 다시 굽지 않는다. 그림은 자르기 전 전체라 같다.
@@ -171,128 +209,154 @@ export default function CutoutScreen() {
   const mode: EditMode = fresh ? tool : null;
 
   return (
-    <FlowScreen
-      step="2 / 4"
-      title={failed ? "배경을 지우지 못했어요" : "배경을 지웠어요"}
-      sub={
-        failed
-          ? "옷과 바닥 색이 비슷하면 잘 안 지워져요. 다시 시도하거나 직접 다듬어 주세요"
-          : "잘 지워졌으면 「다음」을 눌러요. 남은 부분은 「지우기」로 다듬어요"
-      }
-      onBack={() => router.back()}
-      footer={
-        failed ? (
-          <>
-            <PrimaryButton label="다시 시도" disabled={busy} onPress={() => void retry()} />
-            <Pressable role="button" onPress={trimByHand} style={styles.textButton}>
-              <Text style={styles.textButtonLabel}>직접 다듬기</Text>
-            </Pressable>
-          </>
-        ) : (
-          <PrimaryButton label="다음" disabled={busy} onPress={() => void next()} />
-        )
-      }
-    >
-      <EditSurface
-        imageUri={showOriginal ? draft.photo.originalUri : (image?.uri ?? draft.photo.cutoutUri)}
-        aspect={showOriginal || tool ? fullAspect : (image?.aspect ?? fullAspect)}
-        mode={showOriginal ? null : mode}
-        brushRadius={radius}
-        crop={edits.crop}
-        onStroke={addStroke}
-        onCropChange={(crop) => change({ ...edits, crop })}
-        dark={showOriginal}
+    <View style={styles.root}>
+      <FlowScreen
+        step="2 / 4"
+        title={failed ? "배경을 지우지 못했어요" : "배경을 지웠어요"}
+        sub={
+          failed
+            ? "옷과 바닥 색이 비슷하면 잘 안 지워져요. 다시 시도하거나 직접 다듬어 주세요"
+            : "잘 지워졌으면 「다음」을 눌러요. 남은 부분은 「지우기」로 다듬어요"
+        }
+        onBack={() => router.back()}
+        footer={
+          failed ? (
+            <>
+              <PrimaryButton label="다시 시도" disabled={busy} onPress={() => void retry()} />
+              <Pressable role="button" onPress={trimByHand} style={styles.textButton}>
+                <Text style={styles.textButtonLabel}>직접 다듬기</Text>
+              </Pressable>
+            </>
+          ) : (
+            <PrimaryButton label="다음" disabled={busy} onPress={() => void next()} />
+          )
+        }
       >
-        {tool ? (
-          <View pointerEvents="none" style={styles.toolHint}>
-            <Text style={styles.toolHintLabel}>{TOOL_HINT[tool]}</Text>
+        <EditSurface
+          imageUri={showOriginal ? draft.photo.originalUri : (image?.uri ?? draft.photo.cutoutUri)}
+          aspect={showOriginal || tool ? fullAspect : (image?.aspect ?? fullAspect)}
+          mode={showOriginal ? null : mode}
+          brushRadius={radius}
+          crop={edits.crop}
+          onStroke={addStroke}
+          onCropChange={(crop) => change({ ...edits, crop })}
+          dark={showOriginal}
+        >
+          {tool ? (
+            <View pointerEvents="none" style={styles.toolHint}>
+              <Text style={styles.toolHintLabel}>{TOOL_HINT[tool]}</Text>
+            </View>
+          ) : null}
+        </EditSurface>
+
+        <View style={styles.viewToggle}>
+          {(
+            [
+              ["original", "원본"],
+              ["cutout", "배경 지움"],
+            ] as const
+          ).map(([key, label]) => (
+            <Pressable
+              key={key}
+              role="button"
+              aria-pressed={view === key}
+              onPress={() => {
+                setView(key);
+                if (key === "original") setTool(null);
+              }}
+              style={StyleSheet.flatten([styles.viewItem, view === key && styles.viewItemOn])}
+            >
+              <Text style={[styles.viewLabel, view === key && styles.viewLabelOn]}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {garmentEditable ? (
+          <View style={styles.tools}>
+            {TOOLS.map((item) => {
+              const on = item.key === tool;
+              return (
+                <Pressable
+                  key={item.key}
+                  role="button"
+                  aria-label={item.label}
+                  aria-pressed={on}
+                  onPress={() => pickTool(item.key)}
+                  style={StyleSheet.flatten([styles.tool, on && styles.toolOn])}
+                >
+                  <Text style={styles.toolIcon}>{item.icon}</Text>
+                  <Text style={styles.toolLabel}>{item.label}</Text>
+                  <Text style={styles.toolHintText}>{item.hint}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={styles.notice}>아이폰 손보기 도구는 곧 열려요</Text>
+        )}
+
+        {tool === "erase" || tool === "restore" ? (
+          <View style={styles.brushRow}>
+            <Text style={styles.brushTitle}>
+              {tool === "erase" ? "지울 붓 크기" : "되살릴 붓 크기"}
+            </Text>
+            <View style={styles.brushChips}>
+              {BRUSHES.map((item) => (
+                <Pressable
+                  key={item.key}
+                  role="button"
+                  aria-pressed={brush === item.key}
+                  onPress={() => setBrush(item.key)}
+                  style={StyleSheet.flatten([
+                    styles.brushChip,
+                    brush === item.key && styles.brushChipOn,
+                  ])}
+                >
+                  <View
+                    style={[
+                      styles.brushDot,
+                      brush === item.key && styles.brushDotOn,
+                      { width: item.dot, height: item.dot, borderRadius: item.dot / 2 },
+                    ]}
+                  />
+                  <Text style={[styles.brushLabel, brush === item.key && styles.brushLabelOn]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         ) : null}
-      </EditSurface>
-
-      <View style={styles.viewToggle}>
-        {(
-          [
-            ["original", "원본"],
-            ["cutout", "배경 지움"],
-          ] as const
-        ).map(([key, label]) => (
+      </FlowScreen>
+      <OverlaySheet
+        visible={discardOpen}
+        title="넣던 옷을 버릴까요?"
+        hideClose
+        onClose={() => setDiscardOpen(false)}
+      >
+        <View style={styles.discardRow}>
           <Pressable
-            key={key}
             role="button"
-            aria-pressed={view === key}
-            onPress={() => {
-              setView(key);
-              if (key === "original") setTool(null);
-            }}
-            style={StyleSheet.flatten([styles.viewItem, view === key && styles.viewItemOn])}
+            onPress={discard}
+            style={[styles.discardButton, styles.dropFill]}
           >
-            <Text style={[styles.viewLabel, view === key && styles.viewLabelOn]}>{label}</Text>
+            <Text style={styles.dropLabel}>버리기</Text>
           </Pressable>
-        ))}
-      </View>
-
-      {garmentEditable ? (
-        <View style={styles.tools}>
-          {TOOLS.map((item) => {
-            const on = item.key === tool;
-            return (
-              <Pressable
-                key={item.key}
-                role="button"
-                aria-label={item.label}
-                aria-pressed={on}
-                onPress={() => pickTool(item.key)}
-                style={StyleSheet.flatten([styles.tool, on && styles.toolOn])}
-              >
-                <Text style={styles.toolIcon}>{item.icon}</Text>
-                <Text style={styles.toolLabel}>{item.label}</Text>
-                <Text style={styles.toolHintText}>{item.hint}</Text>
-              </Pressable>
-            );
-          })}
+          <Pressable
+            role="button"
+            onPress={() => setDiscardOpen(false)}
+            style={[styles.discardButton, styles.keepFill]}
+          >
+            <Text style={styles.keepLabel}>계속 넣기</Text>
+          </Pressable>
         </View>
-      ) : (
-        <Text style={styles.notice}>아이폰 손보기 도구는 곧 열려요</Text>
-      )}
-
-      {tool === "erase" || tool === "restore" ? (
-        <View style={styles.brushRow}>
-          <Text style={styles.brushTitle}>
-            {tool === "erase" ? "지울 붓 크기" : "되살릴 붓 크기"}
-          </Text>
-          <View style={styles.brushChips}>
-            {BRUSHES.map((item) => (
-              <Pressable
-                key={item.key}
-                role="button"
-                aria-pressed={brush === item.key}
-                onPress={() => setBrush(item.key)}
-                style={StyleSheet.flatten([
-                  styles.brushChip,
-                  brush === item.key && styles.brushChipOn,
-                ])}
-              >
-                <View
-                  style={[
-                    styles.brushDot,
-                    brush === item.key && styles.brushDotOn,
-                    { width: item.dot, height: item.dot, borderRadius: item.dot / 2 },
-                  ]}
-                />
-                <Text style={[styles.brushLabel, brush === item.key && styles.brushLabelOn]}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      ) : null}
-    </FlowScreen>
+      </OverlaySheet>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   toolHint: {
     position: "absolute",
     bottom: 12,
@@ -345,6 +409,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2F1EF",
   },
   brushChipOn: { backgroundColor: "#151314" },
+  discardRow: { flexDirection: "row", gap: 8, marginTop: 10 },
+  discardButton: {
+    flex: 1,
+    height: 52,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dropFill: { backgroundColor: "#F6F5F3" },
+  dropLabel: { fontSize: 16, fontWeight: "600", color: "#B42318" },
+  keepFill: { backgroundColor: "#151314" },
+  keepLabel: { fontSize: 16, fontWeight: "600", color: "#fff" },
   brushLabel: { fontSize: 13, color: "#151314" },
   brushLabelOn: { color: "#fff", fontWeight: "700" },
 });
