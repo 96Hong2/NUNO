@@ -3,7 +3,8 @@ import { GARMENT_CATEGORIES } from "@nuno/wardrobe";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { lookPhotoOf, type CatalogItem } from "./coordi-catalog";
 import { STAGE_PINK } from "./coordi-stage";
-import { CHERRY } from "./garment-card";
+
+const CHERRY = "#B8233F";
 
 const ORDER: readonly OutfitCategory[] = GARMENT_CATEGORIES.map((category) => category.key);
 
@@ -55,49 +56,53 @@ export function OutfitCard(props: OutfitCardProps) {
           </View>
         ) : null}
         <View style={styles.badge}>
-          <Text style={styles.badgeLabel}>{badge}</Text>
+          <Text style={styles.badgeLabel} numberOfLines={1}>
+            {badge}
+          </Text>
         </View>
       </View>
-      <Text style={styles.title} numberOfLines={1}>
+      <Text style={styles.title} numberOfLines={2}>
         {title}
       </Text>
     </Pressable>
   );
 }
 
-// 카드 크기는 와이어프레임 코디 줄 카드(66x88)와 같다.
+// 카드 크기는 와이어프레임 v27 코디 줄 카드(72x96, 3:4)와 같다. 배지는 높이 18, 11px 다.
 const styles = StyleSheet.create({
-  card: { width: 66, gap: 4 },
+  card: { width: 72, gap: 4 },
   photo: {
-    width: 66,
-    height: 88,
+    width: 72,
+    height: 96,
     overflow: "hidden",
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: STAGE_PINK,
   },
   photoOn: { borderWidth: 2, borderColor: CHERRY },
   fill: { width: "100%", height: "100%" },
-  grid: { flex: 1, flexDirection: "row", flexWrap: "wrap", backgroundColor: "#F4F3F1" },
+  grid: { flex: 1, flexDirection: "row", flexWrap: "wrap", backgroundColor: "#EFEDEA" },
   cell: { width: "50%", height: "50%", padding: 3 },
   wearing: {
     position: "absolute",
     top: 4,
     left: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: "rgba(21,19,20,0.8)",
+    height: 18,
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    borderRadius: 9,
+    backgroundColor: CHERRY,
   },
-  wearingLabel: { color: "#fff", fontSize: 9, fontWeight: "700" },
+  wearingLabel: { color: "#fff", fontSize: 11, lineHeight: 18, fontWeight: "600" },
   badge: {
     position: "absolute",
     left: 4,
     bottom: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: "#fff",
+    height: 18,
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    borderRadius: 9,
+    backgroundColor: "rgba(255,255,255,0.92)",
   },
-  badgeLabel: { color: "#151314", fontSize: 9, fontWeight: "600" },
-  title: { fontSize: 11, color: "#151314" },
+  badgeLabel: { color: "#151314", fontSize: 11, lineHeight: 18, fontWeight: "600" },
+  title: { fontSize: 12, lineHeight: 16, fontWeight: "500", color: "#151314" },
 });

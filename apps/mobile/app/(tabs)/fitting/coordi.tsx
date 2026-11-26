@@ -14,12 +14,11 @@ import {
 import { presetTwin, type PresetTwinKey } from "@nuno/twin";
 import { categoryLabel } from "@nuno/wardrobe";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import {
   Image,
   PanResponder,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -40,40 +39,51 @@ import {
   type CoordiState,
 } from "../../../src/composition/outfit";
 import { switchTwin } from "../../../src/composition/twin";
-import {
-  loadClosetImages,
-  toggleFavorite,
-  type GarmentDetail,
-} from "../../../src/composition/wardrobe";
+import { loadClosetImages, type GarmentDetail } from "../../../src/composition/wardrobe";
 import { AddGarmentSheet } from "../../../src/ui/add-garment-sheet";
 import { useAppToast, type ToastAction } from "../../../src/ui/app-toast";
-import { buildCatalog, pieceOf, type CatalogItem } from "../../../src/ui/coordi-catalog";
+import {
+  buildCatalog,
+  lookPhotoOf,
+  pieceOf,
+  type CatalogItem,
+} from "../../../src/ui/coordi-catalog";
 import { CoordiGarmentSheet, type StripTab } from "../../../src/ui/coordi-garment-sheet";
 import { CoordiStage } from "../../../src/ui/coordi-stage";
-import { CHERRY } from "../../../src/ui/garment-card";
 import { withObject, withTopic } from "../../../src/ui/korean-particle";
+import { PersonIcon } from "../../../src/ui/line-icon";
 import { MyOutfitsSheet, SavedFullSheet, SavedMenuSheet } from "../../../src/ui/my-outfits-sheet";
 import { drawnOnStage } from "../../../src/ui/stage-config";
-import { SuggestPanel, SuggestRange, type SuggestScope } from "../../../src/ui/suggest-panel";
+import { SuggestPanel } from "../../../src/ui/suggest-panel";
 import { TWIN_ASSETS } from "../../../src/ui/twin-assets";
 import { TwinSwitchSheet } from "../../../src/ui/twin-switch-sheet";
 import { useGenerateFlow } from "../../../src/ui/use-generate-flow";
 import { useStartGarment } from "../../../src/ui/use-start-garment";
 
-const ZOOM = { min: 1, max: 3, step: 0.5 } as const;
+const ZOOM = { min: 1, max: 3 } as const;
+const INK = "#151314";
+/** 옷 칸을 올렸을 때 작은 무대 줄 높이 */
+const MINI_STAGE = 80;
+/** 옷 칸 시트가 무대 아래를 덮는 높이. 옷 칸을 올리면 12 */
+const SHEET_OVERLAP = { normal: 20, expanded: 12 } as const;
+/** 코디 탭 알림 띠의 윗변은 무대 아랫변에서 128 위, 띠 높이 44 라 아랫변은 84 위다 */
+const TOAST_ABOVE_STAGE_BOTTOM = 84;
+const HINT_MS = 3000;
 
-/** 무대 높이. 와이어프레임처럼 화면 높이에서 아래 옷 칸 몫을 빼고 위아래 한도 안에 둔다. */
-function stageHeight(screenHeight: number, expanded: boolean): number {
-  return expanded
-    ? Math.min(136, Math.max(96, screenHeight - 700))
-    : Math.min(270, Math.max(216, screenHeight - 560));
+/** 무대 높이. 와이어프레임 v27 처럼 화면 높이에서 아래 옷 칸 몫을 빼고 236~308 안에 둔다. */
+function stageHeight(screenHeight: number): number {
+  return Math.min(308, Math.max(236, screenHeight - 536));
 }
+
+// 「옷을 누르면 빠져요」 는 앱을 켠 뒤 처음 옷을 입힌 직후 한 번만 보인다. 기기에 적지 않는다.
+let removeHintShown = false;
 
 // 피팅룸 「코디」: 트윈 무대 위에 옷을 바로 겹쳐 입히고 벗긴다. 서버는 「이대로 입히기」 흐름만 부른다.
 export default function CoordiScreen() {
   const router = useRouter();
   const toast = useAppToast();
   const { height: screenHeight } = useWindowDimensions();
+  const fullStage = stageHeight(screenHeight);
   const { start } = useStartGarment("mine");
   const [state, setState] = useState<CoordiState | null>(null);
   const [garments, setGarments] = useState<GarmentDetail[]>([]);
@@ -85,8 +95,12 @@ export default function CoordiScreen() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [sheet, setSheet] = useState<"my" | "full" | "twin" | "add" | null>(null);
   const [menu, setMenu] = useState<SavedOutfit | null>(null);
-  const [range, setRange] = useState(false);
-  const [suggest, setSuggest] = useState<{ scopes: SuggestScope[]; seed: number } | null>(null);
+  const [suggestSeed, setSuggestSeed] = useState<number | null>(null);
+  const [hint, setHint] = useState(false);
+  const [stageBottom, setStageBottom] = useState<number | null>(null);
+  const stageRef = useRef<ComponentRef<typeof View>>(null);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(hintTimer.current), []);
 
   const load = useCallback(() => {
     void Promise.all([loadCoordi(), loadClosetImages("mine")]).then(([next, list]) => {
@@ -104,7 +118,18 @@ export default function CoordiScreen() {
 
   const generate = useGenerateFlow(state?.twinKey ?? "", state?.outfit ?? [], catalogMap);
 
-  const notify = (message: string, actions?: ToastAction[]) => toast.show(message, actions);
+  // 옷 칸이 내려와 있으면 알림을 옷 칸 시트 바로 위, 무대 아래쪽에 띄운다.
+  const notify = (message: string, actions?: ToastAction[]) =>
+    toast.show(
+      message,
+      actions,
+      !expanded && stageBottom !== null
+        ? { bottom: screenHeight - (stageBottom - TOAST_ABOVE_STAGE_BOTTOM) }
+        : undefined,
+    );
+
+  const measureStage = () =>
+    stageRef.current?.measureInWindow((_x, y, _width, height) => setStageBottom(y + height));
 
   // 손잡이: 누르거나 위로 끌면 옷 칸이 올라오고, 아래로 끌면 내려온다.
   const handle = useRef(
@@ -144,7 +169,9 @@ export default function CoordiScreen() {
         const now = distance(event);
         if (now > 0 && gesture.current.startDistance > 0) {
           const next = (gesture.current.startZoom * now) / gesture.current.startDistance;
-          setZoom(Math.min(ZOOM.max, Math.max(ZOOM.min, next)));
+          const clamped = Math.min(ZOOM.max, Math.max(ZOOM.min, next));
+          setZoom(clamped);
+          if (clamped === ZOOM.min) setPan({ x: 0, y: 0 });
           return;
         }
         if (zoomRef.current > 1) {
@@ -177,8 +204,28 @@ export default function CoordiScreen() {
     if (before) notify(message, [restore(before)]);
   };
 
-  const wear = (item: CatalogItem) =>
-    void changeOutfit((current) => toggleGarment(current, pieceOf(item)));
+  const showRemoveHint = () => {
+    removeHintShown = true;
+    // 안내는 알림 띠와 같은 높이에 뜬다. 앞서 띄운 알림은 걷어 안내가 가려지지 않게 한다.
+    toast.hide();
+    setHint(true);
+    clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(false), HINT_MS);
+  };
+
+  const wear = (item: CatalogItem) => {
+    const next = toggleGarment(outfit, pieceOf(item));
+    // 무대에 옷 그림이 겹쳐 보일 때만 「옷을 누르면 빠져요」 를 띄운다. 착장 사진이면 옷을 누를 수 없다.
+    const firstWear =
+      !removeHintShown &&
+      !expanded &&
+      next.length > outfit.length &&
+      !lookPhotoOf(twinKey, next) &&
+      drawnOnStage(pieceOf(item));
+    void changeOutfit((current) => toggleGarment(current, pieceOf(item))).then(() => {
+      if (firstWear) showRemoveHint();
+    });
+  };
 
   const clear = () => {
     if (outfit.length === 0) return;
@@ -218,18 +265,16 @@ export default function CoordiScreen() {
   };
 
   const closetItems = catalog.filter((item) => !item.sample);
-  const pool = suggest
-    ? closetItems.filter((item) => suggest.scopes.includes("closet") || item.favorite)
-    : [];
-  const picks = suggest
-    ? suggestGarments(
-        pool.map((item) => ({ ref: item.ref, category: item.category })),
-        outfit,
-        suggest.seed,
-      )
-        .map((pick) => catalogMap.get(refKey(pick.ref)))
-        .filter((item): item is CatalogItem => Boolean(item))
-    : [];
+  const picks =
+    suggestSeed !== null
+      ? suggestGarments(
+          closetItems.map((item) => ({ ref: item.ref, category: item.category })),
+          outfit,
+          suggestSeed,
+        )
+          .map((pick) => catalogMap.get(refKey(pick.ref)))
+          .filter((item): item is CatalogItem => Boolean(item))
+      : [];
   const hiddenWorn = outfit.filter(
     (piece) => catalogMap.has(refKey(piece.ref)) && !drawnOnStage(piece),
   );
@@ -248,14 +293,20 @@ export default function CoordiScreen() {
         코디
       </Text>
       <View
+        ref={stageRef}
         testID="coordi-stage"
-        style={[styles.stageWrap, { height: stageHeight(screenHeight, expanded) }]}
+        onLayout={measureStage}
+        style={[styles.stageWrap, { height: expanded ? MINI_STAGE : fullStage }]}
         {...stagePan.panHandlers}
       >
+        {/* 옷 칸을 올려도 트윈은 같은 크기로 두고 작은 무대 줄이 얼굴과 어깨만 보인다. */}
         <View
           style={[
             styles.stageInner,
-            { transform: [{ translateX: pan.x }, { translateY: pan.y }, { scale: zoom }] },
+            {
+              height: fullStage,
+              transform: [{ translateX: pan.x }, { translateY: pan.y }, { scale: zoom }],
+            },
           ]}
         >
           <CoordiStage
@@ -267,9 +318,20 @@ export default function CoordiScreen() {
         </View>
 
         {expanded ? (
-          <Pressable role="button" onPress={() => setExpanded(false)} style={styles.bigPill}>
-            <Text style={styles.pillLabel}>트윈 크게 보기 ⌄</Text>
-          </Pressable>
+          <>
+            <View style={styles.miniLeft}>{generate.compactButton}</View>
+            <Pressable
+              role="button"
+              hitSlop={{ top: 4, bottom: 4 }}
+              onPress={() => setExpanded(false)}
+              style={[styles.pill, styles.miniRight]}
+            >
+              <Text style={styles.pillLabelStrong}>트윈 크게 보기</Text>
+              <View aria-hidden style={styles.chevronBox}>
+                <View style={styles.chevron} />
+              </View>
+            </Pressable>
+          </>
         ) : (
           <>
             <View style={styles.leftTop}>
@@ -289,90 +351,44 @@ export default function CoordiScreen() {
               <Pressable
                 role="button"
                 aria-label={outfit.length > 0 ? "입은 옷 모두 벗기" : "입은 옷이 없어요"}
+                hitSlop={{ top: 4, bottom: 4 }}
                 onPress={clear}
                 style={[styles.pill, outfit.length === 0 && styles.dim]}
               >
-                <Text style={styles.pillLabel}>옷 비우기</Text>
+                <View aria-hidden style={styles.icon16}>
+                  <View style={styles.icon16Scale}>
+                    <PersonIcon color={INK} />
+                  </View>
+                </View>
+                <Text style={styles.pillLabel}>모두 벗기기</Text>
               </Pressable>
             </View>
-            <View style={styles.rightTop}>
-              <Pressable role="button" onPress={() => setSheet("my")} style={styles.myButton}>
-                <View style={styles.round}>
-                  <Text style={styles.roundIcon}>🔖</Text>
-                </View>
-                <Text style={styles.myLabel}>내 코디</Text>
-              </Pressable>
-              <View style={styles.column}>
-                <View style={styles.vpill}>
-                  <Pressable
-                    role="button"
-                    aria-label="트윈 확대"
-                    onPress={() => setZoom(Math.min(ZOOM.max, zoom + ZOOM.step))}
-                    style={styles.vbutton}
-                  >
-                    <Text style={[styles.vicon, zoom >= ZOOM.max && styles.dim]}>＋</Text>
-                  </Pressable>
-                  <Pressable
-                    role="button"
-                    aria-label="트윈 축소"
-                    onPress={() => {
-                      const next = Math.max(ZOOM.min, zoom - ZOOM.step);
-                      setZoom(next);
-                      if (next === 1) setPan({ x: 0, y: 0 });
-                    }}
-                    style={styles.vbutton}
-                  >
-                    <Text style={[styles.vicon, zoom <= ZOOM.min && styles.dim]}>−</Text>
-                  </Pressable>
-                </View>
-                <View style={styles.vpill}>
-                  <Pressable
-                    role="button"
-                    aria-label="이전 코디"
-                    onPress={() => step("undo")}
-                    style={styles.vbutton}
-                  >
-                    <Text style={[styles.vicon, !state.canUndo && styles.dim]}>↶</Text>
-                  </Pressable>
-                  <Pressable
-                    role="button"
-                    aria-label="다음 코디"
-                    onPress={() => step("redo")}
-                    style={styles.vbutton}
-                  >
-                    <Text style={[styles.vicon, !state.canRedo && styles.dim]}>↷</Text>
-                  </Pressable>
+            <Pressable role="button" onPress={() => setSheet("my")} style={styles.myButton}>
+              <View style={styles.round}>
+                <View aria-hidden style={styles.bookmark}>
+                  <View style={styles.bookmarkNotch} />
                 </View>
               </View>
-            </View>
+              <Text style={styles.myLabel}>내 코디</Text>
+            </Pressable>
+            {hint ? (
+              <View pointerEvents="none" style={styles.hint}>
+                <Text style={styles.hintLabel}>옷을 누르면 빠져요</Text>
+              </View>
+            ) : null}
             <Pressable
               role="button"
-              onPress={() => setRange(!range)}
+              hitSlop={{ top: 4, bottom: 4 }}
+              onPress={() => setSuggestSeed(0)}
               style={[styles.pill, styles.leftBottom]}
             >
-              <Text style={styles.pillLabel}>💡 추천 코디</Text>
+              <View aria-hidden style={styles.bulb}>
+                <View style={styles.bulbGlass} />
+                <View style={styles.bulbBase} />
+              </View>
+              <Text style={styles.pillLabelStrong}>내 옷으로 추천</Text>
             </Pressable>
-            {range ? (
-              <Pressable
-                role="button"
-                aria-label="추천 범위 닫기"
-                style={styles.rangeBackdrop}
-                onPress={() => setRange(false)}
-              />
-            ) : null}
             {generate.button}
-            <SuggestRange
-              visible={range}
-              counts={{
-                closet: closetItems.length,
-                favorite: closetItems.filter((item) => item.favorite).length,
-              }}
-              onBlocked={(message) => notify(message)}
-              onSubmit={(scopes) => {
-                setRange(false);
-                setSuggest({ scopes, seed: 0 });
-              }}
-            />
           </>
         )}
       </View>
@@ -383,7 +399,12 @@ export default function CoordiScreen() {
         </Text>
       ) : null}
 
-      <View style={styles.sheet}>
+      <View
+        style={[
+          styles.sheet,
+          { marginTop: -(expanded ? SHEET_OVERLAP.expanded : SHEET_OVERLAP.normal) },
+        ]}
+      >
         <View
           role="button"
           aria-label={expanded ? "옷 칸 내리고 트윈 크게 보기" : "옷 칸 크게 올리기"}
@@ -392,44 +413,37 @@ export default function CoordiScreen() {
         >
           <View style={styles.handle} />
         </View>
-        <ScrollView contentContainerStyle={styles.sheetBody}>
-          <CoordiGarmentSheet
-            twinKey={twinKey}
-            outfit={outfit}
-            catalog={catalog}
-            catalogMap={catalogMap}
-            recents={state.recents}
-            category={category}
-            onCategory={setCategory}
-            favoriteOnly={favoriteOnly}
-            onFavoriteOnly={setFavoriteOnly}
-            tab={tab}
-            onTab={setTab}
-            onWear={wear}
-            onDetail={(item) =>
-              item.ref.kind === "garment" && router.push(`/garment/${item.ref.id}`)
-            }
-            onFavorite={(item) =>
-              item.ref.kind === "garment" &&
-              void toggleFavorite(item.ref.id, !item.favorite).then(() =>
-                notify(item.favorite ? "즐겨찾기에서 뺐어요" : "즐겨찾기에 넣었어요"),
-              )
-            }
-            onAdd={() => setSheet("add")}
-            onPickOutfit={pickOutfit}
-            suggestion={
-              suggest ? (
-                <SuggestPanel
-                  picks={picks}
-                  scopes={suggest.scopes}
-                  onWear={wear}
-                  onRetry={() => setSuggest({ ...suggest, seed: suggest.seed + 1 })}
-                  onClose={() => setSuggest(null)}
-                />
-              ) : null
-            }
-          />
-        </ScrollView>
+        <CoordiGarmentSheet
+          twinKey={twinKey}
+          outfit={outfit}
+          catalog={catalog}
+          catalogMap={catalogMap}
+          recents={state.recents}
+          category={category}
+          onCategory={setCategory}
+          favoriteOnly={favoriteOnly}
+          onFavoriteOnly={setFavoriteOnly}
+          canUndo={state.canUndo}
+          canRedo={state.canRedo}
+          onStep={step}
+          showStrip={!expanded && suggestSeed === null}
+          tab={tab}
+          onTab={setTab}
+          onWear={wear}
+          onDetail={(item) => item.ref.kind === "garment" && router.push(`/garment/${item.ref.id}`)}
+          onAdd={() => setSheet("add")}
+          onPickOutfit={pickOutfit}
+          suggestion={
+            suggestSeed !== null ? (
+              <SuggestPanel
+                picks={picks}
+                onWear={wear}
+                onRetry={() => setSuggestSeed(suggestSeed + 1)}
+                onClose={() => setSuggestSeed(null)}
+              />
+            ) : null
+          }
+        />
       </View>
 
       <MyOutfitsSheet
@@ -502,88 +516,144 @@ export default function CoordiScreen() {
   );
 }
 
+const PILL_BG = "rgba(255,255,255,0.92)";
+
+// 자리와 크기는 와이어프레임 v27 코디 무대(390x844 기준 무대 308)를 따른다.
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   hiddenHeading: { position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" },
   stageWrap: { overflow: "hidden" },
-  stageInner: { flex: 1 },
-  leftTop: { position: "absolute", top: 12, left: 12, gap: 10, alignItems: "flex-start" },
-  face: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  stageInner: { width: "100%" },
+  leftTop: { position: "absolute", top: 12, left: 16, gap: 12, alignItems: "flex-start" },
+  face: { width: 48, height: 48 },
+  faceClip: {
+    flex: 1,
+    overflow: "hidden",
+    borderRadius: 24,
     borderWidth: 2,
-    borderColor: CHERRY,
-    backgroundColor: "#fff",
+    borderColor: "#fff",
+    backgroundColor: "#EFEDEA",
   },
-  faceClip: { flex: 1, overflow: "hidden", borderRadius: 20 },
   // 기본 사진(900x1205)에서 얼굴(가로 0.49, 세로 0.12)이 동그라미 가운데에 오게 키워 옮긴다.
-  faceImage: { position: "absolute", width: 200, height: 268, left: -78, top: -12 },
+  faceImage: { position: "absolute", width: 220, height: 295, left: -86, top: -13 },
   faceBadge: {
     position: "absolute",
-    right: -4,
-    bottom: -4,
+    left: 32,
+    top: 32,
     width: 18,
     height: 18,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9,
-    backgroundColor: "#151314",
+    borderWidth: 1.5,
+    borderColor: "#fff",
+    backgroundColor: INK,
   },
-  faceBadgeLabel: { color: "#fff", fontSize: 10 },
+  faceBadgeLabel: { color: "#fff", fontSize: 10, lineHeight: 12 },
   pill: {
+    height: 36,
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 8,
     borderRadius: 18,
-    backgroundColor: "#fff",
+    backgroundColor: PILL_BG,
   },
-  pillLabel: { fontSize: 13, fontWeight: "600", color: "#151314" },
+  pillLabel: { fontSize: 13, fontWeight: "500", color: INK },
+  pillLabelStrong: { fontSize: 13, fontWeight: "600", color: INK },
   dim: { opacity: 0.38 },
-  rightTop: { position: "absolute", top: 12, right: 12, flexDirection: "row", gap: 8 },
-  myButton: { alignItems: "center", gap: 3 },
+  icon16: { width: 16, height: 16, overflow: "hidden" },
+  icon16Scale: { width: 24, height: 24, margin: -4, transform: [{ scale: 16 / 24 }] },
+  myButton: {
+    position: "absolute",
+    top: 12,
+    right: 16,
+    width: 48,
+    alignItems: "center",
+    gap: 4,
+  },
   round: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
-    backgroundColor: "#fff",
+    borderRadius: 24,
+    backgroundColor: PILL_BG,
   },
-  roundIcon: { fontSize: 16 },
-  myLabel: { fontSize: 11, fontWeight: "600", color: "#151314" },
-  column: { gap: 8 },
-  vpill: { borderRadius: 18, backgroundColor: "#fff" },
-  vbutton: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  vicon: { fontSize: 17, color: "#151314" },
-  // 옷 칸 시트가 무대 아래를 16 만큼 덮으므로(sheet marginTop) 무대 아래 알약은 그만큼 올린다.
-  leftBottom: { position: "absolute", left: 12, bottom: 28 },
-  rangeBackdrop: { ...StyleSheet.absoluteFill, zIndex: 5 },
-  bigPill: {
+  myLabel: {
+    width: 80,
+    textAlign: "center",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "500",
+    color: INK,
+  },
+  // 책갈피 22: 선 1.75 의 세로 사각형과 아래 가운데 V 홈
+  bookmark: {
+    width: 14,
+    height: 18,
+    borderWidth: 1.75,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+    borderColor: INK,
+    overflow: "hidden",
+  },
+  bookmarkNotch: {
     position: "absolute",
-    right: 12,
-    bottom: 26,
+    left: 1.5,
+    bottom: -6,
+    width: 8,
+    height: 8,
+    borderTopWidth: 1.75,
+    borderLeftWidth: 1.75,
+    borderColor: INK,
+    backgroundColor: PILL_BG,
+    transform: [{ rotate: "45deg" }],
+  },
+  // 전구 16: 동그란 유리와 아래 받침
+  bulb: { width: 16, height: 16, alignItems: "center" },
+  bulbGlass: { width: 11, height: 11, borderRadius: 5.5, borderWidth: 1.75, borderColor: INK },
+  bulbBase: { width: 6, height: 3, marginTop: 1, borderRadius: 1, backgroundColor: INK },
+  // 옷 칸 시트가 무대 아래를 20 만큼 덮으므로 무대 아래 알약은 아랫변을 무대 끝에서 32 위에 둔다.
+  leftBottom: { position: "absolute", left: 16, bottom: 32 },
+  hint: {
+    position: "absolute",
+    alignSelf: "center",
+    bottom: 80,
+    height: 32,
+    justifyContent: "center",
     paddingHorizontal: 12,
-    paddingVertical: 7,
     borderRadius: 16,
-    backgroundColor: "#fff",
+    backgroundColor: "rgba(21,19,20,0.8)",
+  },
+  hintLabel: { color: "#fff", fontSize: 13, fontWeight: "500" },
+  miniLeft: { position: "absolute", left: 16, top: 16 },
+  miniRight: { position: "absolute", right: 16, top: 16 },
+  chevronBox: { width: 16, height: 16, alignItems: "center", justifyContent: "center" },
+  chevron: {
+    width: 7,
+    height: 7,
+    marginTop: -4,
+    borderRightWidth: 1.75,
+    borderBottomWidth: 1.75,
+    borderColor: INK,
+    transform: [{ rotate: "45deg" }],
   },
   hiddenLine: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    paddingBottom: 22,
+    paddingBottom: 26,
     fontSize: 12,
-    color: "#76736C",
+    color: "#5F5C56",
   },
   sheet: {
     flex: 1,
-    marginTop: -16,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     backgroundColor: "#fff",
+    boxShadow: "0px -2px 12px rgba(21,19,20,0.06)",
   },
-  handleArea: { alignItems: "center", paddingVertical: 8 },
-  handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: "#D9D7D2" },
-  sheetBody: { paddingHorizontal: 16, paddingBottom: 32 },
+  handleArea: { height: 21, alignItems: "center", paddingTop: 8 },
+  handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(21,19,20,0.2)" },
 });
