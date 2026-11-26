@@ -10,7 +10,7 @@ const box = async (locator: Locator) => {
   return rect;
 };
 
-const recoList = (page: Page) => page.getByRole("list", { name: "홈 추천 코디" });
+const recoList = (page: Page) => page.getByRole("list", { name: "홈 추천 목록" });
 
 /** 빈 저장소에서 생년월일, 하린, 「건너뛰기」 로 온보딩을 넘기고 둘러보기를 닫는다. 룩도 옷도 없다. */
 async function skipOnboardingAsHarin(page: Page) {
@@ -37,7 +37,7 @@ test("룩이 없으면 「최근 저장한 룩」 칸에 추천 코디 줄이 �
   );
   await expect(page.getByText("온보딩에서 저장한 첫 코디가 여기에 보여요", { exact: false })).toHaveCount(0);
   await expect(page.getByText("추천 코디", { exact: true })).toBeVisible();
-  await expect(page.getByText("NUNO가 고른 코디예요", { exact: true })).toBeVisible();
+  await expect(page.getByText("다른 사람들의 코디에서 골랐어요", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "코디하러 가기" })).toBeVisible();
   const cards = recoList(page).getByRole("button");
   await expect(cards.first()).toContainText("NUNO 추천");

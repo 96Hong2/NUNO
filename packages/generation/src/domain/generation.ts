@@ -396,7 +396,7 @@ export function outfitKeyOf(manifest: GenerationManifest): string {
 
 /** 결과 화면 입은 옷 줄 오른쪽 칸 이름 */
 export function closetLabel(closet: ManifestCloset): string {
-  if (closet === "mine") return "내 옷";
+  if (closet === "mine") return "내 옷장";
   if (closet === "wanted") return "담은 옷";
   return "견본 옷";
 }

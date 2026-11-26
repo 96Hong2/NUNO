@@ -30,8 +30,8 @@ interface HomeRecoStripProps {
 
 /**
  * 홈 시트 칸이 비었을 때 빈 안내 대신 보이는 추천 코디 줄.
- * 첫 판은 피팅룸 코디 탭 「추천 코디」 와 같은 NUNO 추천 코디를 쓴다.
- * 넓히기 단계에서 다른 사용자의 공개 룩북이 더해지면 설명 줄을 「다른 사람들의 코디에서 골랐어요」 로 바꾼다.
+ * 첫 판은 피팅룸 코디 탭 「추천 코디」 와 같은 NUNO 추천 코디를 쓴다. 넓히기 단계에서 다른 사용자의 공개 룩북이 더해진다.
+ * 목록 이름에 「추천 코디」 를 넣지 않는다. 탭을 옮겨도 홈이 남아 코디 탭의 「추천 코디」 목록과 이름이 겹친다.
  */
 export function HomeRecoStrip({ twinKey, action, onPick }: HomeRecoStripProps) {
   const looks = recoLooks(twinKey);
@@ -40,11 +40,11 @@ export function HomeRecoStrip({ twinKey, action, onPick }: HomeRecoStripProps) {
       <View style={styles.head}>
         <View style={styles.headText}>
           <Text style={styles.title}>추천 코디</Text>
-          <Text style={styles.sub}>NUNO가 고른 코디예요</Text>
+          <Text style={styles.sub}>다른 사람들의 코디에서 골랐어요</Text>
         </View>
         {action}
       </View>
-      <View role="list" aria-label="홈 추천 코디">
+      <View role="list" aria-label="홈 추천 목록">
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
