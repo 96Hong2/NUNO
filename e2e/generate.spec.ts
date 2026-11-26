@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 
-// 「이대로 입히기」 흐름. 기대값은 로드맵 T7 DoD(plan_T7 D1~D11)와 plan 「화면 문구」 에서 가져온다.
+// 「이대로 입히기」 흐름. 기대값은 로드맵 T7 DoD(plan_T7 D1~D11)에서 가져오고, 화면 문구는 와이어프레임 v27 을 따른다.
 // 시험마다 새 브라우저라 시험 로그인 subject 가 새로 생기고, 서버에는 새 사용자다.
 // API 와 worker 는 playwright.config.ts 가 scripts/e2e-api.mjs 로 nuno_e2e DB 에 띄운다.
 
@@ -68,7 +68,7 @@ async function wearCoat(page: Page) {
 async function signUpFromStage(page: Page) {
   await stageButton(page).click();
   await page
-    .getByRole("dialog", { name: "골드를 쓰려면 가입해요" })
+    .getByRole("dialog", { name: "완성 룩을 만들려면 가입이 필요해요" })
     .getByRole("button", { name: "시험 계정으로 계속하기" })
     .click();
   await expect(
@@ -100,8 +100,8 @@ test("D1, D2: 가입 전 「이대로 입히기」 는 가입 시트를 먼저 �
   await wearCoat(page);
   await expect(page.getByText("무료 2장 남음")).toBeVisible();
   await stageButton(page).click();
-  const join = page.getByRole("dialog", { name: "골드를 쓰려면 가입해요" });
-  await expect(join).toContainText("닫아도 지금 코디는 이 휴대폰에 그대로 남아요.");
+  const join = page.getByRole("dialog", { name: "완성 룩을 만들려면 가입이 필요해요" });
+  await expect(join).toContainText("가입은 무료예요. 닫아도 지금 코디는 이 휴대폰에 그대로 남아요");
   await join.getByRole("button", { name: "닫기" }).click();
   await expect(join).toHaveCount(0);
   await expect(page.getByRole("button", { name: `무대의 ${COAT}` })).toBeVisible();
@@ -150,10 +150,10 @@ test("D3~D8: 동의 화면을 먼저 거쳐 무료 장으로 만들고, 만드�
            AND c.text_version IS NOT NULL AND c.agreed_at IS NOT NULL`),
   ).toBe("1");
 
-  await expect(makeSheet(page)).toContainText("이번에는 첫 체험 무료 2장 중 1장을 써요");
+  await expect(makeSheet(page)).toContainText("무료로 만들 수 있는 사진이 2장 남았어요");
   await makeSheet(page).getByRole("button", { name: "무료로 만들기" }).click();
   await expect(page.getByRole("progressbar", { name: "만드는 중" })).toBeVisible();
-  await expect(page.getByText("앞모습을 그리고 있어요")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("완성 룩을 만들고 있어요")).toBeVisible({ timeout: 10_000 });
   await expect(page.getByText(/화면을 닫아도 계속 만들어요/)).toBeVisible();
 
   await expect(page.getByText("✦ AI 생성")).toBeVisible({ timeout: 20_000 });
@@ -170,7 +170,7 @@ test("D3~D8: 동의 화면을 먼저 거쳐 무료 장으로 만들고, 만드�
   await expect(page.getByText("✦ AI 생성")).toBeVisible();
 
   await page.getByRole("button", { name: "내 룩북에 저장" }).click();
-  await expect(page.getByRole("alert")).toContainText("룩북에 저장했어요. 나만 볼 수 있어요");
+  await expect(page.getByRole("alert")).toContainText("모든 룩에 저장했어요");
   await expect(page.getByRole("button", { name: "룩북에 저장했어요" })).toBeVisible();
   await page.getByRole("button", { name: "뒤로" }).click();
   await expect(leave).toHaveCount(0);
@@ -187,8 +187,9 @@ test("D9: 「나가기」 전에 적어 둔 결과 서명 주소는 나간 뒤 �
   await makeSheet(page).getByRole("button", { name: "무료로 만들기" }).click();
   await expect(page.getByRole("progressbar", { name: "만드는 중" })).toBeVisible();
   await page.getByRole("button", { name: "닫기" }).click();
-  await expect(page.getByRole("alert")).toContainText("다 만들면 알려 드릴게요");
-  await expect(page.getByRole("alert")).toContainText("완성 룩이 다 됐어요", { timeout: 20_000 });
+  // 닫으면 알림 없이 코디 무대로 돌아가고, 무대 단추가 「완성 룩 만드는 중」 으로 바뀐다.
+  await expect(page.getByRole("button", { name: "완성 룩 만드는 중" })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("완성 룩이 나왔어요", { timeout: 20_000 });
   await page.getByRole("alert").getByRole("button", { name: "보기" }).click();
 
   const photo = page.getByRole("img", { name: "완성 룩 사진" }).first().locator("img");
@@ -219,9 +220,10 @@ test("D10: 무료 장 작업을 가짜 공급사가 거절하면 「만들지 �
   });
   await expect(page.getByText("무료 1장을 돌려드렸어요")).toBeVisible();
   await expect(page.getByText("+1장")).toBeVisible();
-  await expect(page.getByText("2장", { exact: true })).toBeVisible();
+  // 실패 화면에는 반환 줄 하나만 있고 지금 남은 장 줄은 없다.
+  await expect(page.getByText("지금 남은", { exact: false })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "다른 옷으로 다시 해 보기" }).click();
+  await page.getByRole("button", { name: "코디 바꾸기" }).click();
   await expect(page.getByText("무료 2장 남음")).toBeVisible();
   await page.getByRole("tab", { name: "마이" }).click();
   await page.getByRole("button", { name: "내 골드 0골드" }).click();
@@ -240,21 +242,20 @@ test("D11: 무료 장을 다 쓴 뒤 골드로 만든 작업이 거절되면 4�
   await makeFreeAndSave(page);
   await stageButton(page).click();
   await makeFreeAndSave(page);
-  await expect(page.getByText("4골드", { exact: true })).toBeVisible();
+  await expect(stageButton(page)).toContainText("1장 4골드");
 
   await dev(page, "provider", { mode: "refuse" });
   await stageButton(page).click();
-  await expect(makeSheet(page)).toContainText("이번에는 내 골드에서 4골드를 써요");
-  await makeSheet(page).getByRole("button", { name: "만들기", exact: true }).click();
-  const confirm = page.getByRole("dialog", { name: "완성 룩 1장 만들기" });
-  await expect(confirm).toContainText("20 → 16골드");
-  await confirm.getByRole("button", { name: "4골드 쓰기" }).click();
+  // 같은 「완성 룩 만들기」 시트가 골드 상태로 그려진다. 따로 뜨는 확인 시트는 없다.
+  await expect(makeSheet(page).getByText("내 골드", { exact: true })).toBeVisible();
+  await expect(makeSheet(page).getByText("20골드", { exact: true })).toBeVisible();
+  await makeSheet(page).getByRole("button", { name: "4골드 사용" }).click();
 
   await expect(page.getByText("골드를 돌려드렸어요")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText("+4 골드")).toBeVisible();
-  await expect(page.getByText("20 골드")).toBeVisible();
+  await expect(page.getByText("+4골드")).toBeVisible();
+  await expect(page.getByText("지금 남은", { exact: false })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "다른 옷으로 다시 해 보기" }).click();
+  await page.getByRole("button", { name: "코디 바꾸기" }).click();
   await page.getByRole("tab", { name: "마이" }).click();
   await page.getByRole("button", { name: "내 골드 20골드" }).click();
   const wallet = page.getByTestId("gold-screen");
@@ -264,7 +265,7 @@ test("D11: 무료 장을 다 쓴 뒤 골드로 만든 작업이 거절되면 4�
   await expect(ledger.getByText("+4골드")).toBeVisible();
 });
 
-test("무료 하루 한도에 닿으면 무료 장이 남아도 무대 단추가 4골드이고, 「4골드 쓰기」 로 골드 작업이 접수된다", async ({
+test("무료 하루 한도에 닿으면 무료 장이 남아도 무대 단추가 4골드이고, 「4골드 사용」 으로 골드 작업이 접수된다", async ({
   page,
 }) => {
   await wearCoat(page);
@@ -284,14 +285,12 @@ test("무료 하루 한도에 닿으면 무료 장이 남아도 무대 단추가
   await page.getByRole("button", { name: "모두 동의하기" }).click();
   await page.getByRole("button", { name: "동의하고 만들기" }).click();
 
-  await expect(makeSheet(page)).toContainText("이번에는 내 골드에서 4골드를 써요");
+  await expect(makeSheet(page).getByText("내 골드", { exact: true })).toBeVisible();
+  await expect(makeSheet(page).getByText("20골드", { exact: true })).toBeVisible();
   await expect(stageButton(page)).toContainText("4골드");
   await expect(stageButton(page)).not.toContainText("무료");
-  await makeSheet(page).getByRole("button", { name: "만들기", exact: true }).click();
-  const confirm = page.getByRole("dialog", { name: "완성 룩 1장 만들기" });
-  await expect(confirm).toContainText("오늘은 무료로 더 만들 수 없어요. 골드로 만들어요");
-  await expect(confirm).toContainText("20 → 16골드");
-  await confirm.getByRole("button", { name: "4골드 쓰기" }).click();
+  await expect(makeSheet(page)).toContainText("오늘은 무료로 더 만들 수 없어요");
+  await makeSheet(page).getByRole("button", { name: "4골드 사용" }).click();
 
   await expect(page.getByRole("progressbar", { name: "만드는 중" })).toBeVisible();
   expect(

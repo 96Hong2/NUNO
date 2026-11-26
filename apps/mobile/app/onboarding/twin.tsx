@@ -8,7 +8,6 @@ import { withRo } from "../../src/ui/korean-particle";
 import { useProfile } from "../../src/ui/profile-gate";
 import { StepDots } from "../../src/ui/step-dots";
 import { useAppToast } from "../../src/ui/app-toast";
-import { CloseIcon } from "../../src/ui/line-icon";
 import { TWIN_ASSETS } from "../../src/ui/twin-assets";
 import { TwinCard } from "../../src/ui/twin-card";
 
@@ -25,7 +24,7 @@ const KINDS: { kind: PresetKind; label: string }[] = [
 ];
 
 // 온보딩 1단계. 「<이름>으로 시작」 은 트윈을 저장하고 스타일 단계로 간다.
-// 왼쪽 위 X 는 기본 트윈으로 온보딩을 끝낸다. 프로필을 다시 읽으면 루트의 Stack.Protected 가 홈으로 보낸다.
+// 오른쪽 위 「건너뛰기」 는 기본 트윈으로 온보딩을 끝낸다. 프로필을 다시 읽으면 루트의 Stack.Protected 가 홈으로 보낸다.
 // 「실사」, 「인형」 을 바꿔도 고른 트윈은 그대로 둔다. 단추는 다른 종류 탭에서도 고른 트윈 이름을 보인다.
 export default function TwinPickScreen() {
   const { refresh } = useProfile();
@@ -68,20 +67,19 @@ export default function TwinPickScreen() {
         ]}
       >
         <View style={styles.topRow}>
+          <StepDots current={1} />
           <Pressable
             role="button"
-            aria-label="닫기"
             onPress={() =>
               void save(async () => {
                 await skipTwinPick();
                 await refresh();
               })
             }
-            style={styles.close}
+            style={styles.skip}
           >
-            <CloseIcon color={INK} />
+            <Text style={styles.skipLabel}>건너뛰기</Text>
           </Pressable>
-          <StepDots current={1} />
         </View>
         <Text role="heading" aria-level={1} style={styles.title}>
           옷을 입어 볼 트윈을 골라 주세요
@@ -127,7 +125,9 @@ export default function TwinPickScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}>
-        <Text style={styles.hint}>키와 체형도 트윈 탭에서 바꿀 수 있어요{"\n"}몸 치수는 받지 않아요</Text>
+        <Text style={styles.hint}>
+          키와 체형도 트윈 탭에서 바꿀 수 있어요{"\n"}몸 치수는 받지 않아요
+        </Text>
         <Pressable
           role="button"
           onPress={start}
@@ -145,9 +145,10 @@ export default function TwinPickScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: PAPER },
   body: { paddingHorizontal: 20 },
-  // 머리 줄 높이 44. X 누르는 영역 44 의 왼쪽을 화면 끝 8 에 둔다.
-  topRow: { height: 44, flexDirection: "row", alignItems: "center", gap: 4 },
-  close: { width: 44, height: 44, marginLeft: -12, alignItems: "center", justifyContent: "center" },
+  // 머리 줄 높이 44. 왼쪽 점 넷과 「1 / 4」, 오른쪽 「건너뛰기」(2~4단계 머리 줄과 같은 글자).
+  topRow: { height: 44, flexDirection: "row", alignItems: "center" },
+  skip: { height: 44, marginLeft: "auto", justifyContent: "center" },
+  skipLabel: { fontSize: 15, fontWeight: "500", color: SUB },
   title: { marginTop: 8, fontSize: 24, lineHeight: 32, fontWeight: "700", color: INK },
   lead: { marginTop: 8, gap: 2 },
   leadText: { fontSize: 15, lineHeight: 22, color: INK },

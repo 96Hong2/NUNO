@@ -25,6 +25,10 @@ test.describe("빈 저장소의 온보딩", () => {
       page.getByRole("heading", { name: "옷을 입어 볼 트윈을 골라 주세요" }),
     ).toBeVisible();
     await expect(page.getByText("1 / 4", { exact: true })).toBeVisible();
+    // 01-1 머리 줄: 왼쪽 위 X 없이 오른쪽 위 「건너뛰기」.
+    await expect(page.getByRole("button", { name: "닫기" })).toHaveCount(0);
+    const skip = await box(page.getByRole("button", { name: "건너뛰기" }));
+    expect(Math.round(skip.x + skip.width)).toBe(370);
     await expect(page.getByText("트윈은 나 대신 옷을 입어 볼 가상 모델이에요")).toBeVisible();
     await expect(page.getByText("나중에 피팅룸 트윈 탭에서 바꿀 수 있어요")).toBeVisible();
     await expect(page.getByText("몸 치수는 받지 않아요")).toBeVisible();
@@ -100,15 +104,26 @@ test("하단 탭 「홈」, 「마이」 는 아이콘과 11px 이름이고, 「
   expect(Math.round(bar.y - circle.y)).toBe(20);
 });
 
-test("피팅룸 머리 줄의 「피팅룸」 은 22px 이고, 옷장 칸의 「+ 옷 추가」 는 높이 40 알약이다", async ({
+test("홈 머리글은 「NUNO」 20px 800 이다", async ({ page }) => {
+  await page.goto("/");
+  await expect(header(page)).toHaveText("NUNO");
+  await expect(header(page)).toHaveCSS("font-size", "20px");
+  await expect(header(page)).toHaveCSS("font-weight", "800");
+});
+
+test("피팅룸 「코디」 칸은 머리 줄 없이 위 칸 줄이 화면 맨 위에 오고, 옷장 칸 머리 줄의 「피팅룸」 은 22px, 「+ 옷 추가」 는 높이 40 알약이다", async ({
   page,
 }) => {
   await page.goto("/");
   await page.getByRole("tab", { name: "피팅룸", exact: true }).click();
-  await expect(header(page)).toHaveText("피팅룸");
-  await expect(header(page)).toHaveCSS("font-size", "22px");
+  await expect(page).toHaveURL("/fitting/coordi");
+  await expect(header(page)).toHaveCount(0);
+  const cells = await box(page.getByRole("tablist", { name: "피팅룸 칸" }));
+  expect(Math.round(cells.y)).toBe(0);
 
   await page.getByRole("tablist", { name: "피팅룸 칸" }).getByRole("tab", { name: "옷장" }).click();
+  await expect(header(page)).toHaveText("피팅룸");
+  await expect(header(page)).toHaveCSS("font-size", "22px");
   const add = page.getByRole("button", { name: "옷 추가", exact: true }).first();
   const pill = await box(add);
   expect(Math.round(pill.height)).toBe(40);

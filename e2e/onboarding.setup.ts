@@ -7,10 +7,10 @@ setup("온보딩을 마친 기기 저장소를 만든다", async ({ page, contex
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "생년월일을 알려 주세요" })).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
-  await page.getByRole("button", { name: "닫기" }).click();
+  await page.getByRole("button", { name: "건너뛰기" }).click();
   await expect(page.getByRole("tab", { name: "홈" })).toBeVisible();
   const tour = page.getByRole("dialog", { name: "처음 둘러보기" });
-  await tour.getByRole("button", { name: "닫기" }).click();
+  await tour.getByRole("button", { name: "건너뛰기" }).click();
   await expect(tour).toHaveCount(0);
   await page.goto("about:blank");
   await context.storageState({ path: ONBOARDED_STATE, opfs: true });

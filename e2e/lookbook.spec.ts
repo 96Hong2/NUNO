@@ -56,7 +56,7 @@ async function makeThreeLooks(page: Page) {
   await wearOnly(page, FIRST);
   await stageButton(page).click();
   await page
-    .getByRole("dialog", { name: "골드를 쓰려면 가입해요" })
+    .getByRole("dialog", { name: "완성 룩을 만들려면 가입이 필요해요" })
     .getByRole("button", { name: "시험 계정으로 계속하기" })
     .click();
   await page.getByRole("button", { name: "모두 동의하기" }).click();
@@ -72,11 +72,7 @@ async function makeThreeLooks(page: Page) {
 
   await wearOnly(page, THIRD);
   await stageButton(page).click();
-  await makeSheet(page).getByRole("button", { name: "만들기", exact: true }).click();
-  await page
-    .getByRole("dialog", { name: "완성 룩 1장 만들기" })
-    .getByRole("button", { name: "4골드 쓰기" })
-    .click();
+  await makeSheet(page).getByRole("button", { name: "4골드 사용" }).click();
   await saveResult(page);
 }
 
@@ -219,7 +215,7 @@ test("D13~D15: 별과 「즐겨찾기만」, 새 룩북에 복사해서 넣기, 
   await expect(sheet.getByRole("radio", { name: /^주말 데이트/ })).toHaveCount(0);
   const copyButton = sheet.getByRole("button", { name: "복사해서 넣기" });
   const moveButton = sheet.getByRole("button", { name: "옮기기" });
-  await expect(copyButton.getByText("복사해서 넣기")).toHaveCSS("color", "rgb(118, 115, 108)");
+  await expect(copyButton.getByText("복사해서 넣기")).toHaveCSS("color", "rgb(95, 92, 86)");
   await expect(moveButton).toHaveCSS("background-color", "rgb(231, 230, 227)");
   await copyButton.click();
   await expect(toast(page)).toContainText("넣을 룩북을 먼저 골라 주세요");
@@ -260,7 +256,7 @@ test("책장의 「새 룩북」 카드로 빈 룩북을 만들면 「아직 룩
   await wearOnly(page, FIRST);
   await stageButton(page).click();
   await page
-    .getByRole("dialog", { name: "골드를 쓰려면 가입해요" })
+    .getByRole("dialog", { name: "완성 룩을 만들려면 가입이 필요해요" })
     .getByRole("button", { name: "시험 계정으로 계속하기" })
     .click();
   await page.getByRole("button", { name: "모두 동의하기" }).click();
@@ -294,7 +290,7 @@ test("룩북 크게 보기에서 사진 서명 주소가 열리지 않으면 룩
   await wearOnly(page, FIRST);
   await stageButton(page).click();
   await page
-    .getByRole("dialog", { name: "골드를 쓰려면 가입해요" })
+    .getByRole("dialog", { name: "완성 룩을 만들려면 가입이 필요해요" })
     .getByRole("button", { name: "시험 계정으로 계속하기" })
     .click();
   await page.getByRole("button", { name: "모두 동의하기" }).click();

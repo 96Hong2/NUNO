@@ -57,12 +57,13 @@ test("코디를 바꾸면 최근 줄 맨 앞에 「입는 중」 이 붙고 새�
   await expect(sheet.getByRole("button", { name: /코디 입히기$/ })).toHaveCount(1);
 });
 
-test("무대 「추천 코디」 범위 창에는 옷장과 즐겨찾기 두 범위만 있다", async ({ page }) => {
+test("무대 「내 옷으로 추천」 은 범위 창 없이 옷장에 있는 옷에서 고르고, 스토어 범위는 없다", async ({
+  page,
+}) => {
   await openCoordi(page);
-  await page.getByRole("button", { name: "💡 추천 코디" }).click();
-  const range = page.getByRole("dialog", { name: "추천 범위" });
-  await expect(range.getByRole("checkbox")).toHaveCount(2);
-  await expect(range.getByRole("checkbox", { name: /옷장에 있는 옷/ })).toBeVisible();
-  await expect(range.getByRole("checkbox", { name: /즐겨찾기한 옷/ })).toBeVisible();
-  await expect(range.getByText(/찜한 스토어 옷|스토어 전체/)).toHaveCount(0);
+  await page.getByRole("button", { name: "내 옷으로 추천" }).click();
+  await expect(page.getByRole("dialog", { name: "추천 범위" })).toHaveCount(0);
+  const panel = page.getByRole("region", { name: "지금 코디에 어울리는 옷" });
+  await expect(panel).toContainText("옷장에 있는 옷에서 골랐어요");
+  await expect(page.getByText(/찜한 스토어 옷|스토어 전체/)).toHaveCount(0);
 });

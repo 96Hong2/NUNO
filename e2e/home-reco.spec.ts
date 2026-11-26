@@ -18,9 +18,11 @@ async function skipOnboardingAsHarin(page: Page) {
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByRole("radio", { name: "하린" }).click();
   await page.getByRole("button", { name: "하린으로 시작" }).click();
+  // 트윈 고르기에도 「건너뛰기」 가 있어, 스타일 단계가 뜬 뒤에 누른다.
+  await expect(page.getByRole("heading", { name: "좋아하는 스타일을 골라 주세요" })).toBeVisible();
   await page.getByRole("button", { name: "건너뛰기" }).click();
   const tour = page.getByRole("dialog", { name: "처음 둘러보기" });
-  await tour.getByRole("button", { name: "닫기" }).click();
+  await tour.getByRole("button", { name: "건너뛰기" }).click();
   await expect(tour).toHaveCount(0);
   await expect(page.getByRole("img", { name: "하린 기본 코디" }).first()).toBeVisible();
 }
@@ -131,7 +133,7 @@ test("룩이 있으면 시트를 올렸을 때만 「+ 코디하기」 가 보�
   const sheet = page.getByRole("dialog", { name: "룩북 저장" });
   await sheet.getByRole("button", { name: "내 룩북에 저장" }).click();
   const tour = page.getByRole("dialog", { name: "처음 둘러보기" });
-  await tour.getByRole("button", { name: "닫기" }).click();
+  await tour.getByRole("button", { name: "건너뛰기" }).click();
   await expect(tour).toHaveCount(0);
 
   await expect(page.getByText("저장한 룩 1개")).toBeVisible();

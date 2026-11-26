@@ -26,12 +26,15 @@ export default function FittingLayout() {
   const insets = useSafeAreaInsets();
   const { moving } = useGlobalSearchParams<{ moving?: string }>();
   const inCloset = pathname.startsWith("/fitting/closet");
+  // 「코디」 칸은 무대를 넓게 쓰려고 「피팅룸」 머리 줄을 두지 않는다. 위 칸 줄이 상태 표시줄 바로 아래에 온다.
+  const inCoordi = pathname === "/fitting" || pathname.startsWith("/fitting/coordi");
   return (
     <View style={styles.container}>
       {/* 옷장 칸에서만 머리 줄 오른쪽에 「+ 옷 추가」 를 둔다. 누르면 옷장의 「옷을 어떻게 추가할까요?」 시트가 열린다.
           「여러 벌 옮기기」 중(moving=1)에는 숨긴다. */}
       <Tabs.Screen
         options={{
+          headerShown: !inCoordi,
           headerTitleAlign: "left",
           headerTitleStyle: styles.headerTitle,
           headerTitleContainerStyle: styles.headerTitleBox,
@@ -53,7 +56,11 @@ export default function FittingLayout() {
               : undefined,
         }}
       />
-      <View role="tablist" aria-label="피팅룸 칸" style={styles.cells}>
+      <View
+        role="tablist"
+        aria-label="피팅룸 칸"
+        style={[styles.cells, inCoordi && { height: 44 + insets.top, paddingTop: insets.top }]}
+      >
         {CELLS.map(({ href, label }) => {
           const selected = pathname === href || pathname.startsWith(`${href}/`);
           return (

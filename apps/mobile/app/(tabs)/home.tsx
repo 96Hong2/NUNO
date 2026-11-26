@@ -1,5 +1,6 @@
 import {
   outfitTitle,
+  RECOMMENDED_LOOKS,
   refKey,
   samplePiece,
   type OutfitPiece,
@@ -8,7 +9,7 @@ import {
 import { DEFAULT_PRESET_TWIN, presetTwin, type PresetTwinKey } from "@nuno/twin";
 import { categoryLabel, type GarmentMethod } from "@nuno/wardrobe";
 import { Tabs, useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   Image,
   Pressable,
@@ -17,6 +18,7 @@ import {
   Text,
   View,
   type ScrollViewInstance,
+  type ViewInstance,
 } from "react-native";
 import {
   changeOutfit,
@@ -41,6 +43,7 @@ import { FirstTour } from "../../src/ui/first-tour";
 import { HomeRecoStrip } from "../../src/ui/home-reco-strip";
 import { BellIcon } from "../../src/ui/line-icon";
 import { LookCard } from "../../src/ui/look-card";
+import { LOOK_PHOTOS } from "../../src/ui/sample-assets";
 import { GarmentCard } from "../../src/ui/garment-card";
 import { useProfile } from "../../src/ui/profile-gate";
 import { useAppToast } from "../../src/ui/app-toast";
@@ -95,6 +98,8 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [sheetWidth, setSheetWidth] = useState(0);
   const { start } = useStartGarment("mine");
+  // 처음 둘러보기 1 / 2 가 밝히는 무대 「코디」 단추
+  const coordiButton = useRef<ViewInstance>(null);
 
   // 시트 탭을 누르면 시트 윗변까지 올린다. 시트가 화면 위에 닿으면 머리글이 트윈 얼굴, 이름, 코디 이름으로 바뀐다.
   const scroll = useRef<ScrollViewInstance>(null);
@@ -283,7 +288,10 @@ export default function HomeScreen() {
                     </View>
                   </View>
                 )
-              : "홈",
+              : "NUNO",
+          headerTitleAlign: "left",
+          headerTitleStyle: styles.wordmark,
+          headerTitleContainerStyle: styles.wordmarkBox,
           headerStyle: StyleSheet.flatten([styles.header, { height: HEADER_HEIGHT + insets.top }]),
           headerShadowVisible: false,
           headerRight: () => (
@@ -338,7 +346,7 @@ export default function HomeScreen() {
             </StageButton>
           </View>
           <View style={[styles.stageColumn, styles.stageRight]}>
-            <StageButton label="코디" strong onPress={openCoordi}>
+            <StageButton label="코디" strong buttonRef={coordiButton} onPress={openCoordi}>
               <View testID="stage-coordi-circle" style={[styles.circle, styles.circleInk]}>
                 <HangerIcon color="#fff" />
               </View>
@@ -400,14 +408,10 @@ export default function HomeScreen() {
       />
       <FirstTour
         visible={!profile.tourSeen}
-        lead={
-          looks && looks.length > 0
-            ? {
-                title: "첫 코디를 저장했어요",
-                body: "룩북에 저장했어요. 자주 쓰는 곳만 짧게 알려 드릴게요",
-              }
-            : undefined
-        }
+        lead={looks !== null && looks.length > 0}
+        anchorRef={coordiButton}
+        photo={twin ? LOOK_PHOTOS[RECOMMENDED_LOOKS[twin]?.[0]?.key ?? ""] : undefined}
+        onAddGarment={() => void finishTour().then(() => setAdding(true))}
         onDone={() => void finishTour()}
       />
     </View>
@@ -418,14 +422,21 @@ interface StageButtonProps {
   label: string;
   /** 잉크색 원 「코디」 는 이름을 600 으로 */
   strong?: boolean;
+  buttonRef?: RefObject<ViewInstance | null>;
   onPress: () => void;
   children: ReactNode;
 }
 
 /** 무대 원형 단추: 원 48 과 아래 이름 13px. 누르는 영역은 원과 이름을 합친 72×70 이다. */
-function StageButton({ label, strong, onPress, children }: StageButtonProps) {
+function StageButton({ label, strong, buttonRef, onPress, children }: StageButtonProps) {
   return (
-    <Pressable role="button" aria-label={label} onPress={onPress} style={styles.stageButton}>
+    <Pressable
+      ref={buttonRef}
+      role="button"
+      aria-label={label}
+      onPress={onPress}
+      style={styles.stageButton}
+    >
       <View style={styles.circleBox}>{children}</View>
       <Text style={[styles.stageLabel, strong && styles.stageLabelStrong]}>{label}</Text>
     </Pressable>
@@ -514,6 +525,9 @@ const icon = StyleSheet.create({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   header: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: LINE },
+  // 시트를 내린 머리 줄 왼쪽 「NUNO」 20px 800. 시트를 올리면 트윈 얼굴과 이름으로 바뀐다.
+  wordmark: { fontSize: 20, lineHeight: 26, fontWeight: "800", letterSpacing: 0.5, color: INK },
+  wordmarkBox: { marginLeft: 16 },
   // 종 24 아이콘, 누르는 영역 44. 오른쪽 끝을 화면 안쪽 16 에 맞춘다.
   bell: { width: 44, height: 44, marginRight: 6, alignItems: "center", justifyContent: "center" },
   headTwin: { flexDirection: "row", alignItems: "center", gap: 10 },
