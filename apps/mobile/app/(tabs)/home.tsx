@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import {
   changeOutfit,
+  leaveOutfitNotice,
   loadCoordi,
   onCoordiChange,
   wearTodayLook,
@@ -33,10 +34,12 @@ import {
   onClosetChange,
   type ClosetView,
 } from "../../src/composition/wardrobe";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddGarmentSheet } from "../../src/ui/add-garment-sheet";
 import { buildCatalog } from "../../src/ui/coordi-catalog";
 import { FirstTour } from "../../src/ui/first-tour";
 import { HomeRecoStrip } from "../../src/ui/home-reco-strip";
+import { BellIcon } from "../../src/ui/line-icon";
 import { LookCard } from "../../src/ui/look-card";
 import { GarmentCard } from "../../src/ui/garment-card";
 import { useProfile } from "../../src/ui/profile-gate";
@@ -47,6 +50,8 @@ import { useStartGarment } from "../../src/ui/use-start-garment";
 
 const INK = "#151314";
 const SUB = "#5F5C56";
+/** 홈 머리 줄 높이(상태 표시줄 아래). 피팅룸 머리 줄과 같다 */
+const HEADER_HEIGHT = 52;
 const LINE = "#E7E6E3";
 const SURFACE = "#F6F5F3";
 
@@ -78,10 +83,16 @@ export default function HomeScreen() {
   const [switching, setSwitching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [cell, setCell] = useState<CellKey>("recentLooks");
+  // 두 칸 목록은 읽기 전 null 이다. 다 읽고 0건일 때만 추천 코디 줄을 보인다.
   const [recent, setRecent] = useState<ClosetView | null>(null);
-  const [looks, setLooks] = useState<BookLook[]>([]);
+  const [looks, setLooks] = useState<BookLook[] | null>(null);
+  const [failed, setFailed] = useState<Record<CellKey, boolean>>({
+    recentLooks: false,
+    recentGarments: false,
+  });
   const [outfitName, setOutfitName] = useState("");
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [sheetWidth, setSheetWidth] = useState(0);
   const { start } = useStartGarment("mine");
 
@@ -102,8 +113,16 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       const load = () => {
-        void loadRecentGarments().then(setRecent);
-        void loadRecentLooks().then(setLooks);
+        const fail = (key: CellKey) => setFailed((current) => ({ ...current, [key]: true }));
+        const ok = (key: CellKey) => setFailed((current) => ({ ...current, [key]: false }));
+        loadRecentGarments().then(
+          (next) => (setRecent(next), ok("recentGarments")),
+          () => fail("recentGarments"),
+        );
+        loadRecentLooks().then(
+          (next) => (setLooks(next), ok("recentLooks")),
+          () => fail("recentLooks"),
+        );
         loadOutfitName();
       };
       load();
@@ -143,16 +162,14 @@ export default function HomeScreen() {
 
   const openCoordi = () => router.navigate("/fitting/coordi");
 
-  // 추천 코디 카드는 코디 탭 「추천 코디」 카드와 같이 그 코디를 입히고, 「되돌리기」 는 바꾸기 전 코디를 다시 입힌다.
+  // 추천 코디 카드는 코디 탭 「추천 코디」 카드와 같이 그 코디를 입힌다.
+  // 알림과 「되돌리기」 는 코디 무대에 넘겨, 코디 탭 카드를 누를 때와 같은 무대 아래 자리에 뜨게 한다.
   const wearReco = (look: RecommendedLook) => {
     const twinKey = twin;
     void changeOutfit(look.items.map(samplePiece)).then((before) => {
+      if (before && twinKey)
+        leaveOutfitNotice({ message: `${look.name} 코디로 바꿨어요`, before, twinKey });
       openCoordi();
-      if (before && twinKey) {
-        show(`${look.name} 코디로 바꿨어요`, [
-          { label: "되돌리기", onPress: () => void changeOutfit(before, { twinKey }) },
-        ]);
-      }
     });
   };
 
@@ -167,9 +184,10 @@ export default function HomeScreen() {
   const lookWidth = (inner - LOOK_GAP) / 2;
   const garmentWidth = (inner - GARMENT_GAP * 2) / 3;
 
-  const looksEmpty = looks.length === 0;
-  const garmentsEmpty = !recent || recent.garments.length === 0;
+  const looksEmpty = looks !== null && looks.length === 0;
+  const garmentsEmpty = recent !== null && recent.garments.length === 0;
   const cellEmpty = cell === "recentLooks" ? looksEmpty : garmentsEmpty;
+  const cellLoaded = cell === "recentLooks" ? looks !== null : recent !== null;
 
   const textButton = (label: string, onPress: () => void, ariaLabel?: string): ReactNode => (
     <Pressable role="button" aria-label={ariaLabel} onPress={onPress} style={styles.textButton}>
@@ -178,7 +196,9 @@ export default function HomeScreen() {
   );
 
   let content: ReactNode;
-  if (cellEmpty) {
+  if (!cellLoaded) {
+    content = failed[cell] ? <Text style={styles.loadFailed}>목록을 불러오지 못했어요</Text> : null;
+  } else if (cellEmpty) {
     content = twin ? (
       <HomeRecoStrip
         twinKey={twin}
@@ -190,7 +210,7 @@ export default function HomeScreen() {
         onPick={wearReco}
       />
     ) : null;
-  } else if (cell === "recentLooks") {
+  } else if (cell === "recentLooks" && looks) {
     content = (
       <View>
         <View style={styles.countRow}>
@@ -264,15 +284,16 @@ export default function HomeScreen() {
                   </View>
                 )
               : "홈",
+          headerStyle: StyleSheet.flatten([styles.header, { height: HEADER_HEIGHT + insets.top }]),
+          headerShadowVisible: false,
           headerRight: () => (
             <Pressable
               role="button"
               aria-label="알림"
-              hitSlop={12}
               onPress={() => show("새 알림이 없어요")}
               style={styles.bell}
             >
-              <Text style={styles.bellIcon}>🔔</Text>
+              <BellIcon color={INK} />
             </Pressable>
           ),
         }}
@@ -299,18 +320,13 @@ export default function HomeScreen() {
           <View style={[styles.stageColumn, styles.stageLeft]}>
             <StageButton label="트윈 바꾸기" onPress={() => setSwitching(true)}>
               <View testID="stage-twin-face" style={styles.faceCircle}>
-                {twin ? (
-                  <Image source={TWIN_ASSETS[twin].base} style={styles.faceImage} />
-                ) : null}
+                {twin ? <Image source={TWIN_ASSETS[twin].base} style={styles.faceImage} /> : null}
               </View>
               <View style={styles.swapBadge}>
                 <Text style={styles.swapGlyph}>⇄</Text>
               </View>
             </StageButton>
-            <StageButton
-              label="오늘 추천"
-              onPress={() => void wearTodayLook().then(openCoordi)}
-            >
+            <StageButton label="오늘 추천" onPress={() => void wearTodayLook().then(openCoordi)}>
               <View style={styles.circle}>
                 <SunIcon color={INK} />
               </View>
@@ -358,7 +374,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* 시트를 올렸을 때만 보인다. 칸이 비면 머리 줄 글자 단추가 같은 일을 하므로 숨긴다. */}
-      {raised && !cellEmpty ? (
+      {raised && cellLoaded && !cellEmpty ? (
         <Pressable
           role="button"
           onPress={cell === "recentLooks" ? openCoordi : () => setAdding(true)}
@@ -385,7 +401,7 @@ export default function HomeScreen() {
       <FirstTour
         visible={!profile.tourSeen}
         lead={
-          looks.length > 0
+          looks && looks.length > 0
             ? {
                 title: "첫 코디를 저장했어요",
                 body: "룩북에 저장했어요. 자주 쓰는 곳만 짧게 알려 드릴게요",
@@ -497,7 +513,9 @@ const icon = StyleSheet.create({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
-  bell: { marginRight: 16 },
+  header: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: LINE },
+  // 종 24 아이콘, 누르는 영역 44. 오른쪽 끝을 화면 안쪽 16 에 맞춘다.
+  bell: { width: 44, height: 44, marginRight: 6, alignItems: "center", justifyContent: "center" },
   headTwin: { flexDirection: "row", alignItems: "center", gap: 10 },
   headFace: {
     width: 36,
@@ -510,14 +528,14 @@ const styles = StyleSheet.create({
   headFaceImage: { position: "absolute", width: 164, height: 220, left: -64, top: -10 },
   headName: { fontSize: 16, fontWeight: "700", color: INK },
   headOutfit: { maxWidth: 240, fontSize: 13, color: SUB },
-  bellIcon: { fontSize: 20 },
   // 무대 448, 사진 높이 420 을 위 12 띄워 가운데에 세운다. 시트가 무대 아래 12 를 덮는다.
   stage: { width: "100%", height: 448, backgroundColor: "#fff" },
   stageImage: { position: "absolute", top: 12, left: 0, width: "100%", height: 420 },
   // 단추 열 가운데는 왼쪽 x48, 오른쪽 x342, 위아래 간격 84(단추 70 + 14).
   stageColumn: { position: "absolute", top: 12, gap: 14 },
   stageLeft: { left: 12 },
-  stageRight: { right: 12 },
+  // 「코디」 는 오른쪽 둘째 자리다. 첫째 자리(「트윈 꾸미기」, 아직 개발 안 됨)는 비워 둔다.
+  stageRight: { right: 12, paddingTop: 84 },
   stageButton: { width: 72, height: 70, alignItems: "center", gap: 4 },
   circleBox: { width: 48, height: 48 },
   circle: {
@@ -601,6 +619,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   count: { fontSize: 13, color: SUB },
+  loadFailed: { paddingHorizontal: SIDE, paddingVertical: 24, fontSize: 14, color: SUB },
   textButton: { minHeight: 44, justifyContent: "center" },
   textButtonLabel: { fontSize: 14, fontWeight: "600", color: INK },
   grid: { marginTop: 8, paddingHorizontal: SIDE, flexDirection: "row", flexWrap: "wrap" },

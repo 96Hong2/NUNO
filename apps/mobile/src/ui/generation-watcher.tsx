@@ -18,6 +18,14 @@ export function GenerationWatcher() {
   const pathname = usePathname();
   const pathRef = useRef(pathname);
   pathRef.current = pathname;
+  // 알림을 띄운 작업. 「보기」 나 무대 단추로 그 결과 화면에 들어가면 알림을 내린다(입은 옷 목록을 가리지 않게).
+  const notifiedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (notifiedRef.current === null || pathname !== `/generate/${notifiedRef.current}`) return;
+    notifiedRef.current = null;
+    toast.hide();
+  }, [pathname, toast]);
 
   useEffect(() => {
     let running = false;
@@ -28,6 +36,7 @@ export function GenerationWatcher() {
         for (const job of await pollWatchedJobs()) {
           await markJobSeen(job.jobId);
           if (pathRef.current === `/generate/${job.jobId}`) continue;
+          notifiedRef.current = job.jobId;
           toast.show(
             job.status === "succeeded" ? "완성 룩이 나왔어요" : "완성 룩을 만들지 못했어요",
             [{ label: "보기", onPress: () => router.push(`/generate/${job.jobId}`) }],

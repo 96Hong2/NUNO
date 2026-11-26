@@ -1,4 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { TagIcon } from "./line-icon";
 
 export const CHERRY = "#B8233F";
 
@@ -19,7 +20,7 @@ interface GarmentCardProps {
   /** 「담은 옷」 칸의 가격과 판매처 한 줄 */
   priceKrw?: number | null;
   seller?: string | null;
-  /** 사진 왼쪽 아래 「담은 옷」 알약. 두 칸이 섞여 보이는 홈에서만 켠다 */
+  /** 사진 왼쪽 위 「담은 옷」 알약. 두 칸이 섞여 보이는 홈에서만 켠다 */
   wanted: boolean;
   favorite?: boolean;
   onToggleFavorite?: () => void;
@@ -53,6 +54,7 @@ export function GarmentCard(props: GarmentCardProps) {
           ) : null}
           {wanted ? (
             <View style={styles.pill}>
+              <TagIcon color={CHERRY} />
               <Text style={styles.pillLabel}>담은 옷</Text>
             </View>
           ) : null}
@@ -132,16 +134,20 @@ const styles = StyleSheet.create({
   },
   starIcon: { fontSize: 18, lineHeight: 22, color: INK_2 },
   starOn: { color: INK },
+  // 사진 왼쪽 위 안쪽 6, 높이 20 알약: 가격표 아이콘 10 과 11px 글자
   pill: {
     position: "absolute",
-    left: 8,
-    bottom: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    left: 6,
+    top: 6,
+    height: 20,
+    paddingHorizontal: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     borderRadius: 10,
     backgroundColor: "#F7E9EC",
   },
-  pillLabel: { fontSize: 12, fontWeight: "600", color: CHERRY },
+  pillLabel: { fontSize: 11, lineHeight: 14, fontWeight: "600", color: CHERRY },
   name: { marginTop: 8, fontSize: 13, fontWeight: "500", color: INK, lineHeight: 18 },
   subline: { marginTop: 4, fontSize: 12, lineHeight: 16, color: INK_2 },
   priceRow: { marginTop: 4, flexDirection: "row", alignItems: "baseline", gap: 6 },

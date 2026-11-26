@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-// 와이어프레임 v27 공통 틀. 기대값은 plan_W27.md 묶음 F 와 DoD W24, 시안 v2 명세(온보딩 트윈, 팔레트)에서 가져온다.
+// 기대값은 와이어프레임 v27 의 공통 틀(하단 탭, 머리 줄, 온보딩 트윈)과 시안 v2 명세(온보딩 트윈, 팔레트)에서 가져온다.
 // 크기는 와이어프레임 기준 틀 390×844 에서 잰다.
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -21,7 +21,9 @@ test.describe("빈 저장소의 온보딩", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "다음" }).click();
 
-    await expect(page.getByRole("heading", { name: "옷을 입어 볼 트윈을 골라 주세요" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "옷을 입어 볼 트윈을 골라 주세요" }),
+    ).toBeVisible();
     await expect(page.getByText("1 / 4", { exact: true })).toBeVisible();
     await expect(page.getByText("트윈은 나 대신 옷을 입어 볼 가상 모델이에요")).toBeVisible();
     await expect(page.getByText("나중에 피팅룸 트윈 탭에서 바꿀 수 있어요")).toBeVisible();
@@ -41,7 +43,9 @@ test.describe("빈 저장소의 온보딩", () => {
     await expect(harin).toHaveAttribute("aria-checked", "true");
 
     await page.getByRole("button", { name: "하린으로 시작" }).click();
-    await expect(page.getByRole("heading", { name: "좋아하는 스타일을 골라 주세요" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "좋아하는 스타일을 골라 주세요" }),
+    ).toBeVisible();
     await expect(page.getByText("2 / 4", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "이전 단계" }).click();
     await expect(harin).toHaveAttribute("aria-checked", "true");
@@ -62,7 +66,9 @@ test.describe("빈 저장소의 온보딩", () => {
     // 공통 시트 틀: 제목 20px 700, X 누르는 영역 44.
     await page.getByRole("button", { name: "이대로 입히기" }).click();
     // 「트윈에 입히고 있어요」 동안에는 저장 단추가 눌리지 않는다. 사진이 뜬 뒤 누른다.
-    await expect(page.getByRole("img", { name: "트윈이 고른 옷을 입은 사진" }).first()).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "트윈이 고른 옷을 입은 사진" }).first(),
+    ).toBeVisible();
     await page.getByRole("button", { name: "내 룩북에 저장" }).click();
     const sheet = page.getByRole("dialog", { name: "룩북 저장" });
     await expect(sheet.getByRole("heading", { name: "룩북 저장" })).toHaveCSS("font-size", "20px");

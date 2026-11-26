@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 // 코디 무대 단추, 「내 옷으로 추천」, 옷 종류 칩 체크, 옷 칸을 올린 상태.
-// 기대값은 plan_W27.md DoD W15~W17 과 시안 v2 명세 2(피팅룸 코디 무대)에서 가져온다. 크기는 기준 틀 390×844 에서 잰다.
+// 기대값은 와이어프레임 v27 의 피팅룸 코디 화면과 시안 v2 명세 2(피팅룸 코디 무대)에서 가져온다. 크기는 기준 틀 390×844 에서 잰다.
 test.use({ viewport: { width: 390, height: 844 } });
 
 const box = async (locator: Locator) => {
@@ -18,7 +18,7 @@ async function openCoordi(page: Page) {
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
 }
 
-test("W15: 무대에 「모두 벗기기」 와 「내 옷으로 추천」 이 있고 확대 단추가 없으며, ↶ ↷ 는 「전체, 즐겨찾기」 줄 오른쪽에 있다", async ({
+test("무대에 「모두 벗기기」 와 「내 옷으로 추천」 이 있고 확대 단추가 없으며, ↶ ↷ 는 「전체, 즐겨찾기」 줄 오른쪽에 있다", async ({
   page,
 }) => {
   await openCoordi(page);
@@ -62,7 +62,7 @@ test("W15: 무대에 「모두 벗기기」 와 「내 옷으로 추천」 이 �
   expect(Math.abs(toast.y + toast.height - (stage.y + stage.height - 84))).toBeLessThanOrEqual(2);
 });
 
-test("W16: 「내 옷으로 추천」 을 누르면 범위 창 없이 「지금 코디에 어울리는 옷」 이 열리고 코디 묶음이 접힌다", async ({
+test("「내 옷으로 추천」 을 누르면 범위 창 없이 「지금 코디에 어울리는 옷」 이 열리고 코디 묶음이 접힌다", async ({
   page,
 }) => {
   await openCoordi(page);
@@ -82,7 +82,7 @@ test("W16: 「내 옷으로 추천」 을 누르면 범위 창 없이 「지금 
   await expect(page.getByRole("list", { name: /^(최근 입혀 본 코디|추천 코디)$/ })).toHaveCount(1);
 });
 
-test("W17: 하의를 입히면 칩이 「하의 ✓」 이고 입은 옷이 둘째 칸에 오며, 옷 칸을 올리면 무대 줄 왼쪽에 작은 「이대로 입히기」 가 있다", async ({
+test("하의를 입히면 칩이 「하의 ✓」 이고 입은 옷이 둘째 칸에 오며, 옷 칸을 올리면 무대 줄 왼쪽에 작은 「이대로 입히기」 가 있다", async ({
   page,
 }) => {
   await openCoordi(page);

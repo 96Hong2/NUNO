@@ -1,4 +1,4 @@
-import { Link, Slot, Tabs, usePathname, useRouter } from "expo-router";
+import { Link, Slot, Tabs, useGlobalSearchParams, usePathname, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -24,10 +24,12 @@ export default function FittingLayout() {
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { moving } = useGlobalSearchParams<{ moving?: string }>();
   const inCloset = pathname.startsWith("/fitting/closet");
   return (
     <View style={styles.container}>
-      {/* 옷장 칸에서만 머리 줄 오른쪽에 「+ 옷 추가」 를 둔다. 누르면 옷장의 「옷을 어떻게 추가할까요?」 시트가 열린다. */}
+      {/* 옷장 칸에서만 머리 줄 오른쪽에 「+ 옷 추가」 를 둔다. 누르면 옷장의 「옷을 어떻게 추가할까요?」 시트가 열린다.
+          「여러 벌 옮기기」 중(moving=1)에는 숨긴다. */}
       <Tabs.Screen
         options={{
           headerTitleAlign: "left",
@@ -35,19 +37,20 @@ export default function FittingLayout() {
           headerTitleContainerStyle: styles.headerTitleBox,
           headerStyle: StyleSheet.flatten([styles.header, { height: HEADER_HEIGHT + insets.top }]),
           headerShadowVisible: false,
-          headerRight: inCloset
-            ? () => (
-                <Pressable
-                  role="button"
-                  aria-label="옷 추가"
-                  hitSlop={{ top: 2, bottom: 2 }}
-                  onPress={() => router.setParams({ add: "1" })}
-                  style={styles.addButton}
-                >
-                  <Text style={styles.addLabel}>+ 옷 추가</Text>
-                </Pressable>
-              )
-            : undefined,
+          headerRight:
+            inCloset && moving !== "1"
+              ? () => (
+                  <Pressable
+                    role="button"
+                    aria-label="옷 추가"
+                    hitSlop={{ top: 2, bottom: 2 }}
+                    onPress={() => router.setParams({ add: "1" })}
+                    style={styles.addButton}
+                  >
+                    <Text style={styles.addLabel}>+ 옷 추가</Text>
+                  </Pressable>
+                )
+              : undefined,
         }}
       />
       <View role="tablist" aria-label="피팅룸 칸" style={styles.cells}>

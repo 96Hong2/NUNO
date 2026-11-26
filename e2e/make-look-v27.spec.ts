@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 // 「완성 룩 만들기」 시트, 무대 단추 상태, 만드는 중, 결과, 실패, 「내 골드」.
-// 기대값은 plan_W27.md DoD W7~W14 와 시안 v2 명세 5(완성 룩 만들기 시트와 결과), 명세 2(「이대로 입히기」 상태)에서 가져온다.
+// 기대값은 와이어프레임 v27 의 완성 룩 화면과 시안 v2 명세 5(완성 룩 만들기 시트와 결과), 명세 2(「이대로 입히기」 상태)에서 가져온다.
 // 시험마다 새 브라우저라 시험 로그인 subject 가 새로 생기고, 서버에는 새 사용자다.
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -45,7 +45,7 @@ async function wearCoat(page: Page) {
   await expect(page.getByRole("button", { name: `무대의 ${COAT}` })).toBeVisible();
 }
 
-/** W7: 가입 전에는 가입 시트가 먼저 열린다. 시험 계정으로 들어가면 동의 화면이 뜬다. */
+/** 가입 전에는 가입 시트가 먼저 열린다. 시험 계정으로 들어가면 동의 화면이 뜬다. */
 async function signUpFromStage(page: Page) {
   await stageButton(page).click();
   const join = page.getByRole("dialog", { name: "완성 룩을 만들려면 가입이 필요해요" });
@@ -72,7 +72,7 @@ async function makeFreeAndSave(page: Page) {
   await expect(stageButton(page)).toBeVisible();
 }
 
-test("W7, W8, W10~W12: 가입 시트, 무료 상태 시트, 만드는 중, 무대 단추 상태, 결과와 저장 알림", async ({
+test("가입 시트, 무료 상태 시트, 만드는 중, 무대 단추 상태를 거쳐 결과를 저장하면 「모든 룩에 저장했어요」 가 뜬다", async ({
   page,
 }) => {
   await wearCoat(page);
@@ -88,7 +88,7 @@ test("W7, W8, W10~W12: 가입 시트, 무료 상태 시트, 만드는 중, 무�
   await dev(page, "provider", { mode: "succeed", delayMs: 4000 });
   await agree(page);
 
-  // W8: 「가격」, 줄 그은 「4골드」, 체리색 「무료」, 남은 사진 수 줄
+  // 무료 상태 시트: 「가격」, 줄 그은 「4골드」, 체리색 「무료」, 남은 사진 수 줄
   const sheet = makeSheet(page);
   await expect(sheet.getByText("가격", { exact: true })).toBeVisible();
   const listPrice = sheet.getByText("4골드", { exact: true });
@@ -101,7 +101,7 @@ test("W7, W8, W10~W12: 가입 시트, 무료 상태 시트, 만드는 중, 무�
   );
   await expectNone(sheet, GONE);
 
-  // W10: 만드는 중 화면 글
+  // 만드는 중 화면 글
   await sheet.getByRole("button", { name: "무료로 만들기" }).click();
   await expect(page.getByRole("progressbar", { name: "만드는 중" })).toBeVisible();
   await expect(page.getByText("완성 룩을 만들고 있어요")).toBeVisible();
@@ -111,7 +111,7 @@ test("W7, W8, W10~W12: 가입 시트, 무료 상태 시트, 만드는 중, 무�
   await expect(page.getByRole("button", { name: "닫기" })).toBeVisible();
   await expectNone(page.locator("body"), GONE);
 
-  // W11: 「코디로 돌아가기」 → 무대 단추가 「완성 룩 만드는 중」, 다 되면 알림과 「다 된 완성 룩 보기」
+  // 「코디로 돌아가기」 → 무대 단추가 「완성 룩 만드는 중」, 다 되면 알림과 「다 된 완성 룩 보기」
   await page.getByRole("button", { name: "코디로 돌아가기" }).click();
   await expect(page).toHaveURL(/\/fitting\/coordi/);
   await expect(page.getByRole("button", { name: "완성 룩 만드는 중" })).toBeVisible();
@@ -123,7 +123,7 @@ test("W7, W8, W10~W12: 가입 시트, 무료 상태 시트, 만드는 중, 무�
   await expect(done).toBeVisible();
   await expect(done).toHaveCSS("background-color", "rgb(21, 19, 20)");
 
-  // W12: 결과 화면 「안전 확인 끝」, 「입은 옷 1벌」 과 옷의 칸, 저장 알림 「모든 룩에 저장했어요」 와 「룩북에서 보기」
+  // 결과 화면 「안전 확인 끝」, 「입은 옷 1벌」 과 옷의 칸, 저장 알림 「모든 룩에 저장했어요」 와 「룩북에서 보기」
   await done.click();
   await expect(page.getByText("✦ AI 생성")).toBeVisible();
   await expect(page.getByText("안전 확인 끝", { exact: true })).toBeVisible();
@@ -144,7 +144,7 @@ test("W7, W8, W10~W12: 가입 시트, 무료 상태 시트, 만드는 중, 무�
   await expect(page).toHaveURL(/\/lookbook\/all/);
 });
 
-test("W13: 무료 장 작업을 가짜 공급사가 안전 기준으로 거절하면 무료 1장을 돌려준 실패 화면과 「코디 바꾸기」 가 뜬다", async ({
+test("무료 장 작업을 가짜 공급사가 안전 기준으로 거절하면 무료 1장을 돌려준 실패 화면과 「코디 바꾸기」 가 뜬다", async ({
   page,
 }) => {
   await wearCoat(page);
@@ -169,7 +169,7 @@ test("W13: 무료 장 작업을 가짜 공급사가 안전 기준으로 거절�
   await expect(stageButton(page)).toContainText("무료 2장 남음");
 });
 
-test("W9, W14: 무료 장을 다 쓰면 「1장 4골드」 와 골드 상태 시트, 골드 작업 실패는 4골드를 돌려주고 「내 골드」 에 반환 안내가 없다", async ({
+test("무료 장을 다 쓰면 「1장 4골드」 와 골드 상태 시트, 골드 작업 실패는 4골드를 돌려주고 「내 골드」 에 반환 안내가 없다", async ({
   page,
 }) => {
   await wearCoat(page);
@@ -181,7 +181,7 @@ test("W9, W14: 무료 장을 다 쓰면 「1장 4골드」 와 골드 상태 시
   await expect(makeSheet(page)).toContainText("무료로 만들 수 있는 사진이 1장 남았어요");
   await makeFreeAndSave(page);
 
-  // W9: 무대 옆 글과 골드 상태 시트
+  // 무대 옆 글과 골드 상태 시트
   await expect(stageButton(page)).toContainText("1장 4골드");
   await dev(page, "provider", { mode: "refuse" });
   await stageButton(page).click();
@@ -203,10 +203,43 @@ test("W9, W14: 무료 장을 다 쓰면 「1장 4골드」 와 골드 상태 시
   await expect(page.getByText("+4골드", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "코디 바꾸기" }).click();
 
-  // W14: 「내 골드」 아래 글
+  // 「내 골드」 아래 글
   await page.getByRole("tab", { name: "마이" }).click();
   await page.getByRole("button", { name: "내 골드 20골드" }).click();
   const wallet = page.getByTestId("gold-screen");
   await expect(wallet.getByText("1골드는 100원이에요", { exact: true })).toBeVisible();
   await expectNone(wallet, ["돌려드려요"]);
+});
+
+test("옷장에 추가한 내 옷을 입혀 만든 완성 룩은 「입은 옷」 목록에서 그 옷 옆에 「내 옷장」 이 보인다", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const knit = "스트라이프 니트";
+  await page.goto("/");
+  await page.getByRole("tab", { name: "피팅룸" }).click();
+  await page.getByRole("tablist", { name: "피팅룸 칸" }).getByRole("tab", { name: "옷장" }).click();
+  await page.getByRole("button", { name: "옷 추가", exact: true }).first().click();
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("dialog", { name: "옷을 어떻게 추가할까요?" })
+    .getByRole("button", { name: "앨범에서 고르기" })
+    .click();
+  await (await chooser).setFiles("e2e/fixtures/garments/knit-stripe.jpg");
+  await expect(page.getByRole("heading", { name: "배경을 지웠어요" })).toBeVisible();
+  await page.getByRole("button", { name: "다음" }).click();
+  await page.getByRole("textbox", { name: "이름" }).fill(knit);
+  await page.getByRole("button", { name: "다음" }).click();
+  await page.getByRole("button", { name: "내 옷에 추가", exact: true }).click();
+  await page.getByRole("button", { name: "이 옷으로 코디하기" }).click();
+  await expect(page.getByRole("button", { name: `무대의 ${knit}` })).toBeVisible();
+
+  await signUpFromStage(page);
+  await dev(page, "provider", { mode: "succeed" });
+  await agree(page);
+  await makeSheet(page).getByRole("button", { name: "무료로 만들기" }).click();
+  await expect(page.getByText("✦ AI 생성")).toBeVisible({ timeout: 20_000 });
+  const worn = page.getByLabel("입은 옷", { exact: true });
+  await expect(worn.getByText(knit, { exact: true })).toBeVisible();
+  await expect(worn.getByText("내 옷장", { exact: true })).toHaveCount(1);
 });

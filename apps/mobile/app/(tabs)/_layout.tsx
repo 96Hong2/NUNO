@@ -2,7 +2,7 @@ import type { PresetTwinKey } from "@nuno/twin";
 import { Tabs, usePathname } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
-import { loadCurrentTwin } from "../../src/composition/twin";
+import { loadCurrentTwin, onTwinChange } from "../../src/composition/twin";
 import { HomeIcon, PersonIcon } from "../../src/ui/line-icon";
 import { TWIN_ASSETS } from "../../src/ui/twin-assets";
 
@@ -19,7 +19,7 @@ const ICON_WIDTH = 31;
 const CLIP = FACE - 6;
 
 // 하단 탭은 홈, 피팅룸, 마이 셋이다. 이름은 GLOSSARY.md 「탭과 칸」 을 따른다.
-// 홈과 마이는 선 아이콘, 피팅룸은 고른 트윈의 얼굴 원이다. 트윈은 화면을 옮길 때마다 다시 읽는다.
+// 홈과 마이는 선 아이콘, 피팅룸은 고른 트윈의 얼굴 원이다. 트윈은 화면을 옮기거나 트윈을 바꿀 때마다 다시 읽는다.
 // 아이콘을 비워 두면 빈 아이콘 글자(⏷)가 탭 이름에 붙으므로 세 탭 모두 아이콘을 준다.
 export default function TabsLayout() {
   const pathname = usePathname();
@@ -28,6 +28,7 @@ export default function TabsLayout() {
   useEffect(() => {
     loadCurrentTwin().then(setTwin, () => undefined);
   }, [pathname]);
+  useEffect(() => onTwinChange(() => void loadCurrentTwin().then(setTwin, () => undefined)), []);
 
   return (
     <Tabs
@@ -42,7 +43,10 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="home"
-        options={{ title: "홈", tabBarIcon: ({ color }) => <HomeIcon color={color} testID="홈 아이콘" /> }}
+        options={{
+          title: "홈",
+          tabBarIcon: ({ color }) => <HomeIcon color={color} testID="홈 아이콘" />,
+        }}
       />
       <Tabs.Screen
         name="fitting"
@@ -59,7 +63,10 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="my"
-        options={{ title: "마이", tabBarIcon: ({ color }) => <PersonIcon color={color} testID="마이 아이콘" /> }}
+        options={{
+          title: "마이",
+          tabBarIcon: ({ color }) => <PersonIcon color={color} testID="마이 아이콘" />,
+        }}
       />
     </Tabs>
   );

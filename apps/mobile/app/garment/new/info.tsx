@@ -225,7 +225,7 @@ export default function InfoScreen() {
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <Text style={styles.label}>계절</Text>
-            <Text style={styles.labelNoteSmall}>여러 개 고를 수 있어요</Text>
+            <Text style={styles.labelNoteSmall}>여러 개를 고를 수 있어요</Text>
           </View>
           <View style={styles.chipRow}>
             {SEASONS.map((item) => (

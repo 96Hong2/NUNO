@@ -65,14 +65,16 @@ const CHIPS: { key: string; label: string; filter: GarmentFilter }[] = [
 
 // 피팅룸 「옷장」: 「내 옷」, 「담은 옷」 두 칸. 칸은 주소의 closet 값으로 연다.
 // add=1 이면 「옷을 어떻게 추가할까요?」 시트를 연다(피팅룸 머리 줄 「+ 옷 추가」 가 쓴다).
+// moving=1 이면 「여러 벌 옮기기」 중이다. 피팅룸 머리 줄이 이 값을 보고 「+ 옷 추가」 를 숨긴다.
 // 종류 칩과 「거르기」 조건은 칸마다 따로 기억한다.
 export default function ClosetScreen() {
-  const params = useLocalSearchParams<{ closet?: string; add?: string }>();
+  const params = useLocalSearchParams<{ closet?: string; add?: string; moving?: string }>();
   const router = useRouter();
   const toast = useAppToast();
   const closet: ClosetKey = isClosetKey(params.closet) ? params.closet : "mine";
   const [view, setView] = useState<ClosetView | null>(null);
   const [lookCounts, setLookCounts] = useState<Record<string, number> | null>(null);
+  const [lookCountsFailed, setLookCountsFailed] = useState(false);
   const [chipBy, setChipBy] = useState<Record<ClosetKey, GarmentFilter>>({
     mine: ALL,
     wanted: ALL,
@@ -82,7 +84,8 @@ export default function ClosetScreen() {
     wanted: NO_CLOSET_FILTER,
   });
   const [filterOpen, setFilterOpen] = useState(false);
-  const [moving, setMoving] = useState(false);
+  const moving = params.moving === "1";
+  const setMoving = (next: boolean) => router.setParams({ moving: next ? "1" : undefined });
   const [picked, setPicked] = useState<string[]>([]);
   const { start } = useStartGarment(closet);
   const chip = chipBy[closet];
@@ -97,7 +100,11 @@ export default function ClosetScreen() {
     useCallback(() => {
       void reload();
       // 룩 수는 서버 「모든 룩」 을 읽어 늦게 올 수 있다. 오기 전에는 카드 아래 줄을 비운다.
-      loadGarmentLookCounts().then(setLookCounts, () => setLookCounts(null));
+      setLookCountsFailed(false);
+      loadGarmentLookCounts().then(setLookCounts, () => {
+        setLookCounts(null);
+        setLookCountsFailed(true);
+      });
       return onClosetChange(() => void reload());
     }, [reload]),
   );
@@ -112,8 +119,8 @@ export default function ClosetScreen() {
   };
 
   const switchCloset = (next: ClosetKey) => {
-    stopMoving();
-    router.setParams({ closet: next });
+    setPicked([]);
+    router.setParams({ closet: next, moving: undefined });
   };
 
   // 「사진 찍기」 는 1 / 4 안내 화면부터, 「앨범에서 고르기」 는 사진을 고른 뒤 2 / 4 부터 연다.
@@ -156,9 +163,12 @@ export default function ClosetScreen() {
     ]);
   };
 
-  const garments = view
-    ? closetFilter(filterGarments(view.garments, chip), filter, lookCounts ?? {})
-    : [];
+  // 「룩에 안 쓴 옷」 을 켰는데 룩 수를 아직 못 읽었으면 거르지 않고 상태 글을 보인다(모든 옷이 룩 0개로 남지 않게).
+  const countsMissing = filter.unusedOnly && lookCounts === null;
+  const garments =
+    view && !countsMissing
+      ? closetFilter(filterGarments(view.garments, chip), filter, lookCounts ?? {})
+      : [];
   const total = view?.counts[closet] ?? 0;
   const empty = view !== null && total === 0;
 
@@ -248,7 +258,13 @@ export default function ClosetScreen() {
               )}
             </View>
 
-            {view && garments.length === 0 ? (
+            {view && countsMissing ? (
+              <View style={styles.filteredEmpty}>
+                <Text style={styles.filteredEmptyText}>
+                  {lookCountsFailed ? "룩 수를 불러오지 못했어요" : "룩 수를 불러오는 중이에요"}
+                </Text>
+              </View>
+            ) : view && garments.length === 0 ? (
               <View style={styles.filteredEmpty}>
                 <Text style={styles.filteredEmptyText}>조건에 맞는 옷이 없어요</Text>
                 {filterCount > 0 ? (
@@ -311,7 +327,9 @@ export default function ClosetScreen() {
             ])}
           >
             <Text style={[styles.moveLabel, picked.length === 0 && styles.moveLabelOff]}>
-              {picked.length === 0 ? "옮길 옷을 골라 주세요" : `${picked.length}벌 내 옷으로 옮기기`}
+              {picked.length === 0
+                ? "옮길 옷을 골라 주세요"
+                : `${picked.length}벌 내 옷으로 옮기기`}
             </Text>
           </Pressable>
         </View>
@@ -432,9 +450,11 @@ const styles = StyleSheet.create({
     backgroundColor: SURFACE,
   },
   resetLabel: { fontSize: 15, fontWeight: "600", color: INK },
+  // 아래 28 은 하단 탭 위로 솟은 피팅룸 얼굴 원이 단추를 가리지 않게 둔 여백이다.
   footer: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 28,
     borderTopWidth: 1,
     borderTopColor: LINE,
     backgroundColor: "#fff",

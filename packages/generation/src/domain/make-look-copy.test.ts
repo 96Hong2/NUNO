@@ -139,6 +139,14 @@ describe("「만들지 못했어요」 화면 글", () => {
     });
   });
 
+  it("결과 사진이 자체 안전 검사를 통과하지 못한 실패(check_failed)도 안전 기준으로 읽는다", () => {
+    expect(lookFailureCopy("gold", "check_failed", 4)).toMatchObject({
+      body: "안전 기준을 통과하지 못했어요",
+      action: "change",
+      actionLabel: "코디 바꾸기",
+    });
+  });
+
   it("무료 장, 안전 기준: 「코디 바꾸기」", () => {
     expect(lookFailureCopy("trial", "provider_refused", 0)).toMatchObject({
       title: "무료 1장을 돌려드렸어요",

@@ -48,8 +48,71 @@ export function BackIcon({ color, testID }: LineIconProps) {
   );
 }
 
+/** 홈 머리 줄 오른쪽 알림 종 */
+export function BellIcon({ color, testID }: LineIconProps) {
+  return (
+    <View testID={testID} style={styles.box} aria-hidden>
+      <View style={[styles.bellDome, { borderColor: color }]} />
+      <View style={[styles.bar, styles.bellRim, { backgroundColor: color }]} />
+      <View style={[styles.bellClapper, { borderColor: color }]} />
+    </View>
+  );
+}
+
+/** 「담은 옷」 알약 안 10 칸 가격표. 선 굵기 1.25 */
+export function TagIcon({ color, testID }: LineIconProps) {
+  return (
+    <View testID={testID} style={styles.tagBox} aria-hidden>
+      <View style={[styles.tagBody, { borderColor: color }]} />
+      <View style={[styles.tagHole, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   box: { width: SIZE, height: SIZE },
+  bellDome: {
+    position: "absolute",
+    left: 6,
+    top: 4,
+    width: 12,
+    height: 13,
+    borderWidth: STROKE,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+  },
+  bellRim: { left: 4, top: 16.25, width: 16 },
+  bellClapper: {
+    position: "absolute",
+    left: 9.5,
+    top: 18,
+    width: 5,
+    height: 3,
+    borderWidth: STROKE,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 2.5,
+    borderBottomRightRadius: 2.5,
+  },
+  tagBox: { width: 10, height: 10 },
+  tagBody: {
+    position: "absolute",
+    left: 1.5,
+    top: 1.5,
+    width: 7,
+    height: 7,
+    borderWidth: 1.25,
+    borderRadius: 1.5,
+    transform: [{ rotate: "45deg" }],
+  },
+  tagHole: {
+    position: "absolute",
+    left: 4.25,
+    top: 2.75,
+    width: 1.5,
+    height: 1.5,
+    borderRadius: 0.75,
+  },
   roof: {
     position: "absolute",
     left: 6,

@@ -239,19 +239,21 @@ export async function loadRecentLooks(): Promise<BookLook[]> {
 }
 
 /**
- * 「내 옷」 카드의 「룩 N개에 썼어요」: 옷장 옷 ID 별 룩 수. 기기 견본 룩과 서버 「모든 룩」 의 입은 옷 키 `g:<옷 ID>` 로 센다.
- * 서버가 없거나 가입 전이면 기기 룩만 센다.
+ * 「내 옷」 카드의 「룩 N개에 썼어요」: 옷장 옷 ID 별 룩 수. 서버 「모든 룩」 의 입은 옷 키 `g:<옷 ID>` 로 센다.
+ * 견본 옷 키(`s:<견본 키>`)로 남은 입은 옷과 기기 견본 룩은 세지 않는다. 서버가 없거나 가입 전이면 모두 0 이다.
  */
 export async function loadGarmentLookCounts(): Promise<Record<string, number>> {
   const { allLooks } = await loadShelf();
   return countLooksByGarment(
-    allLooks.map((book) =>
-      (book.kind === "device"
-        ? book.look.items.map((item) => `s:${item.sampleKey}`)
-        : book.look.wornItems.map((item) => textOf(item.id))
-      )
-        .filter((key) => key.startsWith("g:"))
-        .map((key) => key.slice(2)),
+    allLooks.flatMap((book) =>
+      book.kind === "server"
+        ? [
+            book.look.wornItems
+              .map((item) => textOf(item.id))
+              .filter((key) => key.startsWith("g:"))
+              .map((key) => key.slice(2)),
+          ]
+        : [],
     ),
   );
 }

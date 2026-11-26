@@ -6,25 +6,28 @@ import {
   type ManifestGarment,
 } from "@nuno/generation";
 import {
+  sameOutfit,
   samplePiece,
   slotOf,
   type OutfitCategory,
   type OutfitPiece,
   type SampleGarmentKey,
 } from "@nuno/outfit";
-import type { PresetTwinKey } from "@nuno/twin";
+import { isPresetTwinKey, type PresetTwinKey } from "@nuno/twin";
 import { useLocalSearchParams, usePreventRemove, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   discardJob,
+  dropUnviewableJob,
   keepJob,
   loadJob,
   loadJobItems,
   markJobSeen,
   type JobView,
 } from "../../src/composition/generation";
-import { changeOutfit } from "../../src/composition/outfit";
+import { changeOutfit, loadCoordi } from "../../src/composition/outfit";
+import { loadCurrentTwin, switchTwin } from "../../src/composition/twin";
 import { loadClosetImages } from "../../src/composition/wardrobe";
 import { useAppToast } from "../../src/ui/app-toast";
 import { buildCatalog, type CatalogItem } from "../../src/ui/coordi-catalog";
@@ -106,6 +109,13 @@ export default function GenerateJobScreen() {
     if (finished) void markJobSeen(jobId);
   }, [finished, jobId]);
 
+  // 서버가 작업을 찾지 못했거나 결과 주소가 사라졌으면 기기 요청 줄을 지운다.
+  // 남겨 두면 무대 단추가 늘 「다 된 완성 룩 보기」 로 이 화면만 열어 새 완성 룩을 만들 수 없다.
+  const unviewable = missing || (job?.status === "succeeded" && job.result === null);
+  useEffect(() => {
+    if (unviewable) void dropUnviewableJob(jobId);
+  }, [unviewable, jobId]);
+
   const unsaved = job?.status === "succeeded" && job.result !== null && !saved;
   usePreventRemove(unsaved, ({ repeat }) => {
     pendingLeave.current = repeat;
@@ -123,10 +133,17 @@ export default function GenerateJobScreen() {
     if (make) router.navigate({ pathname: "/fitting/coordi", params: { make: "1" } });
     else router.navigate("/fitting/coordi");
   };
-  // 「같은 코디로 다시 만들기」: 그 코디를 무대에 다시 입히고 「완성 룩 만들기」 시트를 연다.
+  // 「같은 코디로 다시 만들기」: 그 트윈과 코디를 무대에 다시 입히고 「완성 룩 만들기」 시트를 연다.
+  // 입은 옷을 읽지 못했거나 무대가 그 코디와 다르면 시트를 열지 않고 무대만 연다(다른 코디로 골드를 쓰지 않게).
   const retry = async () => {
-    await changeOutfit(pieces, { twinKey: twinKey ?? undefined });
-    toStage(true);
+    if (pieces.length === 0 || !twinKey || !isPresetTwinKey(twinKey)) {
+      toStage();
+      return;
+    }
+    if ((await loadCurrentTwin()) !== twinKey) await switchTwin(twinKey);
+    await changeOutfit(pieces, { twinKey });
+    const stage = await loadCoordi();
+    toStage(stage.twinKey === twinKey && sameOutfit(stage.outfit, pieces));
   };
 
   const save = async (thenLeave: boolean) => {

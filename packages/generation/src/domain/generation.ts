@@ -50,6 +50,9 @@ export function freeLooksNow(trialCount: number, trialUsableToday: boolean): num
   return trialUsableToday ? trialCount : 0;
 }
 
+// payWithFor, stagePriceLabel, goldConfirmCopy, progressStep 은 앱이 더는 부르지 않는다.
+// main 의 generation.test.ts 가 박아 두어 남기고, 패키지 공개 면에서는 뺐다. 그 시험 줄과 함께 지운다.
+
 /** 접수 본문의 결제 선택. 화면이 무료 장을 보였으면 trial, 골드 확인 시트를 거쳤으면 gold 다 */
 export function payWithFor(freeLooks: number): PaymentKind {
   return freeLooks > 0 ? "trial" : "gold";
@@ -58,29 +61,6 @@ export function payWithFor(freeLooks: number): PaymentKind {
 /** 무대 「이대로 입히기」 안 작은 글자. trialCount 는 `freeLooksNow` 값이다 */
 export function stagePriceLabel(trialCount: number): string {
   return trialCount > 0 ? `무료 ${trialCount}장 남음` : `${LOOK_PRICE_GOLD}골드`;
-}
-
-export interface MakeSheetCopy {
-  line: string;
-  button: string;
-  /** 무료 장이 없어 골드 확인 시트를 거친다 */
-  needsGold: boolean;
-}
-
-/** 「완성 룩 만들기」 시트의 아래 줄과 단추 글자. trialCount 는 `freeLooksNow` 값이다 */
-export function makeSheetCopy(trialCount: number): MakeSheetCopy {
-  if (trialCount > 0) {
-    return {
-      line: `이번에는 첫 체험 무료 ${trialCount}장 중 1장을 써요`,
-      button: "무료로 만들기",
-      needsGold: false,
-    };
-  }
-  return {
-    line: `이번에는 내 골드에서 ${LOOK_PRICE_GOLD}골드를 써요`,
-    button: "만들기",
-    needsGold: true,
-  };
 }
 
 export interface GoldConfirmCopy {
@@ -206,8 +186,11 @@ export interface MakingCopy {
 
 /** 만드는 중 화면의 막대와 글. 막대는 접수, 만드는 중, 안전 확인 세 단계로 3분의 1씩 채운다 */
 export function makingCopy(status: string): MakingCopy {
+  let percent = 100;
+  if (status === "queued") percent = 33;
+  else if (status === "generating") percent = 67;
   return {
-    percent: progressStep(status).percent,
+    percent,
     title: "완성 룩을 만들고 있어요",
     note: "화면을 닫아도 계속 만들어요. 다 되면 알림을 보내 드려요",
   };
@@ -225,8 +208,11 @@ export interface LookFailureCopy {
   actionLabel: string;
 }
 
-/** 공급사가 안전 기준으로 거절한 실패 코드. 나머지 실패는 시스템 오류로 읽는다 */
-const SAFETY_FAILURE = "provider_refused";
+/**
+ * 안전 기준 실패 코드: 공급사가 거절했거나(provider_refused), 결과 사진이 자체 안전 검사를 두 번 통과하지 못했다(check_failed).
+ * 나머지 실패는 시스템 오류로 읽는다.
+ */
+const SAFETY_FAILURES: ReadonlySet<string> = new Set(["provider_refused", "check_failed"]);
 
 /** 「만들지 못했어요」 화면 글. 낸 것(골드, 무료 장)과 실패 원인으로 고른다 */
 export function lookFailureCopy(
@@ -234,7 +220,7 @@ export function lookFailureCopy(
   failureCode: string | null,
   refundGold: number,
 ): LookFailureCopy {
-  const safety = failureCode === SAFETY_FAILURE;
+  const safety = failureCode !== null && SAFETY_FAILURES.has(failureCode);
   return {
     headline: "만들지 못했어요.",
     title: kind === "gold" ? "골드를 돌려드렸어요" : "무료 1장을 돌려드렸어요",
@@ -307,37 +293,6 @@ export const UNANSWERED_NOTICE: SubmitNext = {
   kind: "notice",
   message: "확인하고 있어요. 잠시 뒤에 결과를 알려 드릴게요",
 };
-
-export interface FailureCopy {
-  title: string;
-  body: string;
-  refundLabel: string;
-  refundValue: string;
-  remainLabel: string;
-  remainValue: string;
-}
-
-/** 「만들지 못했어요」 화면 글자. 골드 작업과 무료 장 작업이 다르다. */
-export function failureCopy(kind: PaymentKind, refundGold: number, remain: number): FailureCopy {
-  if (kind === "gold") {
-    return {
-      title: "골드를 돌려드렸어요",
-      body: `안전 확인에서 통과하지 못했거나 그림이 깨졌어요. 쓴 ${refundGold}골드는 바로 돌려드렸어요.`,
-      refundLabel: "돌려받은 골드",
-      refundValue: `+${refundGold} 골드`,
-      remainLabel: "지금 남은 골드",
-      remainValue: `${remain} 골드`,
-    };
-  }
-  return {
-    title: "무료 1장을 돌려드렸어요",
-    body: "안전 확인에서 통과하지 못했거나 그림이 깨졌어요. 쓴 무료 1장은 바로 돌려드렸어요.",
-    refundLabel: "돌려받은 무료 장",
-    refundValue: "+1장",
-    remainLabel: "지금 남은 무료 장",
-    remainValue: `${remain}장`,
-  };
-}
 
 /** 「내 골드」 의 「N원어치」 */
 export function goldWonLabel(balance: number): string {

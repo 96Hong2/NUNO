@@ -34,6 +34,7 @@ import {
   renameSaved,
   saveCurrentOutfit,
   stepOutfit,
+  takeOutfitNotice,
   todayLookOf,
   wearTodayLook,
   type CoordiState,
@@ -116,7 +117,7 @@ export default function CoordiScreen() {
   const catalog = useMemo(() => buildCatalog(garments), [garments]);
   const catalogMap = useMemo(() => new Map(catalog.map((item) => [item.key, item])), [catalog]);
 
-  const generate = useGenerateFlow(state?.twinKey ?? "", state?.outfit ?? [], catalogMap);
+  const generate = useGenerateFlow(state?.twinKey ?? "", state?.outfit ?? null, catalogMap);
 
   // 옷 칸이 내려와 있으면 알림을 옷 칸 시트 바로 위, 무대 아래쪽에 띄운다.
   const notify = (message: string, actions?: ToastAction[]) =>
@@ -127,6 +128,22 @@ export default function CoordiScreen() {
         ? { bottom: screenHeight - (stageBottom - TOAST_ABOVE_STAGE_BOTTOM) }
         : undefined,
     );
+
+  // 홈 추천 코디 카드가 남긴 알림은 무대 자리를 잰 뒤 무대 아래에 띄운다.
+  useFocusEffect(
+    useCallback(() => {
+      if (stageBottom === null) return;
+      const notice = takeOutfitNotice();
+      if (!notice) return;
+      notify(notice.message, [
+        {
+          label: "되돌리기",
+          onPress: () => void changeOutfit(notice.before, { twinKey: notice.twinKey }),
+        },
+      ]);
+      // notify 는 렌더마다 새로 만든다. 무대 자리가 정해질 때만 다시 본다.
+    }, [stageBottom]),
+  );
 
   const measureStage = () =>
     stageRef.current?.measureInWindow((_x, y, _width, height) => setStageBottom(y + height));

@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// 와이어프레임 v27 옷 넣기 흐름. 기대값은 plan_W27.md 묶음 E 와 DoD W21~W23,
-// 시안 v2 명세 4(옷 정보, 트윈에 맞춰 보기)에서 가져온다.
+// 기대값은 와이어프레임 v27 의 옷 추가 화면과 시안 v2 명세 4(옷 정보, 트윈에 맞춰 보기)에서 가져온다.
 test.use({ viewport: { width: 390, height: 844 } });
 
 const FIXTURES = "e2e/fixtures/garments";
@@ -28,7 +27,7 @@ test("배경 지우기에서 뒤로 가면 「넣던 옷을 버릴까요?」 가
 }) => {
   await openCutout(page);
 
-  // W21: 뒤로 → 확인 시트. 「계속 넣기」 는 시트만 닫는다.
+  // 뒤로 → 확인 시트. 「계속 넣기」 는 시트만 닫는다.
   await page.getByRole("button", { name: "뒤로" }).click();
   const discard = page.getByRole("dialog", { name: "넣던 옷을 버릴까요?" });
   await expect(discard.getByRole("button", { name: "버리기" })).toBeVisible();
@@ -45,13 +44,13 @@ test("배경 지우기에서 뒤로 가면 「넣던 옷을 버릴까요?」 가
   await expect(segment(page, "담은 옷")).toHaveText(/담은 옷 0/);
 });
 
-test("옷 정보 단계의 빈 이름 오류와 「정보 더 넣기」, 맞춰 보기의 「내 옷에 추가」, 마친 화면이 v27 과 같다", async ({
+test("이름을 비우고 「다음」 을 누르면 칸 아래 오류가 뜨고, 「내 옷에 추가」 를 누르면 「내 옷에 추가했어요」 화면이 열린다", async ({
   page,
 }) => {
   await openCutout(page);
   await page.getByRole("button", { name: "다음" }).click();
 
-  // W22: 안내, 소유 질문, 접힌 「정보 더 넣기」
+  // 안내, 소유 질문, 접힌 「정보 더 넣기」
   await expect(page.getByRole("heading", { name: "어떤 옷인가요?" })).toBeVisible();
   await expect(
     page.getByText("종류와 색은 사진을 보고 채웠어요. 다르면 바꿔 주세요"),
@@ -78,7 +77,7 @@ test("옷 정보 단계의 빈 이름 오류와 「정보 더 넣기」, 맞춰 
   await expect(page.getByText("브랜드 넣음", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "다음" }).click();
 
-  // W23: 제목, 접힌 치수 줄, 마지막 단추
+  // 제목, 접힌 치수 줄, 마지막 단추
   await expect(page.getByRole("heading", { name: "트윈에 맞춰 보세요" })).toBeVisible();
   await expect(page.getByText("옷을 끌어 옮기고 두 손가락으로 크기를 바꿔요")).toBeVisible();
   await expect(page.getByRole("button", { name: "치수로 더 정확하게 맞추기" })).toBeVisible();

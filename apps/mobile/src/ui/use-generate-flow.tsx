@@ -34,6 +34,8 @@ const INK = "#151314";
 const freeLooksOf = (state: AccountState): number =>
   state.gold ? freeLooksNow(state.gold.trialCount, state.gold.trialUsableToday) : 0;
 
+const GOLD_UNREAD_MESSAGE = "골드를 불러오지 못했어요. 잠시 뒤에 다시 해 주세요";
+
 const PERSON_PHOTO_MESSAGE = "사람이 함께 찍힌 옷 사진은 완성 룩으로 만들 수 없어요";
 
 type FlowSheet = "join" | "make" | null;
@@ -60,7 +62,8 @@ type StageState =
  */
 export function useGenerateFlow(
   twinKey: string,
-  outfit: Outfit,
+  /** 무대 코디. 아직 읽지 않았으면 null */
+  outfit: Outfit | null,
   catalog: ReadonlyMap<string, CatalogItem>,
 ): GenerateFlow {
   const router = useRouter();
@@ -91,7 +94,7 @@ export function useGenerateFlow(
 
   const notify = (message: string) => toast.show(message);
 
-  const items: ManifestGarment[] = outfit.flatMap((piece) => {
+  const items: ManifestGarment[] = (outfit ?? []).flatMap((piece) => {
     const item = catalog.get(refKey(piece.ref));
     if (!item) return [];
     return [
@@ -115,17 +118,28 @@ export function useGenerateFlow(
       router.push("/generate/consent");
       return;
     }
+    if (state.gold === null) {
+      setSheet(null);
+      notify(GOLD_UNREAD_MESSAGE);
+      return;
+    }
     setSheet("make");
   };
 
   // 동의 화면이나 실패 화면 「같은 코디로 다시 만들기」 에서 돌아오면 「완성 룩 만들기」 시트를 연다.
+  // 무대에 옷이 없으면 열지 않는다. 골드를 읽지 못했으면 시트 대신 알림을 띄운다.
+  const ready = outfit !== null;
+  const hasItems = items.length > 0;
   useEffect(() => {
-    if (params.make !== "1") return;
+    if (params.make !== "1" || !ready) return;
     router.setParams({ make: undefined });
+    if (!hasItems) return;
     void reload().then((state) => {
-      if (state.signedIn && !consentNeeded(state.consent)) setSheet("make");
+      if (!state.signedIn || consentNeeded(state.consent)) return;
+      if (state.gold === null) toast.show(GOLD_UNREAD_MESSAGE);
+      else setSheet("make");
     });
-  }, [params.make, reload, router]);
+  }, [params.make, reload, router, ready, hasItems, toast]);
 
   const run = async (task: () => Promise<void>) => {
     if (busyRef.current) return;

@@ -70,7 +70,7 @@ export function MakeLookSheet({
   return (
     <OverlaySheet visible={visible} title="완성 룩 만들기" onClose={onClose}>
       <Text style={styles.body}>
-        AI 가 옷의 주름과 핏까지 살린 사진을 새로 만들어요. 트윈에 겹쳐 입혀 보기는 늘 무료예요
+        AI가 옷의 주름과 핏까지 살린 사진을 새로 만들어요. 트윈에 겹쳐 입혀 보기는 늘 무료예요
       </Text>
       {notice ? <Text style={styles.line}>{notice}</Text> : null}
       <View style={styles.priceBox}>

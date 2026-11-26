@@ -39,9 +39,11 @@ export function ClosetFilterSheet({ visible, value, onApply, onClose }: ClosetFi
     <OverlaySheet visible={visible} title="거르기" onClose={onClose}>
       <SwitchRow
         title="즐겨찾기"
-        hint="별을 누른 옷만 보여요"
+        hint="즐겨찾기한 옷만 보여요"
         on={draft.favoriteOnly}
-        onToggle={() => setDraft((current) => ({ ...current, favoriteOnly: !current.favoriteOnly }))}
+        onToggle={() =>
+          setDraft((current) => ({ ...current, favoriteOnly: !current.favoriteOnly }))
+        }
       />
       <SwitchRow
         title="룩에 안 쓴 옷"

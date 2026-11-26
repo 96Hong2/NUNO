@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 // 홈 무대 원형 단추, 시트 떠 있는 단추, 빈 칸의 추천 코디 줄.
-// 기대값은 plan_W27.md DoD W1~W6 과 시안 v2 명세 「1. 홈」 에서 가져온다. 크기는 기준 틀 390×844 에서 잰다.
+// 기대값은 와이어프레임 v27 의 홈 화면과 시안 v2 명세 「1. 홈」 에서 가져온다. 크기는 기준 틀 390×844 에서 잰다.
 test.use({ viewport: { width: 390, height: 844 }, storageState: { cookies: [], origins: [] } });
 
 const box = async (locator: Locator) => {
@@ -30,12 +30,14 @@ test("룩이 없으면 「최근 저장한 룩」 칸에 추천 코디 줄이 �
 }) => {
   await skipOnboardingAsHarin(page);
 
-  // W1: 빈 안내 글 대신 머리 줄과 「NUNO 추천」 카드 가로 줄
+  // 빈 안내 글 대신 머리 줄과 「NUNO 추천」 카드 가로 줄
   await expect(page.getByRole("button", { name: "최근 저장한 룩" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(page.getByText("온보딩에서 저장한 첫 코디가 여기에 보여요", { exact: false })).toHaveCount(0);
+  await expect(
+    page.getByText("온보딩에서 저장한 첫 코디가 여기에 보여요", { exact: false }),
+  ).toHaveCount(0);
   await expect(page.getByText("추천 코디", { exact: true })).toBeVisible();
   await expect(page.getByText("다른 사람들의 코디에서 골랐어요", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "코디하러 가기" })).toBeVisible();
@@ -45,18 +47,25 @@ test("룩이 없으면 「최근 저장한 룩」 칸에 추천 코디 줄이 �
   expect(Math.round(first.x)).toBe(16);
   expect(Math.round(first.width)).toBe(104);
 
-  // W2: 무대 트윈 하린의 기본 코디는 줄에 없다
+  // 무대 트윈 하린의 기본 코디는 줄에 없다
   await expect(
     recoList(page).getByRole("button", { name: /^차콜 더플 코트와 플리츠 미니/ }),
   ).toHaveCount(0);
   await expect(cards.first()).toContainText("그레이 더블 코트와 블랙 초미니");
 
-  // W3: 첫 카드를 누르면 피팅룸 코디 탭이 열리고 그 코디 사진이 무대에 선다. 「되돌리기」 로 기본 코디에 돌아온다.
+  // 첫 카드를 누르면 피팅룸 코디 탭이 열리고 그 코디 사진이 무대에 선다. 「되돌리기」 로 기본 코디에 돌아온다.
+  // 알림은 코디 탭 「추천 코디」 카드를 누를 때처럼 옷 목록 위, 무대 아래쪽에 뜬다.
   await cards.first().click();
   await expect(page).toHaveURL(/\/fitting\/coordi$/);
   const alert = page.getByRole("alert");
   await expect(alert).toContainText("그레이 더블 코트와 블랙 초미니 코디로 바꿨어요");
-  const stagePhoto = page.getByRole("img", { name: "코디를 입은 트윈 사진" }).first().locator("img");
+  const alertBox = await box(alert);
+  const listBox = await box(page.getByRole("list", { name: "옷 목록" }));
+  expect(alertBox.y + alertBox.height).toBeLessThanOrEqual(listBox.y);
+  const stagePhoto = page
+    .getByRole("img", { name: "코디를 입은 트윈 사진" })
+    .first()
+    .locator("img");
   await expect(stagePhoto).toHaveAttribute("src", /harin-co/);
   await alert.getByRole("button", { name: "되돌리기" }).click();
   await expect(stagePhoto).toHaveAttribute("src", /harin-p07/);
@@ -67,7 +76,7 @@ test("옷이 없으면 「최근 추가한 옷」 칸에도 추천 코디 줄과
 }) => {
   await skipOnboardingAsHarin(page);
 
-  // W4
+  // 「최근 추가한 옷」 빈 칸
   await page.getByRole("button", { name: "최근 추가한 옷" }).click();
   await expect(page.getByRole("button", { name: "최근 추가한 옷" })).toHaveAttribute(
     "aria-pressed",
@@ -85,13 +94,15 @@ test("홈 무대 왼쪽에 「트윈 바꾸기」, 「오늘 추천」, 「룩�
 }) => {
   await skipOnboardingAsHarin(page);
 
-  // W5: 원 48, 왼쪽 열 가운데 x48, 오른쪽 열 가운데 x342
+  // 원 48, 왼쪽 열 가운데 x48, 오른쪽 열 가운데 x342. 「코디」 는 오른쪽 둘째 자리로 「오늘 추천」 과 높이가 같다.
   for (const name of ["트윈 바꾸기", "오늘 추천", "룩북"]) {
     const button = await box(page.getByRole("button", { name, exact: true }));
     expect(Math.round(button.x + button.width / 2)).toBe(48);
   }
   const coordi = await box(page.getByRole("button", { name: "코디", exact: true }));
   expect(Math.round(coordi.x + coordi.width / 2)).toBe(342);
+  const today = await box(page.getByRole("button", { name: "오늘 추천", exact: true }));
+  expect(Math.round(coordi.y)).toBe(Math.round(today.y));
   const ink = page.getByTestId("stage-coordi-circle");
   await expect(ink).toHaveCSS("background-color", "rgb(21, 19, 20)");
   const circle = await box(ink);
@@ -123,7 +134,6 @@ test("룩이 있으면 시트를 올렸을 때만 「+ 코디하기」 가 보�
   await tour.getByRole("button", { name: "닫기" }).click();
   await expect(tour).toHaveCount(0);
 
-  // W6
   await expect(page.getByText("저장한 룩 1개")).toBeVisible();
   const floating = page.getByRole("button", { name: "+ 코디하기" });
   await expect(floating).toHaveCount(0);

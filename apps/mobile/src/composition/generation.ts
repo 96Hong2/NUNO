@@ -258,6 +258,15 @@ async function forgetJob(jobId: string): Promise<void> {
   await deleteGenerationRequestByJob(db, jobId);
 }
 
+/**
+ * 결과를 더 볼 수 없는 작업(서버가 404 로 답했거나, 보관 기간이 지나 결과 주소가 없다)을 기기 요청 줄에서 지운다.
+ * 지운 뒤 끝남 이벤트를 내어, 무대 단추가 「이대로 입히기」 로 돌아오게 한다.
+ */
+export async function dropUnviewableJob(jobId: string): Promise<void> {
+  await forgetJob(jobId);
+  for (const listener of finishedListeners) listener();
+}
+
 /** 다 만들었지만 저장도 「나가기」 도 하지 않은 결과. 무대의 「다 된 완성 룩 보기」 가 연다 */
 export async function findUnsavedJob(): Promise<string | null> {
   if (!(await sessionToken())) return null;

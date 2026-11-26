@@ -292,7 +292,7 @@ export default function CutoutScreen() {
             })}
           </View>
         ) : (
-          <Text style={styles.notice}>아이폰 손보기 도구는 곧 열려요</Text>
+          <Text style={styles.notice}>iPhone에서는 배경 지우기 수정 도구를 아직 쓸 수 없어요</Text>
         )}
 
         {tool === "erase" || tool === "restore" ? (
