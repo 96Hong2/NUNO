@@ -282,6 +282,8 @@ test("무료 하루 한도에 닿으면 무료 장이 남아도 무대 단추가
               'provider_refused', now(), now()
        FROM generate_series(1, 4) AS g`);
   await dev(page, "gold", { amount: 20 });
+  // 지연이 없으면 worker 가 바로 끝내 「만드는 중」 화면이 보이기 전에 결과로 넘어간다.
+  await dev(page, "provider", { mode: "succeed", delayMs: 4000 });
   await page.getByRole("button", { name: "모두 동의하기" }).click();
   await page.getByRole("button", { name: "동의하고 만들기" }).click();
 
