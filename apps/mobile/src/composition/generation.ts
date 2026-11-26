@@ -86,7 +86,7 @@ export async function hasPersonPhoto(items: readonly ManifestGarment[]): Promise
 }
 
 /**
- * 「무료로 만들기」(payWith trial), 「4골드 쓰기」(payWith gold): 지금 무대 코디로 완성 룩을 접수한다.
+ * 「무료로 만들기」(payWith trial), 「4골드 사용」(payWith gold): 지금 무대 코디로 완성 룩을 접수한다.
  * 사람이 함께 찍힌 옷이 있으면 보내지 않는다. 거절되면 domain 이 고른 다음 화면을 돌려준다.
  */
 export async function submitGeneration(
@@ -224,25 +224,32 @@ export async function discardJob(jobId: string): Promise<boolean> {
   return done;
 }
 
-/** 「내 룩북에 저장」: 입은 옷 이름, 분류, 칸을 함께 저장한다. 연타해도 룩은 하나다 */
-export async function keepJob(jobId: string): Promise<boolean> {
+/**
+ * 「내 룩북에 저장」: 입은 옷 이름, 분류, 칸을 함께 저장한다. 연타해도 룩은 하나다.
+ * 저장한 룩 ID 를 돌려준다. 「룩북에서 보기」 가 「모든 룩」 크게 보기를 이 룩에서 연다. 못 했으면 null.
+ */
+export async function keepJob(jobId: string): Promise<string | null> {
   const token = await sessionToken();
-  if (!token) return false;
+  if (!token) return null;
   const { items } = await loadJobItems(jobId);
-  const result = await apiRequest(`/v1/generation-jobs/${encodeURIComponent(jobId)}/keep`, {
-    method: "POST",
-    token,
-    body: {
-      wornItems: items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        closet: item.closet,
-      })),
+  const result = await apiRequest<{ lookId: string }>(
+    `/v1/generation-jobs/${encodeURIComponent(jobId)}/keep`,
+    {
+      method: "POST",
+      token,
+      body: {
+        wornItems: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          closet: item.closet,
+        })),
+      },
     },
-  });
-  if (result.ok) await forgetJob(jobId);
-  return result.ok;
+  );
+  if (!result.ok) return null;
+  await forgetJob(jobId);
+  return result.data.lookId;
 }
 
 /** 저장했거나 지운 작업은 기기 요청 줄을 지운다. 저장 안 한 결과 찾기에서 빠진다 */
@@ -256,6 +263,16 @@ export async function findUnsavedJob(): Promise<string | null> {
   if (!(await sessionToken())) return null;
   const { db } = await getDeviceDb();
   return latestUnsavedJobId(db);
+}
+
+/** 아직 끝나지 않은 가장 최근 작업. 무대 「이대로 입히기」 자리가 「완성 룩 만드는 중」 이 된다 */
+export async function findRunningJob(): Promise<string | null> {
+  if (!(await sessionToken())) return null;
+  const { db } = await getDeviceDb();
+  const running = (await listWatchedRequests(db)).filter(
+    (request) => request.jobId !== null && !isFinishedStatus(request.status),
+  );
+  return running.at(-1)?.jobId ?? null;
 }
 
 export interface FinishedJob {

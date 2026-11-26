@@ -29,7 +29,7 @@ export function GenerationWatcher() {
           await markJobSeen(job.jobId);
           if (pathRef.current === `/generate/${job.jobId}`) continue;
           toast.show(
-            job.status === "succeeded" ? "완성 룩이 다 됐어요" : "완성 룩을 만들지 못했어요",
+            job.status === "succeeded" ? "완성 룩이 나왔어요" : "완성 룩을 만들지 못했어요",
             [{ label: "보기", onPress: () => router.push(`/generate/${job.jobId}`) }],
           );
         }

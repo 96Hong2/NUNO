@@ -113,6 +113,141 @@ export function progressStep(status: string): ProgressStep {
   return { percent: 100, label: "다 됐어요" };
 }
 
+/** 무대 「이대로 입히기」 옆 작은 글. freeLooks 는 `freeLooksNow` 값이다 */
+export function stageButtonNote(freeLooks: number): string {
+  return freeLooks > 0 ? `무료 ${freeLooks}장 남음` : `1장 ${LOOK_PRICE_GOLD}골드`;
+}
+
+/** 「1,200원」 처럼 원화 값을 세 자리마다 쉼표로 끊는다 */
+function wonLabel(gold: number): string {
+  return `${String(gold * GOLD_WON).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`;
+}
+
+export interface SheetRow {
+  label: string;
+  value: string;
+}
+
+/**
+ * 「완성 룩 만들기」 시트 한 틀의 세 상태. 무료 장이 있으면 무료, 골드가 넉넉하면 골드, 모자라면 골드 부족이다.
+ * 시트에는 실패했을 때 돌려준다는 글을 미리 두지 않는다. 돌려준 것은 실패 화면에서만 보인다.
+ */
+export type MakeLookSheetView =
+  | {
+      kind: "free";
+      /** 가격 칸에 줄 그어 보이는 원래 값 */
+      listPrice: string;
+      price: string;
+      note: string;
+      button: string;
+      payWith: "trial";
+    }
+  | {
+      kind: "gold";
+      price: string;
+      won: string;
+      /** 무료 장이 남았는데 오늘 무료 한도에 닿았을 때만 있다 */
+      notice: string | null;
+      balance: SheetRow;
+      button: string;
+      payWith: "gold";
+    }
+  | { kind: "short"; price: string; notice: string | null; rows: SheetRow[] };
+
+/**
+ * 시트 상태와 글. freeLooks 는 `freeLooksNow` 값, trialCount 는 서버의 남은 무료 장, balance 는 내 골드다.
+ */
+export function makeLookSheetView(
+  freeLooks: number,
+  trialCount: number,
+  balance: number,
+): MakeLookSheetView {
+  const price = `${LOOK_PRICE_GOLD}골드`;
+  if (freeLooks > 0) {
+    return {
+      kind: "free",
+      listPrice: price,
+      price: "무료",
+      note: `무료로 만들 수 있는 사진이 ${freeLooks}장 남았어요`,
+      button: "무료로 만들기",
+      payWith: "trial",
+    };
+  }
+  const notice = trialCount > 0 ? "오늘은 무료로 더 만들 수 없어요" : null;
+  const need = LOOK_PRICE_GOLD - balance;
+  if (need > 0) {
+    return {
+      kind: "short",
+      price,
+      notice,
+      rows: [
+        { label: "필요한 골드", value: price },
+        { label: "내 골드", value: `${balance}골드` },
+        { label: "부족한 골드", value: `${need}골드` },
+      ],
+    };
+  }
+  return {
+    kind: "gold",
+    price,
+    won: wonLabel(LOOK_PRICE_GOLD),
+    notice,
+    balance: { label: "내 골드", value: `${balance}골드` },
+    button: `${LOOK_PRICE_GOLD}골드 사용`,
+    payWith: "gold",
+  };
+}
+
+export interface MakingCopy {
+  percent: number;
+  title: string;
+  note: string;
+}
+
+/** 만드는 중 화면의 막대와 글. 막대는 접수, 만드는 중, 안전 확인 세 단계로 3분의 1씩 채운다 */
+export function makingCopy(status: string): MakingCopy {
+  return {
+    percent: progressStep(status).percent,
+    title: "완성 룩을 만들고 있어요",
+    note: "화면을 닫아도 계속 만들어요. 다 되면 알림을 보내 드려요",
+  };
+}
+
+/** 실패 화면의 주 단추. 시스템 오류면 같은 코디로 다시, 안전 기준이면 코디를 바꾸러 간다 */
+export type FailureAction = "retry" | "change";
+
+export interface LookFailureCopy {
+  headline: string;
+  title: string;
+  body: string;
+  refund: SheetRow;
+  action: FailureAction;
+  actionLabel: string;
+}
+
+/** 공급사가 안전 기준으로 거절한 실패 코드. 나머지 실패는 시스템 오류로 읽는다 */
+const SAFETY_FAILURE = "provider_refused";
+
+/** 「만들지 못했어요」 화면 글. 낸 것(골드, 무료 장)과 실패 원인으로 고른다 */
+export function lookFailureCopy(
+  kind: PaymentKind,
+  failureCode: string | null,
+  refundGold: number,
+): LookFailureCopy {
+  const safety = failureCode === SAFETY_FAILURE;
+  return {
+    headline: "만들지 못했어요.",
+    title: kind === "gold" ? "골드를 돌려드렸어요" : "무료 1장을 돌려드렸어요",
+    body: safety ? "안전 기준을 통과하지 못했어요" : "이미지를 만드는 중에 오류가 났어요",
+    refund:
+      kind === "gold"
+        ? { label: "돌려받은 골드", value: goldAmountLabel(refundGold) }
+        : { label: "돌려받은 무료 장", value: "+1장" },
+    action: safety ? "change" : "retry",
+    actionLabel: safety ? "코디 바꾸기" : "같은 코디로 다시 만들기",
+  };
+}
+
 /** 접수가 거절됐을 때 앱이 보일 다음 화면 */
 export type SubmitNext =
   | { kind: "consent" }
