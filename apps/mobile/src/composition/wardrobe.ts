@@ -74,7 +74,7 @@ export async function loadCloset(closet: ClosetKey): Promise<ClosetView> {
   return { counts, garments: await Promise.all(garments.map(withThumb)) };
 }
 
-/** 홈 「최근 넣은 옷」 탭: 두 칸을 합쳐 마지막에 넣은 옷부터 12벌 */
+/** 홈 「최근 추가한 옷」 탭: 두 칸을 합쳐 마지막에 추가한 옷부터 12벌 */
 export const RECENT_GARMENT_LIMIT = 12;
 
 export async function loadRecentGarments(): Promise<ClosetView> {

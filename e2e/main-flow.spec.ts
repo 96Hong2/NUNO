@@ -29,8 +29,9 @@ test("생년월일, 하린, 입고 싶은 옷, 「첫 코디」 룩북 저장, �
   await sheet.getByRole("button", { name: "내 룩북에 저장" }).click({ clickCount: 5 });
 
   const tour = page.getByRole("dialog", { name: "처음 둘러보기" });
-  await expect(tour).toContainText("첫 코디를 저장했어요");
-  await tour.getByRole("button", { name: "닫기" }).click();
+  await expect(tour).toContainText("첫 코디를 룩북에 저장했어요");
+  await tour.getByRole("button", { name: "건너뛰기" }).click();
+  await expect(tour).toHaveCount(0);
   const card = page.getByRole("button", { name: "첫 코디 룩 보기" });
   await expect(card).toContainText("옷 2벌");
   await expect(card).toContainText("방금 저장");
@@ -46,8 +47,9 @@ test("생년월일, 하린, 입고 싶은 옷, 「첫 코디」 룩북 저장, �
   await page.getByRole("button", { name: "다음" }).click();
   await page.getByRole("radio", { name: /이미 가진 옷/ }).click();
   await page.getByRole("button", { name: "다음" }).click();
-  await page.getByRole("button", { name: "내 옷에 담기" }).click();
-  await page.getByRole("alert").getByRole("button", { name: "이 옷으로 코디하기" }).click();
+  await page.getByRole("button", { name: "내 옷에 추가", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "내 옷에 추가했어요" })).toBeVisible();
+  await page.getByRole("button", { name: "이 옷으로 코디하기" }).click();
 
   await expect(page.getByTestId("stage-piece")).not.toHaveCount(0);
   await page.getByRole("button", { name: "내 코디" }).click();

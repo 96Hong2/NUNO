@@ -69,6 +69,28 @@ function changed(): void {
   for (const listener of listeners) listener();
 }
 
+/** 다른 화면이 코디를 바꾸고 코디 무대로 넘길 때, 코디 무대가 띄울 알림 한 건 */
+export interface OutfitNotice {
+  message: string;
+  /** 「되돌리기」 가 다시 입힐 바꾸기 전 코디와 그때의 트윈 */
+  before: Outfit;
+  twinKey: string;
+}
+
+let pendingNotice: OutfitNotice | null = null;
+
+/** 홈 추천 코디 카드처럼 코디를 바꾼 뒤 코디 무대를 열 때 부른다. 코디 무대가 무대 아래 자리에 띄운다 */
+export function leaveOutfitNotice(notice: OutfitNotice): void {
+  pendingNotice = notice;
+}
+
+/** 남겨 둔 알림을 꺼낸다. 한 번 꺼내면 비운다 */
+export function takeOutfitNotice(): OutfitNotice | null {
+  const notice = pendingNotice;
+  pendingNotice = null;
+  return notice;
+}
+
 // 옷장이 바뀌면(옷을 지우면 코디에서도 빠진다) 무대도 다시 읽는다.
 onClosetChange(changed);
 

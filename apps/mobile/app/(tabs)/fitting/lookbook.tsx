@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   hiddenHeading: { position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" },
   empty: { alignItems: "center", gap: 8, paddingVertical: 60 },
   emptyTitle: { fontSize: 17, fontWeight: "700", color: "#151314" },
-  emptyBody: { fontSize: 14, color: "#76736C", textAlign: "center" },
+  emptyBody: { fontSize: 14, color: "#5F5C56", textAlign: "center" },
   emptyButton: {
     marginTop: 8,
     paddingHorizontal: 18,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   emptyButtonLabel: { color: "#fff", fontSize: 14, fontWeight: "700" },
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
   headTitle: { fontSize: 17, fontWeight: "700", color: "#151314" },
-  headHint: { fontSize: 12, color: "#76736C" },
+  headHint: { fontSize: 12, color: "#5F5C56" },
   shelf: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 18 },
   newBook: { width: "48%" },
   newCover: {
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     borderColor: "#C9C6C0",
     backgroundColor: "#FAFAF9",
   },
-  newPlus: { fontSize: 28, color: "#76736C" },
+  newPlus: { fontSize: 28, color: "#5F5C56" },
   newTitle: { fontSize: 15, fontWeight: "700", color: "#151314" },
-  newHint: { fontSize: 12, color: "#76736C" },
+  newHint: { fontSize: 12, color: "#5F5C56" },
 });

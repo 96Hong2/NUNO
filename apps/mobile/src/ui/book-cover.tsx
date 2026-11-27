@@ -126,10 +126,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F7F7F7",
+    backgroundColor: "#EFEDEA",
   },
-  emptyText: { fontSize: 12, color: "#76736C" },
+  emptyText: { fontSize: 12, color: "#5F5C56" },
   title: { marginTop: 10, color: "#fff", fontSize: 16, fontWeight: "800" },
   count: { marginTop: 2, color: "#fff", fontSize: 12, opacity: 0.85 },
-  note: { fontSize: 12, color: "#76736C" },
+  note: { fontSize: 12, color: "#5F5C56" },
 });

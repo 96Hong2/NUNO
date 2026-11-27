@@ -13,7 +13,7 @@ import { useAppToast } from "../src/ui/app-toast";
 import { ConfirmSheet } from "../src/ui/generate-sheets";
 
 const INK = "#151314";
-const SUB = "#76736C";
+const SUB = "#5F5C56";
 
 // 설정: 「개인정보와 안전」 의 완성 룩 만들기 동의, 「계정」 의 로그아웃. 가입 전에는 두 칸 모두 숨긴다.
 export default function SettingsScreen() {

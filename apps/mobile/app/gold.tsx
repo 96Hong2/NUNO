@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { loadAccount, type GoldSummary } from "../src/composition/account";
 
 const INK = "#151314";
-const SUB = "#76736C";
+const SUB = "#5F5C56";
 
 // 「내 골드」: 잔액, 원화 값, 사용 내역. 충전 단추는 충전이 생기면 단다.
 export default function GoldScreen() {
@@ -59,9 +59,7 @@ export default function GoldScreen() {
                 ))
               )}
             </View>
-            <Text style={styles.foot}>
-              1골드는 100원이에요. 만들지 못하면 쓴 골드를 돌려드려요.
-            </Text>
+            <Text style={styles.foot}>1골드는 100원이에요</Text>
           </>
         ) : loaded ? (
           <Text style={styles.empty}>골드를 불러오지 못했어요</Text>

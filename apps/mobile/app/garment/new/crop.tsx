@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   badgeLabel: { fontSize: 13, fontWeight: "700", color: CHERRY },
   info: { padding: 14, borderRadius: 14, backgroundColor: "#F2F1EF" },
-  infoText: { fontSize: 13, lineHeight: 19, color: "#76736C" },
+  infoText: { fontSize: 13, lineHeight: 19, color: "#5F5C56" },
   cover: { alignItems: "center", paddingVertical: 10 },
   coverLabel: { fontSize: 15, fontWeight: "600", color: "#151314" },
 });

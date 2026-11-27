@@ -5,9 +5,9 @@ import { CHERRY } from "./garment-card";
 import { OverlaySheet } from "./overlay-sheet";
 
 const INK = "#151314";
-const SUB = "#76736C";
+const SUB = "#5F5C56";
 const LINE = "#E7E6E3";
-const CARD = "#F7F7F7";
+const CARD = "#F6F5F3";
 
 /** 줄 왼쪽 책 아이콘. plus 면 책 안에 「+」 */
 function BookIcon({ plus = false }: { plus?: boolean }) {

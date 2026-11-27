@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#F4F3F1",
   },
-  goldLabel: { fontSize: 13, color: "#76736C" },
+  goldLabel: { fontSize: 13, color: "#5F5C56" },
   goldValue: { fontSize: 22, fontWeight: "800", color: "#151314" },
   devRow: {
     paddingVertical: 14,

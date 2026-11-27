@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { finishStyleStep, saveStyleChoice } from "../../src/composition/profile";
 import { useProfile } from "../../src/ui/profile-gate";
-import { StepDots } from "../../src/ui/step-dots";
+import { OnboardingHead } from "../../src/ui/onboarding-head";
 import { useAppToast } from "../../src/ui/app-toast";
 
 // 온보딩 2단계. 「다음」 은 고른 태그를 저장하고 3단계로, 「나중에 고를게요」 는 저장 없이 3단계로 간다.
@@ -56,12 +56,7 @@ export default function StyleScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.topRow}>
-          <StepDots current={2} />
-          <Pressable role="button" hitSlop={12} onPress={() => void finish()}>
-            <Text style={styles.skip}>건너뛰기</Text>
-          </Pressable>
-        </View>
+        <OnboardingHead step={2} previous="/onboarding/twin" onSkip={() => void finish()} />
         <Text role="heading" aria-level={1} style={styles.title}>
           좋아하는 스타일을 골라 주세요
         </Text>
@@ -107,10 +102,8 @@ export default function StyleScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-  body: { padding: 24, gap: 14 },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  skip: { fontSize: 15, color: "#555" },
+  screen: { flex: 1, backgroundColor: "#FCFBFA" },
+  body: { paddingHorizontal: 20, paddingBottom: 24, gap: 14 },
   title: { fontSize: 24, fontWeight: "700" },
   subtitle: { fontSize: 14, color: "#777" },
   count: { fontSize: 14, color: "#555" },
@@ -128,7 +121,7 @@ const styles = StyleSheet.create({
   later: { alignSelf: "center", paddingVertical: 8 },
   laterLabel: { fontSize: 14, color: "#777", textDecorationLine: "underline" },
   button: {
-    margin: 24,
+    margin: 20,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",

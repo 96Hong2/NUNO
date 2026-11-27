@@ -60,7 +60,7 @@ test("무대에 머물러도 「다 된 완성 룩 보기」 가 남고, 알림�
   await expect(page.getByRole("button", { name: `무대의 ${COAT}` })).toBeVisible();
   await stageButton(page).click();
   await page
-    .getByRole("dialog", { name: "골드를 쓰려면 가입해요" })
+    .getByRole("dialog", { name: "완성 룩을 만들려면 가입이 필요해요" })
     .getByRole("button", { name: "시험 계정으로 계속하기" })
     .click();
   await expect(
@@ -74,7 +74,7 @@ test("무대에 머물러도 「다 된 완성 룩 보기」 가 남고, 알림�
   await makeSheet(page).getByRole("button", { name: "무료로 만들기" }).click();
   await expect(page.getByRole("progressbar", { name: "만드는 중" })).toBeVisible();
   await page.getByRole("button", { name: "닫기" }).click();
-  await expect(toast(page)).toContainText("완성 룩이 다 됐어요", { timeout: 20_000 });
+  await expect(toast(page)).toContainText("완성 룩이 나왔어요", { timeout: 20_000 });
   const chip = page.getByRole("button", { name: "다 된 완성 룩 보기" });
   await expect(chip).toBeVisible();
   await expect(toast(page)).toHaveCount(0, { timeout: 10_000 });

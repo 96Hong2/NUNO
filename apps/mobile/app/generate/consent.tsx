@@ -6,7 +6,7 @@ import { agreeConsent, loadConsentProvider } from "../../src/composition/account
 import { useAppToast } from "../../src/ui/app-toast";
 
 const INK = "#151314";
-const SUB = "#76736C";
+const SUB = "#5F5C56";
 
 // 첫 사용 동의: 「이대로 입히기」 전에 한 번. 체크 줄 셋을 다 골라야 「동의하고 만들기」 가 된다.
 // 받는 곳(공급사 이름과 나라)은 서버가 켜 둔 공급사 줄에서 읽는다. 못 읽으면 동의를 받지 않는다.

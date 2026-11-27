@@ -1,5 +1,5 @@
 import type { GarmentMethod } from "@nuno/wardrobe";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 interface AddGarmentSheetProps {
   visible: boolean;
@@ -14,15 +14,19 @@ const METHODS: { method: GarmentMethod; icon: string; label: string; hint: strin
   { method: "album", icon: "🖼", label: "앨범에서 고르기", hint: "상품 사진이나 옷 사진을 골라요" },
 ];
 
-/** 「옷 추가」 를 누르면 뜨는 「옷을 어떻게 넣을까요?」 시트. 링크와 스토어로 넣기는 넓히기 단계에 연다. */
+// 웹 Modal 은 닫히는 움직임이 끝나야 빠진다. 사진을 고른 뒤 옷장 화면이 가려지면 그 움직임이 끝나지 않아,
+// 보이지 않는 시트가 남아 다음 단계 입력칸의 초점을 빼앗는다. 그래서 웹에서는 움직임 없이 바로 닫는다.
+const SHEET_ANIMATION = Platform.OS === "web" ? "none" : "slide";
+
+/** 「옷 추가」 를 누르면 뜨는 「옷을 어떻게 추가할까요?」 시트. 링크와 스토어로 넣기는 넓히기 단계에 연다. */
 export function AddGarmentSheet({ visible, counts, onPick, onClose }: AddGarmentSheetProps) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={SHEET_ANIMATION} onRequestClose={onClose}>
       <Pressable role="button" style={styles.backdrop} onPress={onClose} aria-label="시트 닫기" />
-      <View role="dialog" aria-label="옷을 어떻게 넣을까요?" style={styles.sheet}>
+      <View role="dialog" aria-label="옷을 어떻게 추가할까요?" style={styles.sheet}>
         <View style={styles.grip} />
         <Text role="heading" aria-level={3} style={styles.title}>
-          옷을 어떻게 넣을까요?
+          옷을 어떻게 추가할까요?
         </Text>
         <View style={styles.row}>
           {METHODS.map((item) => (
@@ -50,7 +54,7 @@ export function AddGarmentSheet({ visible, counts, onPick, onClose }: AddGarment
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
+  backdrop: { flex: 1, backgroundColor: "rgba(21,19,20,0.4)" },
   sheet: {
     paddingHorizontal: 20,
     paddingTop: 10,
@@ -62,16 +66,16 @@ const styles = StyleSheet.create({
   },
   grip: {
     alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E7E6E3",
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(21,19,20,0.2)",
   },
   title: { fontSize: 20, fontWeight: "700", color: "#151314" },
   row: { flexDirection: "row", gap: 10 },
-  card: { flex: 1, gap: 6, padding: 16, borderRadius: 14, backgroundColor: "#F7F7F7" },
+  card: { flex: 1, gap: 6, padding: 16, borderRadius: 14, backgroundColor: "#F6F5F3" },
   icon: { fontSize: 20 },
   label: { fontSize: 16, fontWeight: "700", color: "#151314" },
-  hint: { fontSize: 13, lineHeight: 18, color: "#76736C" },
-  count: { fontSize: 13, color: "#76736C" },
+  hint: { fontSize: 13, lineHeight: 18, color: "#5F5C56" },
+  count: { fontSize: 13, color: "#5F5C56" },
 });

@@ -70,7 +70,7 @@ export function PrimaryButton({ label, onPress, disabled, dimmed }: PrimaryButto
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FCFCFC" },
+  screen: { flex: 1, backgroundColor: "#FCFBFA" },
   screenDark: { backgroundColor: "#151314" },
   top: {
     flexDirection: "row",
@@ -81,11 +81,11 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   back: { fontSize: 28, lineHeight: 30, color: "#151314" },
-  step: { fontSize: 15, color: "#76736C" },
+  step: { fontSize: 15, color: "#5F5C56" },
   light: { color: "#fff" },
   body: { paddingHorizontal: 20, paddingBottom: 120, gap: 14 },
   title: { fontSize: 26, fontWeight: "800", color: "#151314", marginTop: 8 },
-  sub: { fontSize: 15, lineHeight: 22, color: "#76736C" },
+  sub: { fontSize: 15, lineHeight: 22, color: "#5F5C56" },
   subDark: { color: "#C9C6C0" },
   footer: { position: "absolute", left: 20, right: 20, bottom: 20, gap: 10 },
   primary: {
@@ -96,5 +96,5 @@ const styles = StyleSheet.create({
   },
   primaryOff: { backgroundColor: "#E7E6E3" },
   primaryLabel: { color: "#fff", fontSize: 17, fontWeight: "700" },
-  primaryLabelOff: { color: "#76736C" },
+  primaryLabelOff: { color: "#5F5C56" },
 });
