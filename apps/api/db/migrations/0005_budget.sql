@@ -206,36 +206,39 @@ BEGIN
 END;
 $$;
 
--- 예약 작업. 끝난 작업에 예약 상태로 남은 시도를 정산한다. worker 가 공급사를 부른 뒤 죽은 시도가 여기로 온다.
--- 시도를 예산 날짜, ID 순서로 고르고, 시도마다 사용자, 작업, 시도, 예산 행 순서로 잠근다. 정산한 시도 수를 낸다.
-CREATE FUNCTION nuno_settle_budgets(p_now timestamptz) RETURNS integer
+-- 예약 작업. 끝난 작업에 예약 상태로 남은 시도 하나를 정산한다. worker 가 공급사를 부른 뒤 죽은 시도가 여기로 온다.
+-- 한 번 부를 때 시도 하나만 다뤄 트랜잭션 하나가 사용자 행 하나만 잠근다. 예산 행을 쥔 채 다른 사용자 행을
+-- 기다리면 worker 의 시도 시작, 시도 마침과 교착이 생긴다. 부르는 쪽이 NULL 이 나올 때까지 되풀이한다.
+-- 정산할 시도가 없으면 NULL, 고른 시도를 다른 트랜잭션이 먼저 정산했으면 'skipped', 아니면 새 예산 상태를 낸다.
+CREATE FUNCTION nuno_settle_next_budget(p_now timestamptz) RETURNS text
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   v_candidate record;
-  v_count integer := 0;
 BEGIN
-  FOR v_candidate IN
-    SELECT a.id, a.job_id, j.user_id FROM generation_attempts a
-    JOIN generation_jobs j ON j.id = a.job_id
-    WHERE a.budget_status = 'reserved' AND j.status IN ('succeeded', 'failed')
-    ORDER BY a.budget_day, a.id
-    LIMIT 100
-  LOOP
-    PERFORM 1 FROM users u WHERE u.id = v_candidate.user_id FOR UPDATE;
-    PERFORM 1 FROM generation_jobs j
-    WHERE j.id = v_candidate.job_id AND j.status IN ('succeeded', 'failed')
-    FOR UPDATE;
-    CONTINUE WHEN NOT FOUND;
-    PERFORM 1 FROM generation_attempts a
-    WHERE a.id = v_candidate.id AND a.budget_status = 'reserved'
-    FOR UPDATE;
-    CONTINUE WHEN NOT FOUND;
-    IF nuno_budget_settle_attempt(v_candidate.id, p_now) IS NOT NULL THEN
-      v_count := v_count + 1;
-    END IF;
-  END LOOP;
-  RETURN v_count;
+  SELECT a.id, a.job_id, j.user_id INTO v_candidate FROM generation_attempts a
+  JOIN generation_jobs j ON j.id = a.job_id
+  WHERE a.budget_status = 'reserved' AND j.status IN ('succeeded', 'failed')
+  ORDER BY a.budget_day, a.id
+  LIMIT 1;
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+
+  PERFORM 1 FROM users u WHERE u.id = v_candidate.user_id FOR UPDATE;
+  PERFORM 1 FROM generation_jobs j
+  WHERE j.id = v_candidate.job_id AND j.status IN ('succeeded', 'failed')
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN 'skipped';
+  END IF;
+  PERFORM 1 FROM generation_attempts a
+  WHERE a.id = v_candidate.id AND a.budget_status = 'reserved'
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN 'skipped';
+  END IF;
+  RETURN coalesce(nuno_budget_settle_attempt(v_candidate.id, p_now), 'skipped');
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION nuno_settle_budgets(timestamptz) TO nuno_api;
+GRANT EXECUTE ON FUNCTION nuno_settle_next_budget(timestamptz) TO nuno_api;

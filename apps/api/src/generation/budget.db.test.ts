@@ -220,6 +220,19 @@ async function holdStatus(jobId: string) {
   return row?.status;
 }
 
+/** 정산 문장이 잠금을 기다릴 때까지 기다린다. 10초 안에 기다리지 않으면 멈춘다. */
+async function waitForSettleLockWait() {
+  for (let tries = 0; tries < 200; tries += 1) {
+    const [row] = await admin.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM pg_stat_activity
+       WHERE state = 'active' AND wait_event_type = 'Lock' AND query LIKE '%nuno_settle%'`,
+    );
+    if ((row?.n ?? 0) > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("정산이 사용자 행을 기다리지 않았다");
+}
+
 describe("하루 생성 예산", () => {
   it("그날 예산이 0원이면 worker 는 공급사를 부르지 않고 시도 줄 없이 budget_exhausted 로 실패하며 묶인 무료 장이 돌아온다", async () => {
     const day = "2022-02-01";
@@ -374,6 +387,89 @@ describe("하루 생성 예산", () => {
       [billed.attemptId],
     );
     expect(cost?.cost).toBe(300);
+  });
+
+  it("worker 가 다른 사용자의 시도를 시작하는 동안 정산이 돌아도 교착 없이 둘 다 끝난다", async () => {
+    const day = "2022-02-04";
+    const times = [
+      "2022-02-04T01:00:00Z",
+      "2022-02-04T01:00:10Z",
+      "2022-02-04T01:00:20Z",
+      "2022-02-04T01:00:30Z",
+    ];
+    const first = apiAt(times[0] ?? "");
+    const users = [await first.readyUser(), await first.readyUser()];
+    // 사용자마다 끝날 작업 하나와 진행 중일 작업 하나를 접수한다. 끝날 작업을 먼저 접수해 먼저 선점된다.
+    const finishing: string[] = [];
+    const running: string[] = [];
+    for (const [index, user] of users.entries()) {
+      finishing.push(await apiAt(times[index] ?? "").submit(user.token));
+    }
+    for (const [index, user] of users.entries()) {
+      running.push(await apiAt(times[index + 2] ?? "").submit(user.token));
+    }
+    const now = new Date(times[3] ?? "");
+    const before = await budgetRow(day);
+
+    const claim = async (jobId: string, at: Date) => {
+      const token = randomUUID();
+      const [claimed] = await api.query<{ job_id: string }>(
+        "SELECT job_id FROM nuno_claim_job($1, $2, $3)",
+        [token, LEASE_SECONDS, at],
+      );
+      expect(claimed?.job_id).toBe(jobId);
+      return token;
+    };
+    const attemptIds: string[] = [];
+    for (const jobId of finishing) {
+      const token = await claim(jobId, now);
+      const [attempt] = await api.query<{ id: string }>(
+        "SELECT nuno_start_attempt($1, $2, $3, 'm', $4) AS id",
+        [jobId, token, SEED_PROVIDER, now],
+      );
+      attemptIds.push(attempt?.id ?? "");
+    }
+    await admin.query(
+      "UPDATE generation_attempts SET billing_status = 'billed', cost_usd = $2 WHERE id = ANY($1)",
+      [attemptIds, PRICE_USD],
+    );
+    const later = new Date(now.getTime() + (LEASE_SECONDS + 1) * 1000);
+    const workerDown = { db: api, store, push: countingWorker(later).deps.push, now: () => later };
+    await sweepJobs(workerDown);
+    const runningTokens: string[] = [];
+    for (const jobId of running) runningTokens.push(await claim(jobId, later));
+
+    // 정산은 시도를 ID 순서로 고른다. 뒤에 고르는 시도의 주인이 worker 로 새 시도를 시작하는 사용자다.
+    const lastIndex = (attemptIds[0] ?? "") < (attemptIds[1] ?? "") ? 1 : 0;
+    const lastUser = users[lastIndex]?.userId ?? "";
+    const lastRunning = running[lastIndex] ?? "";
+    const lastToken = runningTokens[lastIndex] ?? "";
+
+    // nuno_start_attempt 처럼 사용자 행을 먼저 잠그고, 정산이 그 행을 기다리는 동안 예산 행을 잠근다.
+    let settling: Promise<number> | undefined;
+    const started = await admin.transaction(async (tx) => {
+      await tx.query("SELECT 1 FROM users WHERE id = $1 FOR UPDATE", [lastUser]);
+      settling = settleBudgets(workerDown);
+      await waitForSettleLockWait();
+      const [attempt] = await tx.query<{ id: string | null }>(
+        "SELECT nuno_start_attempt($1, $2, $3, 'm', $4) AS id",
+        [lastRunning, lastToken, SEED_PROVIDER, later],
+      );
+      return attempt?.id ?? null;
+    });
+    expect(started).toEqual(expect.any(String));
+    expect(await settling).toBeGreaterThanOrEqual(2);
+
+    const rows = await admin.query<{ budget_status: string }>(
+      "SELECT budget_status FROM generation_attempts WHERE id = ANY($1) ORDER BY budget_status",
+      [[...attemptIds, started]],
+    );
+    expect(rows.map((row) => row.budget_status)).toEqual(["reserved", "settled", "settled"]);
+    expect(await budgetRow(day)).toEqual({
+      budget: before.budget,
+      reserved: before.reserved + PRICE,
+      settled: before.settled + 2 * PRICE,
+    });
   });
 
   it("nuno_api 역할은 예산 표를 읽거나 고치지 못한다", async () => {

@@ -37,7 +37,8 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 - 잠금 순서는 사용자 → 작업 → 시도 → 예산 행(날짜, 종류, 공급사 순)이다. 예산 행은 `nuno_budget_lock` 만 잠근다.
 - 하루 예산은 판 0005 의 `cost_daily` 다. 지금은 하루 전체(`total`) 행만 예약하고 정산한다.
   - `nuno_start_attempt` 가 시도 줄을 만들기 전에 설정 줄의 `price_usd` 를 예약한다. 모자라면 `budget_exhausted` 다.
-  - 시도가 끝나면 `nuno_finish_attempt` 가, worker 가 죽었으면 예약 작업 `nuno_settle_budgets` 가 정산한다.
+  - 시도가 끝나면 `nuno_finish_attempt` 가, worker 가 죽었으면 예약 작업이 `nuno_settle_next_budget` 를 시도마다 한 번씩 불러 정산한다.
+  - 한 트랜잭션에서 예산 행을 쥔 채 다른 사용자 행을 잠그지 않는다. worker 와 교착이 생긴다.
   - 청구 여부나 청구액을 모르면 예약액을 그대로 둔다(`kept_reserved`). 다시 정산하지 않는다.
 - 그날 행이 없으면 `cost_budget_defaults` 의 상한을 복사한다. 기본값이 없으면 상한 0원이라 공급사를 부르지 않는다.
   로컬 시험 DB 와 개발 DB 는 스크립트가 넣는다. 개발 서버와 운영 DB 는 운영자가 관리자로 넣는다.
