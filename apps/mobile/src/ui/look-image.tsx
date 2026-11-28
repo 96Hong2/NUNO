@@ -21,7 +21,7 @@ export function hasLookPhoto(look: LookPicture): boolean {
 /** 사진 아래 안내 문구. AI 가 만들지 않은 겹친 그림에는 AI 문구를 붙이지 않는다 */
 export function lookCaption(look: LookPicture): string {
   return hasLookPhoto(look)
-    ? "AI 가 만든 예시라 실제와 다를 수 있어요"
+    ? "AI 가 만든 예시예요"
     : "옷 그림을 겹쳐 본 예시예요";
 }
 

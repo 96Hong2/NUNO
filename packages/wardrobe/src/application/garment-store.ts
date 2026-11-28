@@ -181,6 +181,21 @@ export async function insertGarment(
   return true;
 }
 
+/** 원본 사진 파일이 따로 남은 옷. 원본을 옷 폴더에 쓰던 앱이 넣은 옷이다 */
+export async function listStoredOriginals(
+  db: SqlExecutor,
+): Promise<{ id: string; originalPath: string }[]> {
+  const rows = await db.all<{ id: string; original_path: string }>(
+    "SELECT id, original_path FROM garments WHERE original_path <> cutout_path",
+  );
+  return rows.map((row) => ({ id: row.id, originalPath: row.original_path }));
+}
+
+/** 원본 사진 파일을 지운 뒤 원본 칸을 누끼 경로로 바꾼다 */
+export async function forgetStoredOriginal(db: SqlExecutor, id: string): Promise<void> {
+  await db.run("UPDATE garments SET original_path = cutout_path WHERE id = ?", [id]);
+}
+
 /** 두 칸 어디든 남아 있는 옷의 견본 키. 룩의 입은 옷 시트 「옷장에 있음」 에 쓴다 */
 export async function listClosetSampleKeys(db: SqlExecutor): Promise<string[]> {
   const rows = await db.all<{ sample_key: string }>(

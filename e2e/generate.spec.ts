@@ -47,15 +47,15 @@ async function dev(page: Page, path: string, body: object) {
 
 const stageButton = (page: Page) => page.getByRole("button", { name: "이대로 입히기" });
 
-/** 코디 무대를 열고 옷을 모두 벗긴 뒤 코트 한 벌만 입힌다. */
+/** 코디 무대를 열고 옷을 비운 뒤 코트 한 벌만 입힌다. */
 async function wearCoat(page: Page) {
   await page.goto("/");
   await page.getByRole("tab", { name: "피팅룸" }).click();
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
-  await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
-  // 벗기기가 끝나면 「되돌리기」 알림이 뜬다. 알림이 들어오는 순간 누르면 클릭이 「되돌리기」 에 맞아
+  await page.getByRole("button", { name: "옷 비우기" }).click();
+  // 옷 비우기가 끝나면 「되돌리기」 알림이 뜬다. 알림이 들어오는 순간 누르면 클릭이 「되돌리기」 에 맞아
   // 원래 코디로 돌아간다. 알림이 뜬 뒤에 누르면 Playwright 가 알림이 옷 목록을 가리는 동안 기다린다.
-  await expect(page.getByRole("alert")).toContainText("입은 옷을 모두 벗었어요");
+  await expect(page.getByRole("alert")).toContainText("옷을 모두 비웠어요");
   await expect(page.getByTestId("stage-piece")).toHaveCount(0);
   await page
     .getByRole("list", { name: "옷 목록" })

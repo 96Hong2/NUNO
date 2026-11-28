@@ -80,7 +80,7 @@ for (const [file, category] of GARMENTS) {
   for (const twin of TWINS) {
     await pickTwin(twin);
     // 비우기가 기기에 저장된 뒤에 다음 화면으로 간다.
-    await page.getByRole("button", { name: /^입은 옷(이 없어요| 모두 벗기)$/ }).click();
+    await page.getByRole("button", { name: /^(입은 옷이 없어요|옷 비우기)$/ }).click();
     await page.getByRole("button", { name: "입은 옷이 없어요" }).waitFor();
     await go(detail);
     await page.getByRole("button", { name: "트윈에 입혀 보기" }).click();

@@ -1,7 +1,9 @@
 import { nextOnboardingStep } from "@nuno/profile";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { loadProfile } from "../src/composition/profile";
+import { removeLeftoverOriginals } from "../src/composition/wardrobe";
 import { AppToastProvider } from "../src/ui/app-toast";
 import { GenerationWatcher } from "../src/ui/generation-watcher";
 import "../src/ui/korean-line-break";
@@ -26,6 +28,7 @@ const OVERLAY_SCREENS = [
 ];
 
 export default function RootLayout() {
+  useEffect(() => void removeLeftoverOriginals(), []);
   return (
     <>
       <StatusBar style="dark" />
