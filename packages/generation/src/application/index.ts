@@ -1,5 +1,6 @@
 // generation application: 기기 생성 요청 표와 옮기기 단계.
 export {
+  addGenerationRequestLeft,
   attachGenerationJob,
   createGenerationRequestTable,
   deleteAllGenerationRequests,
@@ -9,6 +10,7 @@ export {
   insertGenerationRequest,
   latestUnsavedJobId,
   listWatchedRequests,
+  markGenerationLeft,
   markGenerationSeen,
   readGenerationRequestByJob,
   updateGenerationStatus,
