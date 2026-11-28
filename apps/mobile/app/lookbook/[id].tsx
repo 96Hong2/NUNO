@@ -61,10 +61,14 @@ const wornCountOf = (look: BookLook) =>
   look.kind === "device" ? look.look.items.length : look.look.wornItems.length;
 
 // 룩북 크게 보기: id 는 `all`(「모든 룩」)이나 서버 룩북 ID 다. 룩을 한 장씩 넘겨 보고, 별과 「다른 룩북에 넣기」 를 쓴다.
-// 사진이나 오른쪽 아래 「입은 옷 N」 을 누르면 입은 옷 시트가 열린다. 아래 고정 줄은 「전체 보기」 와 「트윈에 입혀 보기」 다.
+// 사진이나 오른쪽 아래 「입은 옷 N」 을 누르면 입은 옷 시트가 열린다. 아래 고정 줄은 「전체 보기」(룩북 격자)와 「트윈에 입혀 보기」 다.
 // 기기 견본 룩(온보딩 「첫 코디」)은 별과 「다른 룩북에 넣기」 가 없다.
 export default function LookbookBookScreen() {
-  const { id = "all", look: startKey } = useLocalSearchParams<{ id: string; look?: string }>();
+  const {
+    id = "all",
+    look: startKey,
+    from,
+  } = useLocalSearchParams<{ id: string; look?: string; from?: string }>();
   const router = useRouter();
   const toast = useAppToast();
   const [view, setView] = useState<BookView | null | "missing">(null);
@@ -321,9 +325,10 @@ export default function LookbookBookScreen() {
     }
   };
 
-  const toShelf = () => {
-    if (router.canDismiss()) router.dismissAll();
-    router.navigate("/fitting/lookbook");
+  // 전체 보기에서 연 화면이면 그 격자로 돌아가 쌓인 화면이 늘지 않게 한다.
+  const toGrid = () => {
+    if (from === "grid" && router.canGoBack()) router.back();
+    else router.push({ pathname: "/lookbook-grid/[id]", params: { id } });
   };
 
   return (
@@ -466,7 +471,7 @@ export default function LookbookBookScreen() {
 
       {current ? (
         <View style={styles.bar}>
-          <Pressable role="button" onPress={toShelf} style={[styles.barButton, styles.barAll]}>
+          <Pressable role="button" onPress={toGrid} style={[styles.barButton, styles.barAll]}>
             <Text style={styles.barAllLabel}>전체 보기</Text>
           </Pressable>
           <Pressable

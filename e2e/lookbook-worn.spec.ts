@@ -114,7 +114,7 @@ test("무대에 머물러도 「다 된 완성 룩 보기」 가 남고, 알림�
   await expect(toast(page)).toContainText("1벌을 트윈에 입혔어요");
   await expect(page.getByRole("button", { name: `무대의 ${COAT}` })).toBeVisible();
 
-  // 아래 고정 줄 「트윈에 입혀 보기」 는 룩 전체를 입히고, 「전체 보기」 는 룩북 책장으로 간다.
+  // 아래 고정 줄 「트윈에 입혀 보기」 는 룩 전체를 입히고, 「전체 보기」 는 그 룩북의 격자를 연다.
   await stripStage(page);
   await openAllLooks(page);
   await bookButton(page, "다음 룩").click();
@@ -124,5 +124,8 @@ test("무대에 머물러도 「다 된 완성 룩 보기」 가 남고, 알림�
   await expect(page.getByRole("button", { name: `무대의 ${COAT}` })).toBeVisible();
   await openAllLooks(page);
   await bookButton(page, "전체 보기").click();
-  await expect(page.getByRole("button", { name: /^모든 룩 룩북 보기/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "모든 룩 전체 보기", exact: true })).toBeVisible();
+  await expect(
+    page.getByTestId("lookbook-grid").getByText("룩 2개", { exact: true }),
+  ).toBeVisible();
 });
