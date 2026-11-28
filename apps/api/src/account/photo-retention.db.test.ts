@@ -92,8 +92,34 @@ describe("AI 업체 서버의 사진 보관 기간", () => {
         consent: { agreed: true, textVersion: 2, currentVersion: 2 },
       });
     } finally {
-      await setSeed(30, 1);
+      // 보관 기간을 되돌릴 때도 판은 내리지 못하고 한 번 더 올린다.
+      await setSeed(30, 3);
     }
+  });
+
+  it("판을 올리지 않고 보관 기간, 공급사, 모델, 나라를 바꾸면 설정 줄 UPDATE 가 거절된다", async () => {
+    const [before] = await admin.query<{ consent_text_version: number }>(
+      "SELECT consent_text_version FROM provider_configs WHERE provider = $1",
+      [SEED_PROVIDER],
+    );
+    const version = before?.consent_text_version ?? 0;
+    for (const change of [
+      "retention_days = 7",
+      `provider = '${SEED_PROVIDER}-다른 업체'`,
+      "model = 'm2'",
+      "country = '다른 나라'",
+    ]) {
+      const error = await admin
+        .query(`UPDATE provider_configs SET ${change} WHERE provider = $1`, [SEED_PROVIDER])
+        .catch((caught: unknown) => caught);
+      expect((error as { code?: string }).code).toBe("P0001");
+      expect((error as Error).message).toContain("동의 문구 판을 함께 올리거나 새 줄을 만든다");
+    }
+    const [after] = await admin.query<{ retention_days: number; consent_text_version: number }>(
+      "SELECT retention_days, consent_text_version FROM provider_configs WHERE provider = $1",
+      [SEED_PROVIDER],
+    );
+    expect(after).toEqual({ retention_days: 30, consent_text_version: version });
   });
 
   it("켜 둔 공급사가 없으면 보관 기간은 null 이고 지금 판도 null 이다", async () => {
@@ -118,11 +144,13 @@ describe("AI 업체 서버의 사진 보관 기간", () => {
   });
 
   it("보관 기간이 음수이거나 판이 0 이면 설정 줄에 넣지 못한다", async () => {
-    for (const [days, version] of [
-      [-1, 1],
-      [30, 0],
-    ] as const) {
-      const error = await setSeed(days, version).catch((caught: unknown) => caught);
+    for (const change of [
+      "retention_days = -1, consent_text_version = consent_text_version + 1",
+      "consent_text_version = 0",
+    ]) {
+      const error = await admin
+        .query(`UPDATE provider_configs SET ${change} WHERE provider = $1`, [SEED_PROVIDER])
+        .catch((caught: unknown) => caught);
       expect((error as { code?: string }).code).toBe("23514");
     }
   });

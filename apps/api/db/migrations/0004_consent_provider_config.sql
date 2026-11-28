@@ -1,10 +1,28 @@
 -- 판 4: 동의 문구 판과 공급사 자료 보관 기간을 공급사 설정 줄에 둔다. 작업은 접수 때 고른 설정 줄과 그 판을 적는다.
 -- worker 는 공급사를 부르기 직전마다 작업에 적은 줄과 판이 지금 고른 줄과 같은지 본다. 다르면 부르지 않고 실패와 풀기다.
--- 보관 기간을 바꾸면 같은 줄의 동의 문구 판도 함께 올린다. 한 판이 두 보관 기간 문구를 가리키지 않게 한다.
+-- 공급사, 모델, 나라, 보관 기간을 바꾸면 같은 줄의 동의 문구 판도 함께 올린다. 한 판이 두 문구를 가리키지 않게 한다.
+-- 판을 올리지 않은 그 자리 UPDATE 는 트리거가 거절한다. ID 와 판만 비교하는 작업 확인이 바뀐 줄을 놓치지 않게 한다.
 
 ALTER TABLE provider_configs
   ADD COLUMN consent_text_version integer NOT NULL DEFAULT 1 CHECK (consent_text_version > 0),
   ADD COLUMN retention_days integer NOT NULL DEFAULT 30 CHECK (retention_days >= 0);
+
+-- 동의 화면이 보이거나 작업이 부를 공급사를 정하는 칸이 바뀌면 판이 올라야 한다. 사용 여부, 우선순위, 동시 호출 수, 단가는 묻지 않는다.
+CREATE FUNCTION nuno_provider_config_reject_silent_change() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF (NEW.provider, NEW.model, NEW.model_version, NEW.country, NEW.subprocessor_countries, NEW.retention_days)
+       IS DISTINCT FROM
+     (OLD.provider, OLD.model, OLD.model_version, OLD.country, OLD.subprocessor_countries, OLD.retention_days)
+     AND NEW.consent_text_version <= OLD.consent_text_version THEN
+    RAISE EXCEPTION '공급사 설정 줄 % 의 공급사, 모델, 나라, 보관 기간을 바꾸려면 동의 문구 판을 함께 올리거나 새 줄을 만든다', OLD.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER provider_configs_consent_version BEFORE UPDATE ON provider_configs
+  FOR EACH ROW EXECUTE FUNCTION nuno_provider_config_reject_silent_change();
 
 -- 판 4 전에 접수한 작업은 두 칸이 비어 있다. 설정 줄을 지우면 작업 행은 남고 ID 가 빈 값이 된다.
 ALTER TABLE generation_jobs

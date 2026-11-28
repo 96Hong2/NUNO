@@ -46,7 +46,9 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 - 동의 문구 판과 AI 업체 자료 보관 기간은 지금 쓰는 공급사 설정 줄(`nuno_current_provider_config`)에 있다.
   앱이 보낸 판이 그 줄의 판과 다르면 409 `consent_text_outdated`. `CONSENT_TEXT_VERSION` 은 열 기본값일 뿐이다.
 - 판은 서버 설정 줄을 먼저 올리고, 새 문구를 담은 앱을 그 뒤에 내보낸다. 앱을 먼저 내면 최신 앱도 409 를 받는다.
-- `retention_days` 를 바꾸면 같은 줄의 `consent_text_version` 도 함께 올린다.
+- 설정 줄의 공급사, 모델, 나라, 보관 기간을 바꾸면 같은 줄의 `consent_text_version` 도 함께 올린다.
+  판을 올리지 않은 UPDATE 는 판 0004 의 트리거가 거절한다. 판은 내리지 못하므로 되돌릴 때도 올린다.
+  판을 올리지 않으려면 새 줄을 넣고 옛 줄을 끈다. 접수된 작업은 `provider_changed` 로 끝난다.
 - 개발 전용 주소는 `/v1/dev` 아래에만 두고 `NUNO_DEV_ROUTES=1` 일 때만 단다. 값이 없으면 그 주소는 404 다.
 - `POST /v1/dev/login` 의 신원 provider 는 코드 상수 `dev` 다. 요청에서 받지 않는다.
 

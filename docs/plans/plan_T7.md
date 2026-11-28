@@ -597,6 +597,7 @@ PR 2b (D33, D23 e2e, D32 e2e)
    - 판 올리는 순서는 기술 검토 v6 3076줄을 따른다. 서버 판을 먼저 올린다. 그동안 옛 앱 사용자는 동의 화면에서 업데이트 안내를 본다. 새 문구를 담은 앱이 나가면 동의 화면이 다시 뜨고 동의할 수 있다.
    - 앱을 먼저 내보내면 새 앱의 판(2)이 서버 판(1)과 달라 최신 앱 사용자도 409 를 받는다. 그래서 그 순서는 쓰지 않는다.
    - `retention_days` 를 바꾸면 같은 줄의 `consent_text_version` 도 함께 올린다. 한 판이 두 보관 기간 문구를 가리키면 동의 기록으로 무엇에 동의했는지 가릴 수 없다(C88 근거).
+   - 이 규칙은 판 0004 의 `provider_configs` BEFORE UPDATE 트리거가 막는다. 공급사, 모델, 모델 판, 나라, 하위 처리 나라, 보관 기간 가운데 하나가 바뀌었는데 판이 오르지 않으면 거절한다.
    - 앱 `PROVIDER_RETENTION_DAYS` 는 지우고 서버가 준 `retentionDays` 를 쓴다(동의 화면, 사진 보관 안내 시트).
    - 버린 안: 판 비교를 라우트에서 지우고 함수로만 옮기기. 함수 안 비교 순서를 어떻게 두어도 보호된 시험 `gold.db.test.ts:284-301` 의 한쪽 단언이 깨진다.
    - 버린 안: 따로 동의 문구 표. 공급사를 바꾸면 판이 오르는 규칙(C88)이라 공급사 줄에 두는 것이 스키마 v4 와 같다.
@@ -611,6 +612,8 @@ PR 2b (D33, D23 e2e, D32 e2e)
    - `nuno_start_attempt` 는 서명을 바꾸지 않는다(기존 시험이 `AS id` 로 부른다). worker 는 빈 값을 받으면 작업 상태와 실패 코드를 다시 읽는다.
    - 이 함수가 적는 실패 코드(`budget_exhausted`, `provider_changed`, `consent_outdated`, `consent_withdrawn`, `account_inactive`)면 `failed` 와 푸시, 아니면 지금처럼 `lost` 다.
    - 버린 안: 선점 때만 비교. 다시 만들기 회차가 비교를 건너뛴다.
+   - ID 비교는 같은 줄을 그 자리에서 고치면 모델이나 나라가 바뀐 것을 놓친다. 그래서 그 칸을 고치는 UPDATE 는 판을 함께 올려야 한다(설계 결정 6 의 트리거).
+     판을 올리면 `consent_outdated`, 새 줄을 넣고 옛 줄을 끄면 `provider_changed` 로 접수된 작업이 끝난다.
    - 버린 안: 공급사 이름으로 비교. 같은 공급사의 모델, 보관 기간, 판이 바뀐 것을 놓친다.
    - 버린 안: 켜 둔 줄의 우선순위 고유 색인. `id` 끝 키로 고르기가 이미 하나로 정해진다. 운영자가 같은 우선순위 줄을 잠시 둘 때 켜기가 막힌다.
 8. 결과 키는 이번에 바꾸지 않는다.
@@ -724,6 +727,8 @@ PR 2b (D33, D23 e2e, D32 e2e)
 - worker 는 선점한 작업이 적은 설정 줄(`providerConfig`: ID, 공급사, 모델)을 읽어 `chooseProvider` 에 넘긴다. 시도 줄의 모델은 그 줄의 값이다.
   - 이를 위해 `nuno_api` 에 `generation_jobs` 의 `provider_config_id`, `consent_text_version` 읽기를 줬다.
 - 시도 시작 실패 코드 가운데 이번 판이 적는 넷(`account_inactive`, `consent_withdrawn`, `provider_changed`, `consent_outdated`)이면 worker 가 `failed` 와 푸시다. `budget_exhausted` 는 판 0005 에서 더한다.
+- 판 0004 에 `provider_configs` BEFORE UPDATE 트리거를 더했다. 공급사, 모델, 나라, 보관 기간을 판 없이 그 자리에서 바꾸면 거절한다.
+  - `photo-retention.db.test.ts` 는 보관 기간을 되돌릴 때 판을 한 번 더 올리고, 판 없이 바꾸면 거절되는 단언을 더했다.
 - `scripts/test-db.mjs` 가 `COMPOSE_PROJECT_NAME` 이 있으면 시험 컨테이너를 `<그 이름>-test` 로 띄운다. worktree 여럿이 함께 `pnpm test:db` 를 돌 때 서로의 컨테이너를 내리지 않게 한다.
 
 ### 2차 묶음 리뷰 반영 (2026-11-28, 지적 23건)
