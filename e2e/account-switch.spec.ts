@@ -74,8 +74,8 @@ test("로그아웃한 뒤 다른 계정으로 로그인하면 앞 계정의 완�
   await page.goto("/");
   await openFitting(page, "코디");
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
-  await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
-  await expect(toast(page)).toContainText("입은 옷을 모두 벗었어요");
+  await page.getByRole("button", { name: "옷 비우기" }).click();
+  await expect(toast(page)).toContainText("옷을 모두 비웠어요");
   await expect(page.getByTestId("stage-piece")).toHaveCount(0);
   await page
     .getByRole("list", { name: "옷 목록" })

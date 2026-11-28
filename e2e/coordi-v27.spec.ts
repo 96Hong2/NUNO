@@ -18,21 +18,21 @@ async function openCoordi(page: Page) {
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
 }
 
-test("무대에 「모두 벗기기」 와 「내 옷으로 추천」 이 있고 확대 단추가 없으며, ↶ ↷ 는 「전체, 즐겨찾기」 줄 오른쪽에 있다", async ({
+test("무대에 「옷 비우기」 와 「내 옷으로 추천」 이 있고 확대 단추가 없으며, ↶ ↷ 는 「전체, 즐겨찾기」 줄 오른쪽에 있다", async ({
   page,
 }) => {
   await openCoordi(page);
   const stage = await box(page.getByTestId("coordi-stage"));
   expect(Math.round(stage.height)).toBe(308);
 
-  const undress = page.getByRole("button", { name: "입은 옷 모두 벗기" });
-  await expect(undress).toHaveText("모두 벗기기");
+  const undress = page.getByRole("button", { name: "옷 비우기" });
+  await expect(undress).toHaveText("옷 비우기");
   await expect(page.getByRole("button", { name: "내 옷으로 추천" })).toBeVisible();
   await expect(page.getByRole("button", { name: "트윈 확대" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "트윈 축소" })).toHaveCount(0);
   await expect(page.getByText("＋", { exact: true })).toHaveCount(0);
   await expect(page.getByText("−", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("옷 비우기", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("모두 벗기기", { exact: true })).toHaveCount(0);
   await expect(page.getByText("💡 추천 코디", { exact: true })).toHaveCount(0);
 
   // 트윈 얼굴 원 48 은 왼쪽 위 16, 12 에 있다.
@@ -54,10 +54,10 @@ test("무대에 「모두 벗기기」 와 「내 옷으로 추천」 이 있고
   expect(Math.round(redo.x + redo.width)).toBe(374);
   expect(Math.round(undo.width)).toBe(44);
 
-  // 「모두 벗기기」 알림은 옷 칸 시트 바로 위, 무대 아랫변에서 84 위에 아랫변이 온다.
+  // 「옷 비우기」 알림은 옷 칸 시트 바로 위, 무대 아랫변에서 84 위에 아랫변이 온다.
   await undress.click();
   const alert = page.getByRole("alert");
-  await expect(alert).toContainText("입은 옷을 모두 벗었어요");
+  await expect(alert).toContainText("옷을 모두 비웠어요");
   const toast = await box(alert);
   expect(Math.abs(toast.y + toast.height - (stage.y + stage.height - 84))).toBeLessThanOrEqual(2);
 });
@@ -86,8 +86,8 @@ test("하의를 입히면 칩이 「하의 ✓」 이고 입은 옷이 둘째 �
   page,
 }) => {
   await openCoordi(page);
-  await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
-  await expect(page.getByRole("alert")).toContainText("입은 옷을 모두 벗었어요");
+  await page.getByRole("button", { name: "옷 비우기" }).click();
+  await expect(page.getByRole("alert")).toContainText("옷을 모두 비웠어요");
   await expect(page.getByTestId("stage-piece")).toHaveCount(0);
   await expect(page.getByTestId("worn-check")).toHaveCount(0);
 

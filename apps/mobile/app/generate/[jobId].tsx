@@ -302,7 +302,6 @@ export default function GenerateJobScreen() {
           <View style={styles.safetyPill}>
             <Text style={styles.safetyLabel}>안전 확인 완료</Text>
           </View>
-          <Text style={styles.fitNote}>주름과 핏은 실제와 다를 수 있어요</Text>
         </View>
         {items.length > 0 ? (
           <View aria-label="입은 옷" style={styles.worn}>
@@ -498,7 +497,6 @@ const styles = StyleSheet.create({
     backgroundColor: SURFACE,
   },
   safetyLabel: { fontSize: 12, fontWeight: "600", color: INK },
-  fitNote: { flexShrink: 1, fontSize: 13, color: SUB },
   worn: { marginTop: 20 },
   wornTitle: { fontSize: 16, fontWeight: "600", color: INK, marginBottom: 4 },
   wornRow: { flexDirection: "row", alignItems: "center", gap: 12, height: 64 },

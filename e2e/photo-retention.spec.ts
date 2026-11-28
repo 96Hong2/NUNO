@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 
-// 설정 「사진 보관 안내」 시트와 동의 화면의 보관 기간. 기대값은 로드맵 T7 DoD D34 와 plan_T7 의 시트 초안 문구다.
-// 와이어프레임 v28 시트 원문은 원본 사진을 기기에 두는 지금 앱과 달라 쓰지 않는다.
+// 설정 「사진 보관 안내」 시트와 동의 화면의 보관 기간. 기대값은 와이어프레임 v29 시트 문구다.
+// v29 의 「내 사진으로 만들기」 줄은 앱에 없는 기능이라 시트에 두지 않는다.
 // 보관 기간은 서버의 공급사 설정 줄 값이다. 시험은 보관 기간이 다른 새 줄을 켜고 옛 줄을 끈 뒤, 끝나면 되돌린다.
 // 판을 올리는 길은 쓰지 않는다. 판은 내리지 못해, 뒤에 도는 시험의 앱 판(1)이 서버 판과 어긋난다.
 
@@ -34,11 +34,15 @@ const retentionSheet = (page: Page) => page.getByRole("dialog", { name: "사진 
 
 async function openRetentionSheet(page: Page) {
   await page.getByRole("button", { name: "사진 보관 안내" }).click();
-  await expect(retentionSheet(page)).toContainText("옷 추가에 쓴 원본 사진은 이 기기에만 남아요.");
+  await expect(retentionSheet(page)).toContainText(
+    "옷 추가에 쓴 원본 사진은 배경을 지운 뒤 기기에서 지워요.",
+  );
+  await expect(retentionSheet(page)).toContainText(
+    "옷 추가는 배경을 지운 옷 이미지만, 트윈은 고른 기본 모습만 저장해요.",
+  );
 }
 
-const sentTo = (days: number) =>
-  `완성 룩을 만들 때 보내는 트윈 그림과 옷 사진은 AI 업체 서버에 ${days}일 보관돼요.`;
+const sentTo = (days: number) => `AI 업체 서버의 보관 기간은 ${days}일이에요.`;
 
 test("D34: 설정 「사진 보관 안내」 는 AI 업체 서버의 보관 기간을 서버가 준 값으로 보이고, 서버 값이 바뀌면 시트와 동의 화면이 함께 바뀐다", async ({
   page,
@@ -82,7 +86,7 @@ test("D34: 설정 「사진 보관 안내」 는 AI 업체 서버의 보관 기�
     sql("UPDATE provider_configs SET enabled = false");
     await openRetentionSheet(page);
     await expect(retentionSheet(page)).toContainText("보관 기간을 불러오지 못했어요");
-    await expect(retentionSheet(page)).not.toContainText("AI 업체 서버에");
+    await expect(retentionSheet(page)).not.toContainText("AI 업체 서버의 보관 기간");
   } finally {
     sql(`DELETE FROM provider_configs WHERE model_version = '${RETENTION_VERSION}'`);
     sql("UPDATE provider_configs SET enabled = true WHERE provider = 'fake'");

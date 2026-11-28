@@ -29,14 +29,14 @@ async function expectNone(scope: Locator, texts: readonly string[]) {
   for (const text of texts) await expect(scope.getByText(text, { exact: false })).toHaveCount(0);
 }
 
-/** 코디 무대를 열고 옷을 모두 벗긴 뒤 코트 한 벌만 입힌다. */
+/** 코디 무대를 열고 옷을 비운 뒤 코트 한 벌만 입힌다. */
 async function wearCoat(page: Page) {
   await page.goto("/");
   await page.getByRole("tab", { name: "피팅룸" }).click();
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
-  await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
+  await page.getByRole("button", { name: "옷 비우기" }).click();
   // 알림이 들어오는 순간 옷을 누르면 클릭이 「되돌리기」 에 맞을 수 있어, 알림이 뜬 뒤에 누른다.
-  await expect(page.getByRole("alert")).toContainText("입은 옷을 모두 벗었어요");
+  await expect(page.getByRole("alert")).toContainText("옷을 모두 비웠어요");
   await expect(page.getByTestId("stage-piece")).toHaveCount(0);
   await page
     .getByRole("list", { name: "옷 목록" })
@@ -127,12 +127,12 @@ test("가입 시트, 무료 상태 시트, 만드는 중, 무대 단추 상태�
   await done.click();
   await expect(page.getByText("✦ AI 생성")).toBeVisible();
   await expect(page.getByText("안전 확인 완료", { exact: true })).toBeVisible();
-  await expect(page.getByText("주름과 핏은 실제와 다를 수 있어요")).toBeVisible();
+  await expect(page.getByText("주름과 핏은 실제와 다를 수 있어요")).toHaveCount(0);
   const worn = page.getByLabel("입은 옷", { exact: true });
   await expect(worn.getByRole("heading", { name: "입은 옷 1벌" })).toBeVisible();
   await expect(worn.getByText(COAT)).toBeVisible();
-  // 옷장에 넣지 않은 견본 옷이라 칸 이름이 「견본 옷」 이다.
-  await expect(worn.getByText("견본 옷", { exact: true })).toBeVisible();
+  // 옷장에 넣지 않은 기본 제공 옷이라 칸 이름이 「기본 제공 옷」 이다.
+  await expect(worn.getByText("기본 제공 옷", { exact: true })).toBeVisible();
   await expect(page.getByText("저장한 그림에는 「AI 생성」 표시가", { exact: false })).toHaveCount(
     0,
   );

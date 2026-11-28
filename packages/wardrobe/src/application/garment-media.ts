@@ -37,6 +37,7 @@ export interface RenderedGarment {
 }
 
 export interface StoredGarmentFiles {
+  /** 원본 사진은 배경을 지운 뒤 남기지 않아 누끼 경로와 같다 */
   originalPath: string;
   cutoutPath: string;
   thumbPath: string;
@@ -54,12 +55,20 @@ export interface GarmentMedia {
   render(photo: PreparedPhoto, edits: GarmentEdits): Promise<RenderedGarment>;
   /** 손보는 동안 보이는 그림. 가장자리를 자르지 않아 붓 자국 좌표가 사진 좌표와 맞는다. */
   renderPreview(photo: PreparedPhoto, edits: GarmentEdits): Promise<RenderedGarment>;
+  /** 누끼와 카드 그림만 옷 폴더에 쓴다. 고른 원본 사진은 옷 폴더에 쓰지 않는다 */
   store(id: string, photo: PreparedPhoto, rendered: RenderedGarment): Promise<StoredGarmentFiles>;
-  /** 이미 배경이 없는 그림(설치 파일 견본 옷)을 그대로 옷 폴더에 쓴다. 원본과 누끼가 같은 그림이다 */
+  /** 이미 배경이 없는 그림(설치 파일 기본 제공 옷)을 그대로 옷 폴더에 쓴다 */
   storeImage(id: string, imageUri: string): Promise<StoredGarmentFiles>;
   /** 다 쓴 미리보기 주소를 놓아준다. 웹은 blob 주소를 해제하고, 아이폰은 할 일이 없다. */
   release(uri: string): void;
+  /**
+   * 옷을 담았거나 추가를 그만둬 초안을 비울 때 고른 원본 사진 사본을 기기에서 지운다.
+   * 저장이 실패해 다시 누를 때 원본이 남아 있도록 그림 저장과 따로 둔다.
+   */
+  discardOriginal(photo: PreparedPhoto): void;
   /** 저장한 그림 경로를 화면이 그릴 주소로 바꾼다. */
   resolve(path: string): Promise<string>;
   remove(id: string): Promise<void>;
+  /** 저장한 그림 파일 하나를 지운다. 없으면 그냥 넘어간다 */
+  removeFile(path: string): Promise<void>;
 }

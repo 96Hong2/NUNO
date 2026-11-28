@@ -1,0 +1,4 @@
+옷 추가 뒤 OPFS garments 폴더 (2026-11-28, Expo 웹 390x844, 내장 브라우저)
+19521c0f-134f-4205-91dd-33e390560cb5/thumb.png 20134B
+19521c0f-134f-4205-91dd-33e390560cb5/cutout.png 15918B
+original.jpg 없음
