@@ -55,7 +55,7 @@ export async function finishOnboarding(db: SqlExecutor): Promise<void> {
 
 /** today 는 한국 날짜 `YYYY-MM-DD`. 받을 수 없는 날짜면 던진다. */
 export async function saveBirthDate(db: SqlExecutor, value: string, today: string): Promise<void> {
-  if (!isValidBirthDate(value, today)) throw new Error(`받을 수 없는 생년월일: ${value}`);
+  if (!isValidBirthDate(value, today)) throw new Error(`입력할 수 없는 생년월일이에요(${value})`);
   await db.run("UPDATE profile SET birth_date = ? WHERE id = 1", [value]);
 }
 

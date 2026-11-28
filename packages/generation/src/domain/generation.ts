@@ -228,7 +228,7 @@ export function lookFailureCopy(
     refund:
       kind === "gold"
         ? { label: "돌려받은 골드", value: goldAmountLabel(refundGold) }
-        : { label: "돌려받은 무료 장", value: "+1장" },
+        : { label: "돌려받은 무료 사진", value: "+1장" },
     action: safety ? "change" : "retry",
     actionLabel: safety ? "코디 바꾸기" : "같은 코디로 다시 만들기",
   };
@@ -254,18 +254,18 @@ export function nextAfterRejection(code: string): SubmitNext {
     case "unauthorized":
       return { kind: "signIn" };
     case "consent_text_outdated":
-      return { kind: "notice", message: "앱을 업데이트해 주세요" };
+      return { kind: "notice", message: "동의 문구가 바뀌었어요. 앱을 업데이트해 주세요" };
     case "switch_off":
       return {
         kind: "notice",
-        message: "지금은 완성 룩을 만들 수 없어요. 잠시 뒤에 다시 해 주세요",
+        message: "지금은 완성 룩을 만들 수 없어요. 잠시 후 다시 시도해 주세요",
       };
     case "trial_daily_limit":
-      return { kind: "notice", message: "오늘은 무료로 더 만들 수 없어요. 내일 다시 해 주세요" };
+      return { kind: "notice", message: "오늘은 완성 룩을 무료로 더 만들 수 없어요. 내일 다시 시도해 주세요" };
     case "account_inactive":
-      return { kind: "notice", message: "이 계정으로는 지금 만들 수 없어요" };
+      return { kind: "notice", message: "이 계정으로는 지금 완성 룩을 만들 수 없어요" };
     default:
-      return { kind: "notice", message: "보내지 못했어요. 잠시 뒤에 다시 해 주세요" };
+      return { kind: "notice", message: "완성 룩 요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요" };
   }
 }
 
@@ -291,7 +291,7 @@ export function mayHaveBeenAccepted(status: number, code: string): boolean {
 /** 서버가 받았는지 아직 모를 때의 알림. 바로 다시 눌러 같은 코디를 또 보내지 않게 한다 */
 export const UNANSWERED_NOTICE: SubmitNext = {
   kind: "notice",
-  message: "확인하고 있어요. 잠시 뒤에 결과를 알려 드릴게요",
+  message: "완성 룩 요청이 접수됐는지 확인하고 있어요. 잠시 후 결과를 알려 드릴게요",
 };
 
 /** 「내 골드」 의 「N원어치」 */

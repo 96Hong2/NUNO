@@ -107,7 +107,7 @@ describe("runMigrations", () => {
       value: { from: 0, to: 3, applied: [1, 2, 3] },
     });
     expect(short.status).toBe("rejected");
-    expect(short.status === "rejected" && String(short.reason)).toMatch(/앱을 새 판으로/);
+    expect(short.status === "rejected" && String(short.reason)).toMatch(/앱을 최신 버전으로 업데이트해 주세요/);
   });
 
   it("SQLite 가 먼저 트랜잭션을 되돌린 실패도 원래 오류를 다시 던지고 연결은 계속 쓴다", async () => {
@@ -140,7 +140,7 @@ describe("runMigrations", () => {
     db = openNodeSqliteDatabase();
     await runMigrations(db, [createNotes, addNoteTag], options);
 
-    await expect(runMigrations(db, [createNotes], options)).rejects.toThrow(/앱을 새 판으로/);
+    await expect(runMigrations(db, [createNotes], options)).rejects.toThrow(/앱을 최신 버전으로 업데이트해 주세요/);
   });
 
   it("판 번호 표 이름이 SQL 이름이 아니면 DB 를 건드리지 않고 던진다", async () => {

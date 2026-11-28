@@ -22,23 +22,23 @@ async function openCutout(page: Page) {
   await expect(page.getByRole("heading", { name: "배경을 지웠어요" })).toBeVisible();
 }
 
-test("배경 지우기에서 뒤로 가면 「넣던 옷을 버릴까요?」 가 뜨고, 「버리기」 를 누르면 옷장으로 돌아간다", async ({
+test("배경 지우기에서 뒤로 가면 「추가하던 옷을 삭제할까요?」 가 뜨고, 「삭제」 를 누르면 옷장으로 돌아간다", async ({
   page,
 }) => {
   await openCutout(page);
 
-  // 뒤로 → 확인 시트. 「계속 넣기」 는 시트만 닫는다.
+  // 뒤로 → 확인 시트. 「계속 추가」 는 시트만 닫는다.
   await page.getByRole("button", { name: "뒤로" }).click();
-  const discard = page.getByRole("dialog", { name: "넣던 옷을 버릴까요?" });
-  await expect(discard.getByRole("button", { name: "버리기" })).toBeVisible();
-  await expect(discard.getByRole("button", { name: "계속 넣기" })).toBeVisible();
-  await discard.getByRole("button", { name: "계속 넣기" }).click();
+  const discard = page.getByRole("dialog", { name: "추가하던 옷을 삭제할까요?" });
+  await expect(discard.getByRole("button", { name: "삭제" })).toBeVisible();
+  await expect(discard.getByRole("button", { name: "계속 추가" })).toBeVisible();
+  await discard.getByRole("button", { name: "계속 추가" }).click();
   await expect(discard).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "배경을 지웠어요" })).toBeVisible();
 
-  // 「버리기」 는 넣던 옷을 담지 않고 옷장으로 돌아간다.
+  // 「삭제」 는 추가하던 옷을 담지 않고 옷장으로 돌아간다.
   await page.getByRole("button", { name: "뒤로" }).click();
-  await discard.getByRole("button", { name: "버리기" }).click();
+  await discard.getByRole("button", { name: "삭제" }).click();
   await expect(page.getByRole("heading", { name: "배경을 지웠어요" })).toHaveCount(0);
   await expect(segment(page, "내 옷")).toHaveText(/내 옷 0/);
   await expect(segment(page, "담은 옷")).toHaveText(/담은 옷 0/);

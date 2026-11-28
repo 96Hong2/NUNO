@@ -128,12 +128,12 @@ describe("「만들지 못했어요」 화면 글", () => {
     });
   });
 
-  it("무료 장, 시스템 오류: 무료 1장을 돌려준 제목과 「돌려받은 무료 장 +1장」", () => {
+  it("무료 장, 시스템 오류: 무료 1장을 돌려준 제목과 「돌려받은 무료 사진 +1장」", () => {
     expect(lookFailureCopy("trial", "provider_timeout", 0)).toEqual({
       headline: "만들지 못했어요.",
       title: "무료 1장을 돌려드렸어요",
       body: "이미지를 만드는 중에 오류가 났어요",
-      refund: { label: "돌려받은 무료 장", value: "+1장" },
+      refund: { label: "돌려받은 무료 사진", value: "+1장" },
       action: "retry",
       actionLabel: "같은 코디로 다시 만들기",
     });
@@ -151,7 +151,7 @@ describe("「만들지 못했어요」 화면 글", () => {
     expect(lookFailureCopy("trial", "provider_refused", 0)).toMatchObject({
       title: "무료 1장을 돌려드렸어요",
       body: "안전 기준을 통과하지 못했어요",
-      refund: { label: "돌려받은 무료 장", value: "+1장" },
+      refund: { label: "돌려받은 무료 사진", value: "+1장" },
       action: "change",
       actionLabel: "코디 바꾸기",
     });

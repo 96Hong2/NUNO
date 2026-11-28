@@ -39,7 +39,7 @@ export function pendingMigrations(
   assertMigrationChain(migrations);
   if (currentVersion > migrations.length) {
     throw new RangeError(
-      `기기 판 ${currentVersion} 이 앱이 아는 마지막 판 ${migrations.length} 보다 높다. 앱을 새 판으로 올린다.`,
+      `이 기기에 저장된 자료의 버전(${currentVersion})이 이 앱이 읽을 수 있는 버전(${migrations.length})보다 높아요. 앱을 최신 버전으로 업데이트해 주세요.`,
     );
   }
   return migrations.slice(currentVersion);

@@ -34,7 +34,7 @@ const INK = "#151314";
 const freeLooksOf = (state: AccountState): number =>
   state.gold ? freeLooksNow(state.gold.trialCount, state.gold.trialUsableToday) : 0;
 
-const GOLD_UNREAD_MESSAGE = "골드를 불러오지 못했어요. 잠시 뒤에 다시 해 주세요";
+const GOLD_UNREAD_MESSAGE = "골드를 불러오지 못했어요. 잠시 후 다시 시도해 주세요";
 
 const PERSON_PHOTO_MESSAGE = "사람이 함께 찍힌 옷 사진은 완성 룩으로 만들 수 없어요";
 

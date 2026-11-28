@@ -296,7 +296,7 @@ export default function GenerateJobScreen() {
         </View>
         <View style={styles.safetyRow}>
           <View style={styles.safetyPill}>
-            <Text style={styles.safetyLabel}>안전 확인 끝</Text>
+            <Text style={styles.safetyLabel}>안전 확인 완료</Text>
           </View>
           <Text style={styles.fitNote}>주름과 핏은 실제와 다를 수 있어요</Text>
         </View>

@@ -330,7 +330,7 @@ export default function CutoutScreen() {
       </FlowScreen>
       <OverlaySheet
         visible={discardOpen}
-        title="넣던 옷을 버릴까요?"
+        title="추가하던 옷을 삭제할까요?"
         hideClose
         onClose={() => setDiscardOpen(false)}
       >
@@ -340,14 +340,14 @@ export default function CutoutScreen() {
             onPress={discard}
             style={[styles.discardButton, styles.dropFill]}
           >
-            <Text style={styles.dropLabel}>버리기</Text>
+            <Text style={styles.dropLabel}>삭제</Text>
           </Pressable>
           <Pressable
             role="button"
             onPress={() => setDiscardOpen(false)}
             style={[styles.discardButton, styles.keepFill]}
           >
-            <Text style={styles.keepLabel}>계속 넣기</Text>
+            <Text style={styles.keepLabel}>계속 추가</Text>
           </Pressable>
         </View>
       </OverlaySheet>

@@ -52,7 +52,7 @@ export default function ShootScreen() {
           <View style={styles.busy}>
             <ActivityIndicator color="#fff" />
             <Text style={styles.busyTitle}>배경을 지우고 있어요</Text>
-            <Text style={styles.frameHint}>옷만 남기고 배경을 저절로 지워요</Text>
+            <Text style={styles.frameHint}>옷만 남기고 배경을 자동으로 지워요</Text>
           </View>
         ) : (
           <View style={styles.frame} />

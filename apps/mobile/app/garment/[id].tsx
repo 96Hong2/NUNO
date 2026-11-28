@@ -34,7 +34,7 @@ export default function GarmentDetailScreen() {
     setGarment(await loadGarment(id));
   }, [id]);
 
-  // 「고치기」 를 두 번 눌러 「치수 고치기」 가 두 장 쌓이지 않게, 이 화면에 돌아올 때까지 막는다.
+  // 「고치기」 를 두 번 눌러 「치수 수정」 가 두 장 쌓이지 않게, 이 화면에 돌아올 때까지 막는다.
   const opening = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -218,7 +218,7 @@ export default function GarmentDetailScreen() {
           role="button"
           style={styles.backdrop}
           onPress={() => setConfirming(false)}
-          aria-label="시트 닫기"
+          aria-label="닫기"
         />
         <View role="dialog" aria-label="이 옷을 지울까요?" style={styles.sheet}>
           <Text style={styles.sheetTitle}>이 옷을 지울까요?</Text>

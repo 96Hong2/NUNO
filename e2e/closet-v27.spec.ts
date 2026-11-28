@@ -41,16 +41,16 @@ async function addFromAlbum(page: Page, file: string, name: string, wanted: bool
   await expect(fit).toHaveCount(0);
 }
 
-test("옷장이 비면 안내 글만 보이고, 「여러 벌 옮기기」 로 담은 옷을 내 옷으로 옮기며, 「거르기」 로 즐겨찾기한 옷만 남긴다", async ({
+test("옷장이 비면 안내 글만 보이고, 「여러 벌 옮기기」 로 담은 옷을 내 옷으로 옮기며, 「필터」 로 즐겨찾기한 옷만 남긴다", async ({
   page,
 }) => {
   test.setTimeout(180_000);
 
-  // 빈 칸: 제목, 설명, 「옷 추가」 하나. 칩 줄과 「거르기」 는 숨긴다.
+  // 빈 칸: 제목, 설명, 「옷 추가」 하나. 칩 줄과 「필터」 는 숨긴다.
   await openCloset(page);
   await expect(page.getByText("아직 추가한 옷이 없어요")).toBeVisible();
   await expect(page.getByText("옷 사진을 찍거나 앨범에서 골라 옷장에 넣어요")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^거르기/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^필터/ })).toHaveCount(0);
   await segment(page, "담은 옷").click();
   await expect(page.getByText("아직 담은 옷이 없어요")).toBeVisible();
   await expect(
@@ -102,28 +102,28 @@ test("옷장이 비면 안내 글만 보이고, 「여러 벌 옮기기」 로 �
   await expect(page.getByRole("button", { name: "옷 추가", exact: true })).toHaveCount(1);
   await expect(page.getByText("사진 찍기, 앨범")).toHaveCount(0);
 
-  // 별 하나를 켜고 「즐겨찾기」 로 거르면 「거르기 1」 이고 별 켠 옷만 남는다.
+  // 별 하나를 켜고 「즐겨찾기」 필터를 켜면 「필터 1」 이고 별 켠 옷만 남는다.
   await page.getByRole("button", { name: "즐겨찾기", exact: true }).first().click();
   await expect(page.getByRole("button", { name: "즐겨찾기 풀기" })).toHaveCount(1);
-  await page.getByRole("button", { name: "거르기", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "거르기" });
+  await page.getByRole("button", { name: "필터", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "필터" });
   await expect(sheet.getByRole("switch", { name: "즐겨찾기" })).toBeVisible();
   await expect(sheet.getByRole("switch", { name: "룩에 안 쓴 옷" })).toBeVisible();
   await expect(sheet.getByText("계절", { exact: true })).toBeVisible();
   await sheet.getByRole("switch", { name: "즐겨찾기" }).click();
   await sheet.getByRole("button", { name: "적용" }).click();
-  await expect(page.getByRole("button", { name: "거르기 1" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "필터 1" })).toBeVisible();
   await expect(page.getByText("1벌", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "즐겨찾기", exact: true })).toHaveCount(0);
 
-  // 거르기 결과가 0벌이면 「조건에 맞는 옷이 없어요」 와 「거르기 초기화」 다. 두 옷 모두 계절을 적지 않았다.
-  await page.getByRole("button", { name: "거르기 1" }).click();
+  // 필터 결과가 0벌이면 「조건에 맞는 옷이 없어요」 와 「필터 초기화」 다. 두 옷 모두 계절을 적지 않았다.
+  await page.getByRole("button", { name: "필터 1" }).click();
   await sheet.getByRole("checkbox", { name: "겨울" }).click();
   await sheet.getByRole("button", { name: "적용" }).click();
-  await expect(page.getByRole("button", { name: "거르기 2" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "필터 2" })).toBeVisible();
   await expect(page.getByText("조건에 맞는 옷이 없어요")).toBeVisible();
-  await page.getByRole("button", { name: "거르기 초기화" }).click();
-  await expect(page.getByRole("button", { name: "거르기", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "필터 초기화" }).click();
+  await expect(page.getByRole("button", { name: "필터", exact: true })).toBeVisible();
   await expect(card(page, KNIT)).toBeVisible();
   await expect(card(page, SKIRT)).toBeVisible();
 });

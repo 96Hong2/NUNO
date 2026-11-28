@@ -17,7 +17,7 @@ interface ClosetFilterSheetProps {
 }
 
 /**
- * 옷장 「거르기」 시트. 「즐겨찾기」, 「룩에 안 쓴 옷」 스위치와 「계절」 칩을 고르고 「적용」 을 눌러야 목록이 바뀐다.
+ * 옷장 「필터」 시트. 「즐겨찾기」, 「룩에 안 쓴 옷」 스위치와 「계절」 칩을 고르고 「적용」 을 눌러야 목록이 바뀐다.
  * 「초기화」 는 시트 안의 고른 값만 비운다.
  */
 export function ClosetFilterSheet({ visible, value, onApply, onClose }: ClosetFilterSheetProps) {
@@ -36,7 +36,7 @@ export function ClosetFilterSheet({ visible, value, onApply, onClose }: ClosetFi
     }));
 
   return (
-    <OverlaySheet visible={visible} title="거르기" onClose={onClose}>
+    <OverlaySheet visible={visible} title="필터" onClose={onClose}>
       <SwitchRow
         title="즐겨찾기"
         hint="즐겨찾기한 옷만 보여요"
@@ -109,9 +109,9 @@ function SwitchRow(props: { title: string; hint: string; on: boolean; onToggle: 
   );
 }
 
-/** 칩 줄 오른쪽 끝에 고정하는 「거르기」 단추. 켠 조건이 있으면 「거르기 N」 이다 */
+/** 칩 줄 오른쪽 끝에 고정하는 「필터」 단추. 켠 조건이 있으면 「필터 N」 이다 */
 export function ClosetFilterButton({ count, onPress }: { count: number; onPress: () => void }) {
-  const label = count > 0 ? `거르기 ${count}` : "거르기";
+  const label = count > 0 ? `필터 ${count}` : "필터";
   return (
     <Pressable
       role="button"
@@ -125,7 +125,7 @@ export function ClosetFilterButton({ count, onPress }: { count: number; onPress:
   );
 }
 
-/** 16 칸 거르기 아이콘: 가로줄 둘과 손잡이 원 둘 */
+/** 16 칸 필터 아이콘: 가로줄 둘과 손잡이 원 둘 */
 function FilterIcon() {
   return (
     <View style={styles.icon} aria-hidden>

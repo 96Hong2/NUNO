@@ -19,13 +19,13 @@ const knit = garment("knit", false, ["winter"]);
 const skirt = garment("skirt", true, []);
 const all = [coat, knit, skirt];
 
-describe("옷장 거르기", () => {
-  it("아무 조건도 켜지 않으면 모든 옷이 순서대로 남고 「거르기」 에 수가 붙지 않는다", () => {
+describe("옷장 필터", () => {
+  it("아무 조건도 켜지 않으면 모든 옷이 순서대로 남고 「필터」 에 수가 붙지 않는다", () => {
     expect(closetFilter(all, NO_CLOSET_FILTER, {})).toEqual(all);
     expect(closetFilterCount(NO_CLOSET_FILTER)).toBe(0);
   });
 
-  it("「즐겨찾기」 를 켜면 별을 누른 옷만 남고 「거르기 1」 이다", () => {
+  it("「즐겨찾기」 를 켜면 별을 누른 옷만 남고 「필터 1」 이다", () => {
     const filter = { ...NO_CLOSET_FILTER, favoriteOnly: true };
     expect(closetFilter(all, filter, {})).toEqual([coat, skirt]);
     expect(closetFilterCount(filter)).toBe(1);

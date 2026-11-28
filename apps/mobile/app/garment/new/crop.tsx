@@ -57,7 +57,7 @@ export default function CropScreen() {
   return (
     <FlowScreen
       title="옷만 보이도록 잘라 주세요"
-      sub="사진에 사람이 보여요. 얼굴과 몸은 보내기 전에 가려요. 옷만 남도록 네모를 맞춰 주세요."
+      sub="사진에 사람이 보여요. 얼굴과 몸은 보내기 전에 가려요. 옷만 남도록 자르기 영역을 맞춰 주세요."
       onBack={() => router.back()}
       footer={
         <>

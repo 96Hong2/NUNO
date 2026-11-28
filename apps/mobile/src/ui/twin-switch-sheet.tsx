@@ -13,7 +13,7 @@ interface TwinSwitchSheetProps {
 export function TwinSwitchSheet({ visible, current, onPick, onClose }: TwinSwitchSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable role="button" style={styles.backdrop} onPress={onClose} aria-label="시트 닫기" />
+      <Pressable role="button" style={styles.backdrop} onPress={onClose} aria-label="닫기" />
       <View style={styles.sheet}>
         <View style={styles.head}>
           <Text role="heading" aria-level={3} style={styles.title}>

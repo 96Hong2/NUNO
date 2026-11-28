@@ -31,7 +31,7 @@ test.describe("빈 저장소의 온보딩", () => {
     expect(Math.round(skip.x + skip.width)).toBe(370);
     await expect(page.getByText("트윈은 나 대신 옷을 입어 볼 가상 모델이에요")).toBeVisible();
     await expect(page.getByText("나중에 피팅룸 트윈 탭에서 바꿀 수 있어요")).toBeVisible();
-    await expect(page.getByText("몸 치수는 받지 않아요")).toBeVisible();
+    await expect(page.getByText("몸 치수는 넣지 않아도 돼요")).toBeVisible();
     await expect(page.getByRole("button", { name: "트윈을 골라 주세요" })).toBeVisible();
 
     const harin = page.getByRole("radio", { name: "하린" });

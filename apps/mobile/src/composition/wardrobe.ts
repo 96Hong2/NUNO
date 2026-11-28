@@ -124,7 +124,7 @@ export async function loadClosetImages(closet: ClosetKey): Promise<GarmentDetail
   );
 }
 
-/** 「치수 고치기」 의 「저장」 */
+/** 「치수 수정」 의 「저장」 */
 export async function saveGarmentFit(id: string, fit: GarmentFit): Promise<void> {
   const { db } = await getDeviceDb();
   await updateGarmentFit(db, id, fit, now());
@@ -245,7 +245,7 @@ export function renderDraft(photo: PreparedPhoto, edits: GarmentEdits) {
 export async function saveDraft(): Promise<{ id: string; closet: ClosetKey; name: string }> {
   const current = draft;
   if (!current?.rendered || !current.form)
-    throw new Error("담을 옷이 없다. 사진 고르기부터 다시 한다");
+    throw new Error("추가할 옷 정보가 없어요. 사진을 다시 골라 주세요");
   const { form, rendered } = current;
   const name = normalizeGarmentName(form.name, defaultGarmentName(form.color, form.category));
   const files = await garmentMedia.store(current.id, current.photo, rendered);
