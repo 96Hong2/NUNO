@@ -351,23 +351,29 @@ PR 은 차례로 쌓는다. 앞 PR 이 머지되기 전이면 다음 브랜치�
 
 > 기준: 기획자 결정 2026-11-28(K2, K3, K3-1, K10, K14), 로드맵 T7-3~T7-5, 스키마 v4 3장, PRD v9 C20 과 C88.
 > main `7837750` 에서 딴 브랜치 `t7/remaining-b`. 아래 파일과 줄 번호는 이 절을 쓰기 전에 직접 열어 확인했다.
+> 리뷰 지적 23건을 같은 날 반영했다. 반영 내역은 이 절 끝 「2차 묶음 리뷰 반영」 에 있다.
 
 ### 목표
 
-공급사 키 없이 지금 끝낼 수 있는 T7 남은 DoD 를 서버 PR 하나와 앱 PR 하나로 끝낸다.
+공급사 키 없이 지금 끝낼 수 있는 T7 남은 DoD 를 서버 PR 셋과 앱 PR 둘로 끝낸다.
+서버 PR 은 판 하나에 PR 하나다. 앱 PR 은 서버 값을 쓰는 묶음과 쓰지 않는 묶음으로 나눈다.
 실제 공급사를 켜기 전에 있어야 할 문지기(예산, 동의 판, 공급사 설정, 대기 상한, 30일 정리)를 DB 함수로 세운다.
 
 ### 범위
 
 | 묶음 | DoD | 이번에 하는 일 |
 | --- | --- | --- |
-| PR 1 서버 | D20, D25, D26, D27, D28, D29, D34 서버 값 | 판 0004, DB 함수, worker, 라우트, DB 시험 |
-| PR 2 앱 | D8, D9, D33, D34 화면, D23 e2e, D32 e2e | 나가기 시트 문구와 동작, 룩북 격자, 사진 보관 안내 시트, e2e |
+| PR 1a 서버 판 0004 | D25, D34 서버 값 | 동의 판, 공급사 설정 ID, 보관 기간 |
+| PR 1b 서버 판 0005 | D20, D26 | 하루 전체 예산의 예약과 정산 |
+| PR 1c 서버 판 0006 | D27, D28, D29 | 대기 상한, 30일 정리, 늦은 저장 시험 |
+| PR 2a 앱 | D8, D9, D34 화면 | 나가기 시트 문구와 동작, 사진 보관 안내 시트 |
+| PR 2b 앱 | D33, D23 e2e, D32 e2e | 룩북 격자와 e2e |
 | 판정만 | D19, D22, D30 | 제품 코드는 그대로 두고 기존 시험, 새 DB 시험, 명령으로 판정 |
 | 다음 묶음 | D21 | 아래 「D21 을 미루는 까닭」 |
 | 남은 일(외부 환경) | D17 시험 2, 3, D24, D31 | 아래 「남은 일」 |
 
-- 착수 실측은 D9 를 서버 묶음에 넣었다. 설계 결정 9 에 따라 서버는 바꾸지 않고 앱이 `/discard` 를 부르지 않게 하므로 PR 2 로 옮겼다.
+- 착수 실측은 D9 를 서버 묶음에 넣었다. 설계 결정 9 에 따라 서버는 바꾸지 않고 앱이 `/discard` 를 부르지 않게 하므로 PR 2a 로 옮겼다.
+- PR 2a 는 PR 1a 가 머지된 뒤 main 에서 딴다(서버의 `retentionDays` 를 읽는다). PR 2b 는 서버 PR 과 상관없이 낼 수 있다.
 
 D21 을 미루는 까닭
 - 올리기 표 `uploads`, 올리기 주소 발급, `job-in/` 사본, 크기와 형식과 해시 검사, 앱의 사진 올리기가 한꺼번에 든다. 서버만 300줄을 넘는다.
@@ -378,7 +384,11 @@ D21 을 미루는 까닭
 남은 일(K10: 지금 할 수 있는 부분을 먼저 판정하고 남은 조건을 적는다)
 - D17: 시험 1 은 통과(`evidence/T7/commands.md` 「D17 시험 1」 절). 시험 2(결과 사진 후처리 네 판 비교)와 시험 3(고정 세트 20쌍 재생성)은 공급사 키와 결정 D3 승인이 있어야 한다.
 - D24 [iOS]: 코드는 기기 판 7 `generation_requests` 로 이미 됐다. Xcode 와 Apple 개발자 계정이 있어야 판정한다.
-- D31: 공급사 키, T6-4 모델 선택, D21 이 먼저다. 이번에 D20, D25 문지기가 갖춰져 남은 조건은 그 셋이다.
+- D31: 이번에 D20, D25 문지기가 갖춰진다. 남은 조건은 넷이다.
+  - 공급사 키
+  - T6-4 모델 선택
+  - D21
+  - 시험할 DB 의 `cost_budget_defaults` 에 하루 전체 예산 상한을 넣기(결정 D49 값이나 시험용 임시값). 값이 없으면 상한이 0원이라 모든 작업이 `budget_exhausted` 로 끝난다.
 
 ### DoD (로드맵 원문, 번호는 이 파일 9~44줄과 같다)
 
@@ -402,94 +412,152 @@ D21 을 미루는 까닭
 - [ ] D33 [웹화면] 룩 크게 보기의 「전체 보기」 를 누르면 그 룩북의 룩이 격자로 보인다. 격자의 룩을 누르면 그 룩이 크게 열린다.
 - [ ] D34 [웹화면] 설정 「사진 보관 안내」 를 누르면 안내 시트가 열린다. 시트에 AI 업체 서버의 사진 보관 기간이 서버가 준 값으로 보인다. (C88)
 
-### 바꿀 것: PR 1 서버
+### 바꿀 것: 서버 PR 1a, 1b, 1c
 
-새 판 `apps/api/db/migrations/0004_budget_consent_retention.sql`. 판 0001~0003 은 고치지 않는다.
+판 0001~0003 은 고치지 않는다. 판마다 PR 하나다.
+
+PR 1a 판 `apps/api/db/migrations/0004_consent_provider_config.sql` (D25, D34 서버 값, K14)
 
 | 대상 | 무엇을 | 왜(DoD) |
 | --- | --- | --- |
 | `provider_configs` 새 열 | `consent_text_version integer NOT NULL DEFAULT 1`, `retention_days integer NOT NULL DEFAULT 30` | 동의 판과 보관 기간을 서버 설정에 둔다(K14, D25, D34) |
-| `generation_jobs` 새 열 | `consent_text_version integer`, `provider_config_id uuid REFERENCES provider_configs` | 접수 때 값을 적고 부르기 전에 비교(D25) |
-| `generation_attempts` 새 열 | `budget_day date`, `reserved_usd numeric(10,4)`, `budget_status text` | 시도마다 예산 예약 기록(D20, D26) |
-| 새 표 `cost_daily` | `day`, `budget_kind`, `provider`, `budget_usd`, `reserved_usd`, `settled_usd`, `updated_at` | 하루 예산 행 셋(스키마 v4) |
-| 새 표 `cost_budget_defaults` | `budget_kind`, `provider`, `budget_usd`, `updated_at`, `updated_by` | 그날 행이 없을 때 복사할 상한 |
-| 바꾼 함수 `nuno_submit_job` | 같은 인자. 고를 공급사 줄, 판 비교, 두 열 적기 | D25. 판 비교를 라우트에서 함수로 옮긴다 |
-| 바꾼 함수 `nuno_start_attempt` | 같은 인자. 설정 ID 와 판 비교, 예산 예약 | D20, D25. 시도 행 없이 실패면 호출 0건 |
-| 바꾼 함수 `nuno_finish_attempt` | 같은 인자. 그 시도의 예산을 바로 정산 | D26 |
-| 바꾼 함수 `nuno_keep_result` | 같은 인자. gen30 이고 기한이 지났으면 NULL | D29 |
-| 새 함수 `nuno_settle_budgets(p_now)` | 끝난 작업에 남은 `reserved` 시도를 정산 | D26 |
-| 새 함수 `nuno_expire_queued_jobs(p_now, p_wait_seconds)` | 대기 상한을 넘긴 접수 작업을 `queue_timeout` 으로 실패와 풀기 | D27 |
-| 새 함수 `nuno_expire_result(p_result_id, p_now)` | 기한이 지난 gen30 결과를 deleted 로 | D29 |
-| 내부 함수 `nuno_current_provider_config()` | 켜 둔 줄 가운데 우선순위 첫 줄의 ID, 판, 값, 공급사 | 고르기 규칙을 한 곳에 둔다 |
+| `generation_jobs` 새 열 | `consent_text_version integer`, `provider_config_id uuid REFERENCES provider_configs ON DELETE SET NULL` | 접수 때 값을 적고 부르기 전에 비교(D25). 설정 줄을 지워도 작업 행은 남는다 |
+| 내부 함수 `nuno_current_provider_config()` | 켜 둔 줄을 `ORDER BY priority, provider, id LIMIT 1` 로 고른다. ID, 판, 보관 기간, 공급사, 나라 | 고르기 규칙을 한 곳에 둔다. `id` 가 끝 키라 동점에도 늘 같은 줄 |
+| 바꾼 함수 `nuno_submit_job` | 같은 인자. 사용자 동의 판 비교 다음에 지금 판 비교, 두 열 적기 | D25 |
+| 바꾼 함수 `nuno_start_attempt` | 같은 인자. 설정 ID 와 판 비교 | D25. 시도 행 없이 실패면 호출 0건 |
 
 | 파일 | 무엇을 | 왜 |
 | --- | --- | --- |
-| `apps/api/src/account/consent.ts` | 지금 판과 보관 기간을 DB 에서 읽는다. `consentProvider` 에 `retentionDays` | D34, K14 |
+| `apps/api/src/account/consent.ts` | `consentState`, `consentProvider` 가 `nuno_current_provider_config` 로 지금 판과 보관 기간을 읽는다. `consentProvider` 에 `retentionDays` | D34, K14 |
 | `apps/api/src/account/routes.ts` | `POST /v1/consents` 의 판 비교를 DB 값으로 | K14 |
-| `apps/api/src/generation/routes.ts` | 라우트의 판 비교(98-101줄)를 지우고 거절 코드 둘을 더한다. 조회가 기한 지난 결과 URL 을 주지 않는다 | D25, D29 |
-| `apps/api/src/lookbook/keep-result.ts` | 복사 전에 기한을 본다 | D29 |
-| `apps/api/src/generation/worker.ts` | 결과 키를 시도 ID 로, `QUEUE_WAIT_SECONDS`, 시도 시작 실패 판별, `expireResults` | D27, D28, D29 |
-| `apps/api/src/composition/worker.ts` | 선점 전마다 대기 만료, 60초 예약 작업에 정산과 30일 정리 | D26, D27, D29 |
-| `scripts/test-db.mjs`, `scripts/e2e-api.mjs` | 로컬 DB 에 `cost_budget_defaults` 를 넣는다(가짜 공급사 줄을 넣는 자리) | 시험과 개발 DB 가 예산 0 으로 막히지 않게 |
-| `apps/api/AGENTS.md` | 「골드와 작업」, 「로그인과 세션」 의 판 0003, `CONSENT_TEXT_VERSION` 줄을 고친다 | 지시 파일을 코드와 맞춘다 |
+| `apps/api/src/generation/routes.ts` | 98-101줄의 판 비교는 남기고 기준만 `consentProvider` 가 읽은 DB 판으로 바꾼다. 켜 둔 줄이 없으면 503 `provider_unavailable` | D25, 보호된 시험 `gold.db.test.ts:284-301` |
+| `apps/api/src/generation/worker.ts` | 시도 시작 실패 판별(설계 결정 7) | D25 |
+| `apps/api/AGENTS.md` | 「로그인과 세션」 의 `CONSENT_TEXT_VERSION` 줄, 판 올리는 순서, 보관 기간을 바꾸면 판도 올리는 규칙 | 지시 파일을 코드와 맞춘다 |
+| 새 시험 `apps/api/src/generation/job-guards.db.test.ts` | D25 | 실제 Postgres |
+
+PR 1b 판 `apps/api/db/migrations/0005_budget.sql` (D20, D26)
+
+| 대상 | 무엇을 | 왜(DoD) |
+| --- | --- | --- |
+| 새 표 `cost_daily` | `day`, `budget_kind`, `provider`, `budget_usd`, `reserved_usd`, `settled_usd`, `updated_at` | 스키마 v4 이름과 기본 키 그대로. 이번에는 `total` 행만 쓴다 |
+| 새 표 `cost_budget_defaults` | `budget_kind`, `provider`, `budget_usd`, `updated_at`, `updated_by` | 그날 행이 없을 때 복사할 상한(스키마 v4 에 없는 표, 기획자 확인) |
+| `generation_attempts` 새 열 | `budget_day date`, `reserved_usd numeric(10,4)`, `budget_status text` | 시도마다 예산 예약 기록(D20, D26) |
+| 내부 함수 `nuno_budget_lock(p_day)` | 그날 `total` 행이 없으면 기본값으로 만들고 `FOR UPDATE` 로 잠근다 | 예약과 정산이 같은 길로 잠근다 |
+| 바꾼 함수 `nuno_start_attempt` | 판 0004 본문에 예산 예약을 더한다 | D20 |
+| 바꾼 함수 `nuno_finish_attempt` | 같은 인자. 시도 UPDATE 가 행을 바꿨을 때만 그 시도의 예산을 정산 | D26 |
+| 새 함수 `nuno_settle_budgets(p_now)` | 끝난 작업에 남은 `reserved` 시도를 정산 | D26 |
+
+| 파일 | 무엇을 | 왜 |
+| --- | --- | --- |
+| `apps/api/src/composition/worker.ts` | 60초 예약 작업에 `nuno_settle_budgets` | D26 |
+| `scripts/test-db.mjs`, `scripts/e2e-api.mjs` | 로컬 DB 에 `total` 기본 상한을 넣는다(가짜 공급사 줄을 넣는 자리) | 시험과 개발 DB 가 예산 0 으로 막히지 않게 |
+| `scripts/e2e-api.mjs` | `--only=api`, `--only=worker` 선택지. 같은 환경변수로 한 프로세스만 띄우고, 그 프로세스가 죽어도 다른 터미널의 것은 남는다 | D30 판정 |
+| `apps/api/AGENTS.md` | 「골드와 작업」 에 잠금 순서 「사용자 → 작업 → 시도 → 예산 행(날짜, 종류, 공급사 순)」 | 판 0003 머리말은 고치지 않으므로 판 0005 머리말과 여기에 적는다 |
 | 새 시험 `apps/api/src/generation/budget.db.test.ts` | D20, D26 | 실제 Postgres |
-| 새 시험 `apps/api/src/generation/job-guards.db.test.ts` | D25, D27, D28, D29 | 실제 Postgres |
+
+PR 1c 판 `apps/api/db/migrations/0006_queue_retention.sql` (D27, D28, D29)
+
+| 대상 | 무엇을 | 왜(DoD) |
+| --- | --- | --- |
+| 새 함수 `nuno_expire_queued_jobs(p_now, p_wait_seconds)` | 대기 상한을 넘긴 접수 작업을 `queue_timeout` 으로 실패와 풀기 | D27 |
+| 새 함수 `nuno_expire_result(p_result_id, p_now)` | 기한이 지난 gen30 결과를 deleted 로 | D29 |
+| 바꾼 함수 `nuno_keep_result` | 같은 인자. gen30 이고 기한이 지났으면 NULL | D29 |
+
+| 파일 | 무엇을 | 왜 |
+| --- | --- | --- |
+| `apps/api/src/generation/routes.ts` | 조회가 기한 지난 결과 URL 을 주지 않는다 | D29 |
+| `apps/api/src/lookbook/keep-result.ts` | 복사 전에 기한을 본다 | D29 |
+| `apps/api/src/generation/worker.ts` | `QUEUE_WAIT_SECONDS`, `expireResults` | D27, D29 |
+| `apps/api/src/composition/worker.ts` | 선점 전마다 대기 만료, 60초 예약 작업에 30일 정리 | D27, D29 |
+| 새 시험 `job-guards.db.test.ts` 나머지 | D27, D28, D29 | 실제 Postgres |
 | 새 시험 `apps/api/src/lookbook/keep-again.db.test.ts` | D22 | 판정만 묶음 |
 
-- 새 시험은 `generation.db.test.ts` 의 `NOW`(2020-02-01)보다 늦은 시각으로 접수하고, 자기 작업을 끝까지 비운다. worker 시험이 가장 오래된 접수 작업부터 선점하기 때문이다.
+- 대기 만료는 `composition/worker.ts` 의 1초 바퀴에서 부른다. `runNextJob` 안에는 넣지 않는다. 기존 worker 시험의 선점 순서가 그대로다.
 - `nuno_api` 는 `cost_daily`, `cost_budget_defaults` 에 권한이 없다(스키마 v4 권한 표). 새 함수는 `SECURITY DEFINER` 와 `search_path` 고정, 하나씩 GRANT.
 
-### 바꿀 것: PR 2 앱
+새 DB 시험의 시각과 날짜 규칙
+- `nuno_claim_job` 은 `p_now` 와 상관없이 가장 오래된 `queued` 작업을 고른다. 다른 파일이 남긴 접수 작업이 있다.
+  - `gold.db.test.ts` 는 2030-04-01 에 접수한 작업을 `queued` 로 남긴다. test-b 는 test-a 덤프를 받아 처음부터 이 작업이 있다.
+- 새 worker 시험은 2021~2029년 안에서 시험마다 겹치지 않는 한국 날짜를 하나씩 맡는다. 2020-02-01, 2020-03-01, 2020-03-02, 2030년은 쓰지 않는다.
+- 선점 전에 `nuno_expire_queued_jobs(그 시각, 300)` 로 그보다 앞서 남은 접수 작업을 비운다. 그다음 `runNextJob` 이 준 `jobId` 가 자기 작업인지 먼저 단언한다(`generation.db.test.ts` 의 `runJob` 과 같다).
+- 덤프에는 `cost_daily` 행도 넘어온다. 예산 단언은 절댓값이 아니라 시험 전후 차이로 본다.
+- 예산을 바꾸는 시험(D20, D26)은 자기 날짜의 `cost_daily` 행만 바꾸고 끝나면 `budget_usd` 를 되돌린다. `cost_budget_defaults` 는 시험에서 바꾸지 않는다.
+- 자기 작업은 끝까지 비운다. `queued` 로 남기는 단언(D27 의 4분 59초)은 그 뒤 만료까지 부른다.
+
+### 바꿀 것: 앱 PR 2a, 2b
+
+PR 2a (D8, D9, D34 화면, K14)
 
 | 파일 | 무엇을 | 왜 |
 | --- | --- | --- |
 | `apps/mobile/src/ui/generate-sheets.tsx:141` | 시트 글을 D8 원문으로 | D8 |
-| `apps/mobile/app/generate/[jobId].tsx:175-181` | `leave` 가 `discardJob` 대신 기기 요청 줄만 지운다 | D9 |
-| `apps/mobile/src/composition/generation.ts:214-226` | `discardJob` 을 `leaveJob`(기기 줄만 지움)으로 바꾼다 | D9 |
-| 새 라우트 `apps/mobile/app/lookbook-grid/[id].tsx` | 「<룩북 이름> 전체 보기」 격자 | D33 |
-| `apps/mobile/app/lookbook/[id].tsx:324-327` | `toShelf` 를 격자 열기로 바꾸고 `from=grid` 파라미터를 받는다 | D33 |
+| `packages/generation/src/application/request-store.ts` | 기기 판 8: `generation_requests` 에 `left INTEGER NOT NULL DEFAULT 0`. `latestUnsavedJobId` 가 `left = 0` 만 고른다 | D9, C20 |
+| `apps/mobile/src/composition/generation.ts:214-226` | `discardJob` 을 `leaveJob` 으로 바꾼다. 서버를 부르지 않고 기기 줄에 `left = 1` 만 적는다 | D9 |
+| `apps/mobile/app/generate/[jobId].tsx:175-181` | `leave` 가 `leaveJob` 을 부른다 | D9 |
 | `apps/mobile/app/settings.tsx` | 「개인정보와 안전」 에 「사진 보관 안내」 줄과 시트 | D34 |
 | `apps/mobile/src/composition/account.ts:154-160` | `loadConsentProvider` 가 `retentionDays` 도 준다 | D34 |
 | `apps/mobile/app/generate/consent.tsx:51` | 「받은 자료는 N일 두고 지워요」 의 N 을 서버 값으로 | K14 |
-| `packages/generation/src/domain/generation.ts:18-19`, 두 `index.ts` | `PROVIDER_RETENTION_DAYS` 를 지운다 | K14 |
-| `GLOSSARY.md` | 「사진 보관 안내」, 「<룩북 이름> 전체 보기」 와 코드 이름 `lookbook-grid` | 새 이름은 이 표에 먼저 |
+| `packages/generation/src/domain/generation.ts:18-19`, 두 `index.ts` | `PROVIDER_RETENTION_DAYS` 를 지운다. `CONSENT_TEXT_VERSION` 주석에서 보관 일수 문장을 서버 규칙으로 바꾼다 | K14 |
+| `GLOSSARY.md` | 「사진 보관 안내」 와 코드 이름 | 새 이름은 이 표에 먼저 |
 | `e2e/generate.spec.ts:169, 185-212` | D8 문구, D9 를 「나간 뒤 다시 조회한 URL 이 200」 으로 | D8, D9 |
-| `e2e/lookbook-worn.spec.ts:117, 126-127` | 「전체 보기」 가 책장이 아니라 격자로 간다 | D33 |
-| 새 e2e `e2e/lookbook-grid.spec.ts`, `e2e/photo-retention.spec.ts`, `e2e/account-switch.spec.ts`, `e2e/home-recent-looks.spec.ts` | D33, D34, D23, D32 | 화면 판정 |
+| 새 e2e `e2e/photo-retention.spec.ts` | D34 | 화면 판정 |
 
-- 「사진 보관 안내」 시트 글은 와이어프레임 v28 `privacy` 시트의 두 문단이다. 「시연용」 문장은 데모 글이라 뺀다.
-  - 「내 사진으로 만들기와 옷 추가에 쓰는 사진은 분석이 끝나면 기기와 NUNO 서버에서 바로 지워요. AI 업체 서버의 보관 기간은 N일이에요.」
-  - 「옷 추가는 배경을 지운 옷 이미지만, 트윈은 고른 기본 모습과 얼굴을 다듬은 값만 저장해요.」
-  - 서버 값을 못 읽으면 N 자리에 「확인 중」 을 두지 않고 「보관 기간을 불러오지 못했어요」 와 「다시 불러오기」 를 보인다(동의 화면 F12 와 같은 꼴, 새로 쓴 글).
-- 격자 화면은 와이어프레임 v28 「S20 룩북 전체 보기」 를 따른다.
-  - 머리글 「<룩북 이름> 전체 보기」, 위 줄 「룩 N개」, 칸 이름 「N번째 룩, <룩 이름>」, 빈 룩북 「아직 룩이 없어요」.
-  - 칸은 가로 88 이상으로 채우는 격자(390 폭에서 4열), 사이 2. 24칸씩 더 불러오기와 「룩 N개를 모두 봤어요」 는 이번에 넣지 않는다(서버가 룩북을 한 번에 준다).
-  - 칸을 누르면 `lookbook/[id]?look=<키>&from=grid` 를 연다. 그 화면의 「전체 보기」 는 `from=grid` 면 뒤로 가서 쌓인 화면이 늘지 않는다.
+PR 2b (D33, D23 e2e, D32 e2e)
+
+| 파일 | 무엇을 | 왜 |
+| --- | --- | --- |
+| 새 라우트 `apps/mobile/app/lookbook-grid/[id].tsx` | 「<룩북 이름> 전체 보기」 격자 | D33 |
+| `apps/mobile/app/_layout.tsx:12-25` | `OVERLAY_SCREENS` 에 `"lookbook-grid/[id]"` | 등록하지 않으면 기본 머리글(라우트 이름)이 함께 보인다 |
+| `apps/mobile/app/lookbook/[id].tsx:324-327` | `toShelf` 를 격자 열기로 바꾸고 `from=grid` 파라미터를 받는다 | D33 |
+| `GLOSSARY.md` | 「<룩북 이름> 전체 보기」 와 `lookbook-grid` 를 더한다. 155줄 「전체 보기」 설명을 「격자 열기, `from=grid` 면 뒤로」 로 고친다 | 새 이름은 이 표에 먼저 |
+| `e2e/lookbook-worn.spec.ts:117, 126-127` | 「전체 보기」 가 책장이 아니라 격자로 간다 | D33 |
+| 새 e2e `e2e/lookbook-grid.spec.ts`, `e2e/account-switch.spec.ts`, `e2e/home-recent-looks.spec.ts` | D33, D23, D32 | 화면 판정. D23, D32 는 제품 코드를 바꾸지 않는다 |
+
+「사진 보관 안내」 시트 글
+- 와이어프레임 v28 `privacy` 시트 원문은 쓰지 않는다. 지금 앱과 다른 문장이 있다.
+  - 「옷 추가에 쓰는 사진은 … 기기에서 바로 지워요」: 앱은 옷을 저장할 때 원본을 `garments/<id>/original.jpg` 로 둔다(`garment-media.ts:52`).
+  - 옷 추가 누끼는 기기의 Apple Vision 으로 한다(기술 검토 v6 77줄). AI 업체 서버의 보관 기간은 옷 추가와 상관이 없다.
+  - AI 업체로 가는 자료는 완성 룩 만들기의 트윈 그림과 옷 사진이다. 원문에는 이 말이 없다.
+- 기획자 확인 전 초안(새로 쓴 글):
+  - 「완성 룩을 만들 때 보내는 트윈 그림과 옷 사진은 AI 업체 서버에 N일 보관돼요.」
+  - 「옷 추가에 쓴 원본 사진은 이 기기에만 남아요.」
+- 서버 값을 못 읽으면 N 자리에 「확인 중」 을 두지 않고 「보관 기간을 불러오지 못했어요」 와 「다시 불러오기」 를 보인다(동의 화면 F12 와 같은 꼴, 새로 쓴 글).
+
+격자 화면은 와이어프레임 v28 「S20 룩북 전체 보기」(`lb22GridV`)를 따른다.
+- 머리글 「<룩북 이름> 전체 보기」, 위 줄 「룩 N개」, 칸 이름 「N번째 룩, <룩 이름>」, 빈 룩북 「아직 룩이 없어요」.
+- 룩이 1개 이상이면 격자 아래에 「룩 N개를 모두 봤어요」 를 보인다. 서버가 룩북을 한 번에 주므로 늘 다 불러온 상태다.
+- 칸은 가로 88 이상으로 채우는 격자(390 폭에서 4열), 사이 2. 24칸씩 더 불러오기와 「룩을 더 불러오는 중」 은 이번에 넣지 않는다.
+- 칸을 누르면 `lookbook/[id]?look=<키>&from=grid` 를 연다. 그 화면의 「전체 보기」 는 `from=grid` 면 뒤로 가서 쌓인 화면이 늘지 않는다.
 
 ### 설계 결정과 버린 안
 
 1. 예산 표와 예약 기록 모양
    - 표 `cost_daily` 는 스키마 v4 이름과 열 그대로다. 기본 키 `(day, budget_kind, provider)`, `budget_kind` 는 `total`, `provider`, `trial`.
+   - 이번에는 `total` 행(공급사 칸은 빈 문자)만 예약하고 정산한다. `provider`, `trial` 행 처리는 S5-22 와 함께 넣는다. 이번 DoD 에 그 행을 판정할 항목이 없다.
    - `day` 는 한국 날짜 `(p_now AT TIME ZONE 'Asia/Seoul')::date` 다(설계 결정 8 의 서버 SQL 예외).
-   - 그날 행이 없으면 예약 함수가 `cost_budget_defaults` 에서 복사해 만든다. `provider` 줄의 기본값은 공급사 이름 줄, 없으면 빈 문자 줄이다.
-   - 판 0004 는 기본값을 넣지 않는다. 결정 D49(하루 예산 상한 셋)가 정해지지 않았다. 기본값도 그날 행도 없으면 상한 0원이다.
+   - 그날 행이 없으면 `nuno_budget_lock` 이 `cost_budget_defaults` 의 `total` 줄에서 복사해 만든다.
+   - 판 0005 는 기본값을 넣지 않는다. 결정 D49(하루 예산 상한 셋)가 정해지지 않았다. 기본값도 그날 행도 없으면 상한 0원이다.
    - 로컬 시험 DB, e2e DB, `api:dev` DB 는 스크립트가 넉넉한 기본값을 넣는다. 개발 서버 RDS 에는 넣지 않는다.
-   - 예약 기록은 `generation_attempts` 의 새 열이다. 시도 행 하나가 예약 하나라 「시도 ID 마다 한 번」 을 기본 키가 지킨다.
+   - 예약 기록은 `generation_attempts` 의 새 열이다(스키마 v4 633줄 「예산 예약액과 정산 상태」). 시도 행 하나가 예약 하나라 「시도 ID 마다 한 번」 을 기본 키가 지킨다.
    - 예약액은 작업이 적은 공급사 설정 줄의 `price_usd`(한 장 값)다. 청구액은 있던 `cost_usd` 다.
-   - 예약은 `nuno_start_attempt` 안에서 시도 행을 넣기 전에 한다. 잡을 행(`total`, 그 공급사 `provider`, 무료 장 작업이면 `trial`)을 `FOR UPDATE` 로 잠근다.
-   - 모든 행이 `budget_usd > 0` 이고 `reserved_usd + 예약액 <= budget_usd` 면 함께 늘리고 시도 행을 `reserved` 로 넣는다.
-   - 하나라도 모자라면 시도 행을 넣지 않고 `budget_exhausted` 로 실패와 풀기다. 그래서 그 작업의 공급사 호출 기록이 0건이다.
+   - 예약은 `nuno_start_attempt` 안에서 시도 행을 넣기 전에 한다. 그날 `total` 행을 `nuno_budget_lock` 으로 잠근다.
+   - `budget_usd > 0` 이고 `reserved_usd + settled_usd + 예약액 <= budget_usd` 면 예약 합을 늘리고 시도 행을 `reserved` 로 넣는다. 확정 합을 빼면 차례로 성공한 작업이 상한에 닿지 않는다.
+   - 모자라면 시도 행을 넣지 않고 `budget_exhausted` 로 실패와 풀기다. 그래서 그 작업의 공급사 호출 기록이 0건이다.
+   - 잠금 순서는 「사용자 → 작업 → 시도 → 예산 행(날짜, 종류, 공급사 순)」 이다. 예산 행은 `nuno_budget_lock` 만 잠근다. 여러 행을 한 문장 UPDATE 로 잠그지 않는다.
    - 버린 안: 따로 예약 표. 시도와 1:1 이라 외래 키와 고유 색인만 늘어난다.
    - 버린 안: `provider_configs` 에 하루 상한 열. 하루 전체와 무료 체험 상한을 둘 곳이 없다.
    - 버린 안: 행이 없으면 상한 없음. 운영 DB 에 값을 넣지 않은 채 스위치를 켜면 예산 없이 부른다.
-   - 이번에 하지 않는 것: `trial` 예산이 바닥났을 때 접수 단계에서 무료 요청만 거절하기(S5-22). 이번에는 부르기 전 확보에서만 막는다.
+   - 버린 안: `total`, `provider`, `trial` 세 행을 지금 함께 잡기. 돈에 걸린 분기 둘이 판정 시험 없이 들어간다.
+   - 이번에 하지 않는 것: `trial` 예산이 바닥났을 때 접수 단계에서 무료 요청만 거절하기(S5-22).
 2. 정산 규칙
    - 정산은 두 곳이다. worker 의 `nuno_finish_attempt` 가 그 시도를 바로 정산한다. 예약 작업 `nuno_settle_budgets` 가 끝난 작업에 남은 `reserved` 시도를 정산한다.
+   - `nuno_finish_attempt` 는 선점이 맞고 시도 UPDATE 가 행을 바꿨을 때만 정산한다. 선점이 풀린 늦은 호출은 `cost_daily` 를 건드리지 않는다.
    - `billed` 이고 청구액이 있으면 예약 합에서 예약액을 빼고 확정 합에 청구액을 더한다. 기록은 `settled`.
    - `not_billed` 면 예약 합에서 예약액을 빼기만 한다. 기록은 `released`.
    - 청구 상태가 `unknown` 이거나 청구액이 없으면 예약액을 예약 합에 그대로 둔다. 기록은 `kept_reserved` 이고 다시 정산하지 않는다.
    - worker 가 공급사를 부른 뒤 죽으면 시도는 `submitting` 이고 청구 상태는 `unknown` 이다. 예약 작업이 작업을 실패로 바꾼 뒤 정산이 `kept_reserved` 로 둔다.
    - 멱등: `UPDATE generation_attempts SET budget_status = … WHERE id = … AND budget_status = 'reserved'` 가 행을 바꿨을 때만 `cost_daily` 를 고친다. 두 번째 실행은 바꿀 행이 없다(D26).
+   - `nuno_settle_budgets` 는 시도를 `budget_day, id` 순서로 고른다. 시도마다 사용자 행 → 작업 행 → 시도 행 → 예산 행 순서로 잠근다.
    - 버린 안: 청구액을 모르면 예약액을 확정 합으로 옮기기. 청구서로 확인하지 않은 값이 확정액에 들어간다.
    - 버린 안: 청구액을 모르면 0원으로 풀기. 실제로 청구됐으면 그날 상한을 넘겨 부른다.
 3. 「공급사 호출 기록 0건」 은 그 작업의 `generation_attempts` 행 수로 센다.
@@ -512,40 +580,53 @@ D21 을 미루는 까닭
    - `nuno_expire_result` 는 사용자 행을 먼저 잠그고, 아직 gen30 이고 기한이 지난 행만 바꾼다. 저장한 결과(`kept`, 키 `u/…`)는 고르지 않는다.
    - 정리 전이라도 기한이 지난 결과는 막는다. 작업 조회는 결과 URL 을 주지 않고, 저장은 `keep-result.ts` 와 `nuno_keep_result` 가 거절한다(404).
    - 저장과 겹치면: 저장이 먼저 복사했어도 `nuno_keep_result` 가 기한을 보고 NULL 을 주고, `keep-result.ts` 가 복사본을 지운다(51-54줄 그대로).
+   - 결과 서명 URL 은 10분짜리다(`RESULT_URL_TTL_SECONDS`). 30일 전에 받은 URL 은 파일이 있든 없든 403 이라, 파일 삭제는 새로 서명한 URL 이나 `store.read` 로 판정한다.
    - 버린 안: DB 를 먼저 deleted 로 적고 파일을 나중에 지우기. 그 사이에 죽으면 DB 로 찾을 수 없는 파일이 gen30 에 남는다.
    - 버린 안: R2 수명 규칙에만 맡기기. 로컬 디스크에는 없고, DB 가 gen30 으로 남아 저장이 된다.
 6. 동의 판을 상수에서 DB 로 옮기는 법
    - `provider_configs` 에 스키마 v4 의 두 열 `consent_text_version`, `retention_days` 를 더한다. 기본값 1 과 30 은 지금 서버 상수와 앱 상수 값이다. 있던 줄과 시험의 INSERT 가 그대로 돈다.
-   - 지금 판은 켜 둔 줄 가운데 우선순위가 가장 앞선 줄(`consentProvider` 와 같은 고르기)의 판이다. 그 줄이 없으면 지금 판은 빈 값이고 동의를 받지 않는다(F12 그대로).
+   - 지금 판은 `nuno_current_provider_config` 가 고른 줄의 판이다. 그 줄이 없으면 지금 판은 빈 값이고 동의를 받지 않는다(F12 그대로).
    - 서버 `CONSENT_TEXT_VERSION` 은 「판 0004 의 열 기본값」 으로 주석을 바꿔 남긴다. 기존 시험 셋이 이 이름을 import 한다.
-   - 접수의 판 비교는 라우트에서 `nuno_submit_job` 안으로 옮긴다. 앱이 보낸 판이 지금 판과 다르면 `consent_text_outdated`(409), 켜 둔 줄이 없으면 `provider_unavailable`(503).
+   - 접수 라우트는 앱이 보낸 판을 DB 의 지금 판과 비교해 다르면 409 `consent_text_outdated` 다. 켜 둔 줄이 없으면 503 `provider_unavailable` 이다.
+   - `nuno_submit_job` 은 사용자 동의 판 비교(`consent_required`)를 먼저 하고 지금 판 비교(`consent_text_outdated`)를 그 뒤에 둔다. 라우트 확인과 함수 실행 사이에 판이 바뀌는 경우를 함수가 막는다.
+   - 이 순서라야 보호된 시험 `gold.db.test.ts:284-301` 의 두 단언(함수 직접 호출은 `consent_required`, 라우트는 409)이 함께 산다.
    - `POST /v1/consents` 의 판 비교도 DB 값으로 한다.
    - 앱의 `CONSENT_TEXT_VERSION` 은 「앱에 든 동의 문구의 판」 으로 그대로 둔다. 서버 판이 오르면 409 이고, 앱은 이미 있는 「동의 문구가 바뀌었어요. 앱을 업데이트해 주세요」 를 보인다(C88).
+   - 판 올리는 순서는 기술 검토 v6 3076줄을 따른다. 서버 판을 먼저 올린다. 그동안 옛 앱 사용자는 동의 화면에서 업데이트 안내를 본다. 새 문구를 담은 앱이 나가면 동의 화면이 다시 뜨고 동의할 수 있다.
+   - 앱을 먼저 내보내면 새 앱의 판(2)이 서버 판(1)과 달라 최신 앱 사용자도 409 를 받는다. 그래서 그 순서는 쓰지 않는다.
+   - `retention_days` 를 바꾸면 같은 줄의 `consent_text_version` 도 함께 올린다. 한 판이 두 보관 기간 문구를 가리키면 동의 기록으로 무엇에 동의했는지 가릴 수 없다(C88 근거).
    - 앱 `PROVIDER_RETENTION_DAYS` 는 지우고 서버가 준 `retentionDays` 를 쓴다(동의 화면, 사진 보관 안내 시트).
+   - 버린 안: 판 비교를 라우트에서 지우고 함수로만 옮기기. 함수 안 비교 순서를 어떻게 두어도 보호된 시험 `gold.db.test.ts:284-301` 의 한쪽 단언이 깨진다.
    - 버린 안: 따로 동의 문구 표. 공급사를 바꾸면 판이 오르는 규칙(C88)이라 공급사 줄에 두는 것이 스키마 v4 와 같다.
    - 버린 안: 앱이 서버 판을 그대로 보내기. 앱에 없는 문구의 판에 동의한 것으로 적힌다.
 7. 공급사 설정 ID 비교
    - `nuno_submit_job` 이 접수 때 고른 줄의 ID 와 그 줄의 판을 작업에 적는다. 판 0004 전에 접수한 작업은 두 칸이 빈 값이다.
-   - `nuno_start_attempt` 가 공급사를 부르기 전마다(다시 만들기 회차 포함) 지금 고르는 줄과 비교한다.
+   - `nuno_start_attempt` 가 공급사를 부르기 전마다(다시 만들기 회차 포함) `nuno_current_provider_config` 가 고른 줄과 비교한다.
    - ID 가 다르거나 빈 값이면 `provider_changed`, 판이 다르면 `consent_outdated` 로 실패와 풀기다. 시도 행은 만들지 않는다.
+   - 외래 키는 `ON DELETE SET NULL` 이다. 설정 줄이 지워진 작업은 ID 가 빈 값이 되어 `provider_changed` 로 끝난다.
+   - 기존 시험 `gold.db.test.ts:48`, `generation.db.test.ts:89` 의 afterAll 이 시드 설정 줄을 지운다. 외래 키에 `ON DELETE` 가 없으면 이 정리가 실패한다.
    - 비교는 작업에 적은 판과 공급사 줄의 지금 판이다. 접수 때 사용자의 동의 판과 같았으므로 동의 행은 다시 보지 않는다. 철회는 지금처럼 따로 본다.
    - `nuno_start_attempt` 는 서명을 바꾸지 않는다(기존 시험이 `AS id` 로 부른다). worker 는 빈 값을 받으면 작업 상태와 실패 코드를 다시 읽는다.
    - 이 함수가 적는 실패 코드(`budget_exhausted`, `provider_changed`, `consent_outdated`, `consent_withdrawn`, `account_inactive`)면 `failed` 와 푸시, 아니면 지금처럼 `lost` 다.
    - 버린 안: 선점 때만 비교. 다시 만들기 회차가 비교를 건너뛴다.
    - 버린 안: 공급사 이름으로 비교. 같은 공급사의 모델, 보관 기간, 판이 바뀐 것을 놓친다.
-8. 결과 키를 시도 ID 로
-   - 키는 `gen30/<사용자 ID>/<시도 ID>.jpg` 다. 시도 행 하나가 키 하나를 가진다(로드맵 T7-4).
-   - `nuno_job_checking` 은 선점 토큰이 맞을 때만 이 키를 결과 행에 적는다(지금 그대로). 맞지 않으면 worker 가 그 시도의 파일만 지운다.
-   - 늦은 시도가 다른 시도의 파일을 덮거나 지울 수 없다. 지울 파일도 시도 행으로 찾을 수 있다.
-   - 기존 `generation.db.test.ts` 255, 333, 334, 579줄이 작업 ID 와 회차 키를 읽는다. 기획자 승인 뒤에 바꾼다.
-   - 승인이 없으면 키는 그대로 두고, D28 은 선점 확인과 늦은 저장 시험으로만 판정한다.
-   - 버린 안: 작업 ID 와 회차 키 유지. 로드맵 T7-4 문장과 어긋나고, 회차를 worker 반복 번호와 DB 시도 행이 따로 센다.
-9. 「나가기」 가 지우지 않는 법: 앱이 서버를 부르지 않는다.
-   - 「나가기」 는 시트를 닫고 기기 `generation_requests` 줄만 지운다. 서버 결과는 gen30 그대로이고 30일 정리만 지운다(K3, K3-1).
+   - 버린 안: 켜 둔 줄의 우선순위 고유 색인. `id` 끝 키로 고르기가 이미 하나로 정해진다. 운영자가 같은 우선순위 줄을 잠시 둘 때 켜기가 막힌다.
+8. 결과 키는 이번에 바꾸지 않는다.
+   - 키는 지금처럼 `gen30/<사용자 ID>/<작업 ID>-<회차>.jpg` 다. D28 은 선점 확인과 늦은 저장 DB 시험으로 판정한다.
+   - 늦은 시도가 남의 결과를 덮을 수 없다. `nuno_sweep_jobs` 는 선점이 끝난 작업을 `nuno_job_release` 로 실패시키고 다시 접수 상태로 돌리지 않는다.
+   - 그래서 늦은 시도가 쓰는 키는 이미 실패한 자기 작업의 키뿐이다. 그 뒤 `nuno_job_checking` 이 선점 토큰으로 막고 worker 가 그 파일을 지운다(`worker.ts:161-170`).
+   - 키를 시도 ID 로 바꾸는 일(로드맵 T7-4 문장)은 D31 실제 공급사 어댑터를 붙일 때 다시 본다. 그때 보호된 시험 `generation.db.test.ts` 255, 333, 334, 579줄의 승인을 함께 받는다.
+9. 「나가기」 가 지우지 않는 법: 앱이 서버를 부르지 않고, 기기 줄은 남긴 채 표시만 한다.
+   - 「나가기」 는 시트를 닫고 기기 `generation_requests` 줄에 `left = 1` 을 적는다. 서버 결과는 gen30 그대로이고 30일 정리만 지운다(K3, K3-1).
+   - 기기 줄을 지우지 않는 까닭: 결과 화면의 입은 옷과 트윈 미리보기는 그 줄의 manifest 에서만 읽는다(`loadJobItems`). 「내 룩북에 저장」 도 그 줄의 입은 옷을 서버로 보낸다(`keepJob`).
+   - C20 과 D8 문구는 저장하지 않은 결과를 30일 동안 다시 볼 수 있다고 한다. T8 알림에서 다시 열 때도 입은 옷이 보여야 한다.
+   - `left = 1` 인 줄은 `latestUnsavedJobId` 와 「다 된 완성 룩 보기」 대상에서 빠진다.
+   - 줄은 저장했을 때, 로그아웃했을 때, 보관 기한이 지나 `dropUnviewableJob` 이 돌 때만 지운다(지금 그대로).
    - 서버 `/v1/generation-jobs/:id/discard` 와 `nuno_discard_result` 는 이번에 그대로 둔다. 부르는 화면이 없어진다.
    - 거둘지는 기획자에게 묻는다. 거두면 `generation.db.test.ts` 의 discard 단언 다섯 곳(261-267, 584-586, 606-609)을 함께 고쳐야 한다.
-   - 버린 안: 표시만 하기(`generation_results.dismissed_at`). 그 값을 읽는 화면이 없다. T8 알림 목록도 저장 여부와 기한만 보면 된다. 보호된 시험 263, 264줄도 고쳐야 한다.
-   - 버린 안: 라우트를 지금 거두기. 보호된 시험 다섯 곳을 고쳐야 하고, PR 1 과 PR 2 사이 main 의 앱이 404 를 받는다.
+   - 버린 안: 기기 줄을 지우기. 다시 열면 입은 옷이 비어 보이고, 저장한 룩에도 입은 옷이 빠진다.
+   - 버린 안: 서버에 표시하기(`generation_results.dismissed_at`). 그 값을 읽는 화면이 없다. 보호된 시험 263, 264줄도 고쳐야 한다.
+   - 버린 안: 라우트를 지금 거두기. 보호된 시험 다섯 곳을 고쳐야 하고, 서버 PR 과 PR 2a 사이 main 의 앱이 404 를 받는다.
 10. 사진 보관 기간 응답
     - `GET /v1/consents/generation-transfer` 응답에 `retentionDays` 를 더한다. 동의 화면과 사진 보관 안내 시트가 같은 주소를 읽는다.
     - 기존 `account.db.test.ts:265-269` 가 응답을 `toEqual` 로 본다. 기획자 승인 뒤에 한 줄을 더한다.
@@ -554,20 +635,30 @@ D21 을 미루는 까닭
 
 ### 순서와 PR
 
-1. PR 1 서버 `t7/remaining-b`
-   1. 판 0004 표와 열 → `scripts/test-db.mjs`, `scripts/e2e-api.mjs` 기본 예산 → `pnpm test:db` 로 기존 시험이 그대로 도는지 본다.
-   2. `nuno_current_provider_config`, `nuno_submit_job`, `nuno_start_attempt`(D25) → `job-guards.db.test.ts` 의 D25.
-   3. 예산 예약과 정산(D20, D26) → `budget.db.test.ts`.
-   4. 대기 상한(D27), 결과 키(D28), 30일 정리(D29) → `job-guards.db.test.ts` 나머지.
-   5. `consent.ts`, 라우트, `keep-result.ts`, `AGENTS.md` → D22 시험 `keep-again.db.test.ts` → `pnpm verify`.
-   - 판 0004 하나에 묶여 400줄 안팎이 된다. 시험을 빼면 250줄 안팎이다. 400줄을 크게 넘기면 3 을 PR 1a(판 0004 예산)로 먼저 낸다.
-2. PR 2 앱 (PR 1 머지 뒤 main 에서 딴다)
-   1. D8 시트 글, D9 「나가기」 동작과 `e2e/generate.spec.ts`.
-   2. D34 시트, 동의 화면 서버 값, `PROVIDER_RETENTION_DAYS` 지우기, GLOSSARY.
-   3. D33 격자 라우트와 `lookbook-worn.spec.ts`.
-   4. D23, D32 e2e.
-   - 300줄 안팎이다. 화면 셋과 e2e 넷이 함께 들어 넘으면 PR 본문에 까닭을 쓴다.
-3. 판정만: D19, D22, D30 은 PR 1 이 끝난 뒤 한 번에 판정해 `evidence/T7/commands.md` 에 적는다.
+1. PR 1a 서버 판 0004 `t7/remaining-b`
+   1. 판 0004 열과 `nuno_current_provider_config` → `pnpm test:db` 1/2, 2/2 가 모두 통과하는지 본다(외래 키가 기존 afterAll 을 깨지 않는지).
+   2. `nuno_submit_job`, `nuno_start_attempt`, 라우트, `consent.ts` → `job-guards.db.test.ts` 의 D25 → `pnpm verify`.
+   - 시험을 빼면 250줄 안팎이다. 판 0003 의 `nuno_submit_job` 본문(129줄)을 `CREATE OR REPLACE` 로 다시 쓰는 줄이 대부분이다. 나누지 못한 까닭을 PR 본문에 쓴다.
+2. PR 1b 서버 판 0005 (PR 1a 머지 뒤)
+   1. 판 0005 표와 열, `nuno_budget_lock` → 스크립트 기본 예산과 `--only` → `pnpm test:db` 로 기존 시험이 그대로 도는지 본다.
+   2. 예약과 정산(D20, D26) → `budget.db.test.ts` → `pnpm verify`.
+   - 시험을 빼면 250줄 안팎이다.
+3. PR 1c 서버 판 0006 (PR 1b 머지 뒤)
+   1. 대기 상한(D27), 30일 정리(D29), 늦은 저장 시험(D28) → `job-guards.db.test.ts` 나머지.
+   2. `keep-result.ts`, 조회 라우트 → D22 시험 `keep-again.db.test.ts` → `pnpm verify`.
+   - 시험을 빼면 200줄 안팎이다.
+4. 서버 문서 맞추기(PR 1c 머지 뒤 한 번)
+   - 스키마 v4 를 고친 새 판(v5)을 만든다. `cost_daily` 절에 `updated_at` 과 이번에 `total` 행만 쓰는 것, 새 표 `cost_budget_defaults`, `generation_attempts` 의 `budget_day`, `reserved_usd`, `budget_status` 를 적는다.
+   - 기술 검토 v6 3100줄의 「예산 예약 기록」 을 따로 둔 표가 아니라 `generation_attempts` 의 열로 고친다.
+5. PR 2a 앱 (PR 1a 머지 뒤 main 에서 딴다)
+   1. D8 시트 글, 기기 판 8 `left`, D9 「나가기」 동작과 `e2e/generate.spec.ts`.
+   2. D34 시트, 동의 화면 서버 값, `PROVIDER_RETENTION_DAYS` 지우기, GLOSSARY, `photo-retention.spec.ts`.
+   - 300줄 안팎이다.
+6. PR 2b 앱 (언제든)
+   1. D33 격자 라우트, `_layout.tsx`, GLOSSARY, `lookbook-worn.spec.ts`, `lookbook-grid.spec.ts`.
+   2. D23, D32 e2e.
+   - 새 e2e 셋이 함께 들어 300줄을 넘는다. 제품 코드는 격자 화면 하나라 나누지 않고 까닭을 PR 본문에 쓴다.
+7. 판정만: D19, D22, D30 은 PR 1c 가 끝난 뒤 한 번에 판정해 `evidence/T7/commands.md` 에 적는다.
 
 ### 화면 테스트 시나리오와 판정 방법
 
@@ -577,41 +668,73 @@ D21 을 미루는 까닭
 | DoD | 어디서 | 무엇을 하면 | 무엇이 보여야 하나 |
 | --- | --- | --- | --- |
 | D8 | 코디 무대 → 완성 룩 결과 | 「무료로 만들기」 로 결과를 받고 저장하지 않은 채 「뒤로」 | 「저장하지 않고 나갈까요?」 시트와 D8 원문 두 문장. 「나가면 이 사진은 사라져요」 는 없다 |
-| D9 | 같은 시트, 터미널 | 「나가기」 를 누른다. 시험 계정 토큰으로 `GET /v1/generation-jobs/<작업 ID>` 를 부르고 받은 `result.url` 을 `curl -o` | 응답 200 과 JPEG 바이트. psql 로 그 결과가 `gen30` 이고 `deleted_at` 이 빈 값 |
+| D9 | 같은 시트, 터미널 | 「나가기」 를 누른다. 시험 계정 토큰으로 `GET /v1/generation-jobs/<작업 ID>` 를 부르고 받은 `result.url` 을 `curl -o` | 응답 200 과 JPEG 바이트. psql 로 그 결과가 `gen30` 이고 `deleted_at` 이 빈 값. 무대에 「다 된 완성 룩 보기」 알약이 없다 |
 | D19 | `gold.db.test.ts:229-237` | `pnpm test:db` | 4골드 계정의 서로 다른 요청 두 건 동시 접수에서 한 건만 202, 잔액 0 |
 | D20 | 개발 DB psql, 코디 무대 | 오늘 `cost_daily` 의 `total` 줄 `budget_usd` 를 0 으로 둔다. 「이대로 입히기」 → 「무료로 만들기」 | 「만들지 못했어요」 와 「무료 1장을 돌려드렸어요」. psql 로 그 작업 시도 행 0, `failure_code = 'budget_exhausted'`, 묶음 `released` |
-| D20 | `budget.db.test.ts` | 같은 조건으로 접수하고 worker 한 바퀴 | 시도 행 0, 가짜 공급사 호출 0, 골드 원장 풀기 한 건 |
+| D20 | `budget.db.test.ts` | 같은 조건으로 접수하고 worker 한 바퀴. 따로 맡은 날짜에서는 상한을 한 장 값으로 두고 한 건을 끝까지 돌린 뒤 둘째 작업을 돌린다 | 시도 행 0, 가짜 공급사 호출 0, 골드 원장 풀기 한 건. 한 건을 정산한 뒤 같은 날 다음 예약이 상한을 넘으면 `budget_exhausted` |
 | D22 | `keep-again.db.test.ts` | gen30 파일을 `u/…/looks/` 로 `store.copy` 만 해 두고(복사 직후 중단) 저장 주소를 다시 부른다 | `looks` 1행, 받은 URL 200, gen30 파일 없음 |
 | D23 | 마이 → 설정 → 「로그아웃」, 가입 시트 | 앞 계정으로 룩 하나를 저장하고 끝난 결과 하나를 남긴다. 로그아웃 뒤 `localStorage` 의 `nuno.dev-subject` 를 새 값으로 바꾸고 「시험 계정으로 계속하기」 | 홈 「최근 저장한 룩」 과 피팅룸 「룩북」 에 앞 계정 룩이 없다. 「다 된 완성 룩 보기」 알약과 작업 감시 알림이 없다. 옷장의 코트와 「내 코디」 는 그대로 |
 | D25 | `job-guards.db.test.ts` | 접수 뒤 관리자로 그 공급사 줄의 `consent_text_version` 을 2 로 올리고 worker 한 바퀴 | 작업 `failed`, `consent_outdated`, 시도 행 0, 묶음 `released`, 잔액 원래대로. 줄을 바꿔 켠 경우는 `provider_changed` |
-| D26 | `budget.db.test.ts` | 시도를 시작해 예약만 하고 끝내지 않는다(worker 내림). 시각을 선점 기한 너머로 돌려 `nuno_sweep_jobs` 뒤 `nuno_settle_budgets` 를 두 번 | `cost_daily` 의 예약 합과 확정 합이 첫 실행 뒤 값 그대로. 시도 기록 `kept_reserved` 한 번. 청구액이 있는 시도는 확정 합에 한 번만 더해진다 |
+| D26 | `budget.db.test.ts` | 작업 셋을 접수하고 시도를 시작해 예약만 한다(worker 내림). 관리자로 시도 A 는 `billed` 와 `cost_usd`, B 는 `not_billed` 로 적고 C 는 `unknown` 그대로 둔다. 시각을 선점 기한 너머로 돌려 `nuno_sweep_jobs` 뒤 `nuno_settle_budgets` 를 두 번, 그다음 A 의 옛 토큰으로 `nuno_finish_attempt` | 첫 실행 뒤 예약 합은 A, B 예약액만큼 한 번 줄고 확정 합은 A 청구액만큼 한 번 는다. 둘째 실행 뒤 두 값이 그대로다. 기록은 A `settled`, B `released`, C `kept_reserved`. 늦은 `nuno_finish_attempt` 는 false 이고 두 값이 그대로다 |
 | D27 | `job-guards.db.test.ts` | 접수만 하고 시각을 5분 1초 뒤로 돌려 대기 만료와 선점을 부른다 | 작업 `failed`, `queue_timeout`, 시도 행 0, 묶음 `released`. 4분 59초 뒤에는 그대로 `queued` |
 | D28 | `job-guards.db.test.ts` | 작업 J 를 토큰 T1 로 선점해 시도 사진을 저장한다. 기한을 넘겨 예약 작업으로 정리한 뒤 T1 으로 `nuno_job_checking` 을 늦게 부른다 | 늦은 호출은 NULL 이고 그 시도 파일만 지워진다. 같은 사용자의 다른 완료 작업 결과 키와 파일, 원장 거래 수가 전후 같다 |
-| D29 | `job-guards.db.test.ts`, 개발 DB | 결과를 받고 시각을 30일 1초 뒤로 돌린다. 조회, 적어 둔 URL, 저장을 차례로 부르고 `expireResults` 를 돌린다 | 정리 전에도 조회의 `result` 가 빈 값, 저장 404. 정리 뒤 적어 둔 URL 404, `storage_state = 'deleted'`. 저장한 결과는 그대로 |
-| D30 | 개발 DB, 터미널 둘 | API(`pnpm --filter api start`)와 worker(`pnpm --filter api worker`)를 따로 띄운다. 가짜 공급사 지연 10초로 접수하고 API 만 내렸다 다시 띄운다. 같은 요청 ID 로 다시 접수 | worker 로그에 그 작업 `succeeded`. 다시 접수는 같은 작업 ID. `generation_jobs` 에 그 요청 ID 1행 |
+| D29 | `job-guards.db.test.ts`, 개발 DB | 결과 둘을 받아 하나는 저장한다. 시각을 30일 1초 뒤로 돌려 조회와 저장을 부르고 `expireResults` 를 돌린다. 그 시각으로 두 키의 서명 URL 을 `store.signedUrl(key, later)` 로 새로 받아 연다 | 정리 전에도 조회의 `result` 가 빈 값, 저장 404. 정리 뒤 gen30 키의 새 URL 404, `store.read` 가 null, `storage_state = 'deleted'` 와 `deleted_at`. 저장한 결과(`u/…`)의 새 URL 200 |
+| D30 | 개발 DB, 터미널 둘 | 터미널 1 `node scripts/e2e-api.mjs --dev --only=worker`, 터미널 2 `--dev --only=api`. 가짜 공급사 지연 10초로 접수하고 터미널 2 만 내렸다 다시 띄운다. 같은 요청 ID 로 다시 접수 | API 를 내린 동안 터미널 1 worker 가 살아 있다. worker 로그에 그 작업 `succeeded`. 다시 접수는 같은 작업 ID. `generation_jobs` 에 그 요청 ID 1행 |
 | D32 | 홈 | 시험용 골드 28 로 9건을 만들어 저장한다(접수와 저장은 API 로, 확인은 화면) | 「최근 저장한 룩」 카드 8장, 카드 왼쪽 끝 x 값이 두 가지, 맨 처음 저장한 룩이 없다 |
-| D33 | 피팅룸 「룩북」 → 「모든 룩」 크게 보기 | 「전체 보기」 → 격자의 둘째 칸 → 「전체 보기」 → 「뒤로」 | 「모든 룩 전체 보기」 머리글, 「룩 N개」, 칸 N개. 둘째 칸을 누르면 그 룩이 크게 열린다. 다시 「전체 보기」 는 격자로 돌아가고 화면이 쌓이지 않는다 |
-| D34 | 마이 → 설정 | 「사진 보관 안내」 를 누른다. 시트를 닫고 관리자로 그 공급사 줄 `retention_days` 를 7 로 바꾼 뒤 다시 연다 | 「AI 업체 서버의 보관 기간은 30일이에요」, 다시 열면 「7일이에요」. 동의 화면 부제도 「받은 자료는 7일 두고 지워요」 |
+| D33 | 피팅룸 「룩북」 → 「모든 룩」 크게 보기, 사용자 룩북 「겨울 여행」 크게 보기 | 「모든 룩」 에서 「전체 보기」 → 격자의 둘째 칸 → 「전체 보기」 → 「뒤로」. 룩 일부만 담은 「겨울 여행」 에서 「전체 보기」 | 「모든 룩 전체 보기」 머리글, 「룩 N개」, 칸 N개, 「룩 N개를 모두 봤어요」. 둘째 칸을 누르면 그 룩이 크게 열린다. 다시 「전체 보기」 는 격자로 돌아가고 화면이 쌓이지 않는다. 「겨울 여행 전체 보기」 머리글, 칸 수가 그 룩북의 룩 수와 같고 그 룩북에 없는 룩이 없다 |
+| D34 | 마이 → 설정 | 「사진 보관 안내」 를 누른다. 시트를 닫고 관리자로 그 공급사 줄의 `retention_days` 를 7, `consent_text_version` 을 2 로 함께 올린 뒤 다시 연다. 아직 동의하지 않은 새 시험 계정으로 동의 화면을 연다. 끝나면 두 값을 되돌린다 | 「AI 업체 서버에 30일 보관돼요」, 다시 열면 「7일 보관돼요」. 동의 화면 부제 「받은 자료는 7일 두고 지워요」(보기만 하고 동의는 누르지 않는다) |
 
 - 화면 항목마다 스크린숏을 `docs/plans/evidence/T7/` 에 `d08-…` 꼴로 남긴다. 콘솔 오류와 네트워크 오류가 있으면 통과가 아니다.
 - D23 의 「알림」 은 지금 있는 작업 감시 알림 띠와 「다 된 완성 룩 보기」 알약으로 판정한다. T8 알림 목록이 생기면 그 화면으로 다시 판정한다.
+- D34 의 시트 문장은 기획자가 정한 글로 바꾼다. 판정은 보관 일수 숫자가 서버 값을 따라 바뀌는지다.
 
-### 기획자 확인이 필요한 것 (PR 1 착수 전)
+### 기획자 확인이 필요한 것 (PR 1a 착수 전)
 
-- 보호된 시험 고치기 승인 둘. 훅이 막으므로 승인 없이 고치지 않는다.
-  - `apps/api/src/generation/generation.db.test.ts` 255, 333, 334, 579줄: 결과 키 꼴을 시도 ID 로(설계 결정 8).
+- 보호된 시험 고치기 승인 하나. 훅이 막으므로 승인 없이 고치지 않는다.
   - `apps/api/src/account/account.db.test.ts` 265-269줄: 응답에 `retentionDays: 30` 한 칸(설계 결정 10).
 - 쓰지 않게 되는 `/discard` 라우트와 `nuno_discard_result` 를 거둘지(설계 결정 9).
-- 사진 보관 안내 시트 첫 문장의 「내 사진으로 만들기」 는 아직 앱에 없는 기능이다. 와이어프레임 원문을 그대로 쓸지.
+- 「사진 보관 안내」 시트 글. 와이어프레임 v28 원문은 지금 앱과 맞지 않는다(위 「사진 보관 안내」 시트 글).
+  - 첫 문장을 1차 출시 기준으로 「완성 룩을 만들 때 보내는 트윈 그림과 옷 사진은 AI 업체 서버에 N일 보관돼요」 로 바꿀지.
+  - 옷 원본 사진이 기기에 남는 것을 시트에 알릴지, 아니면 원본을 지우게 앱을 바꿀지.
 - 결정 D49 하루 예산 상한 셋. 정해지기 전에는 운영 DB 에 기본값이 없어 「이대로 입히기」 를 켜도 공급사를 부르지 않는다.
+- 그날 행이 없을 때 복사할 기본 상한을 스키마 v4 에 없는 새 표 `cost_budget_defaults` 로 두는 것.
 
 ### 위험과 되돌리는 법
 
-- 판 0004 가 main 에 머지되면 고치지 않는다. 틀린 곳은 판 0005 로 고친다. 머지 전에는 PR 을 되돌린다.
+- 판 0004~0006 이 main 에 머지되면 고치지 않는다. 틀린 곳은 다음 판으로 고친다. 머지 전에는 PR 을 되돌린다.
 - 운영 DB 에 `cost_budget_defaults` 를 넣지 않고 스위치를 켜면 모든 작업이 `budget_exhausted` 로 실패하고 골드가 돌아간다. 돈은 잃지 않는 쪽이다. 관문 기록표의 출시 전 점검에 「예산 기본값 넣기」 를 더한다.
 - worker 가 5분 넘게 멈추면 그동안 접수한 작업이 모두 `queue_timeout` 으로 실패하고 골드가 돌아간다. 의도한 동작이다. worker 상태 확인은 T9 그대로다.
 - 30일 정리가 저장한 결과를 지우면 크게 다친다. 고르는 조건이 `storage_state = 'gen30'` 하나뿐이고, DB 시험이 저장한 결과의 파일과 행이 남는지 함께 본다.
-- 서버 판을 올리면 그 판의 문구가 없는 앱은 모두 「앱을 업데이트해 주세요」 를 본다. 판은 새 문구를 담은 앱이 나간 뒤에 올린다. 이 순서를 `apps/api/AGENTS.md` 「로그인과 세션」 에 한 줄 적는다.
-- D8 문구는 「알림에서 다시 볼 수 있어요」 라고 말하지만 알림 목록은 T8 이다. T8 전에는 나간 결과로 돌아갈 화면이 없다. 결과는 서버에 30일 남는다.
+- 서버 판을 올리면 그 판의 문구가 없는 앱은 모두 「앱을 업데이트해 주세요」 를 본다. 판은 서버를 먼저 올리고, 새 문구를 담은 앱은 그 뒤에 내보낸다(기술 검토 v6 3076줄). 이 순서와 「보관 기간을 바꾸면 판도 올린다」 를 `apps/api/AGENTS.md` 「로그인과 세션」 에 적는다.
+- D8 문구는 「알림에서 다시 볼 수 있어요」 라고 말하지만 알림 목록은 T8 이다. T8 전에는 나간 결과로 돌아갈 화면이 없다. 결과는 서버에 30일, 기기 줄은 `left = 1` 로 남는다.
 - `nuno_start_attempt` 가 빈 값을 줄 때 worker 가 작업 상태를 다시 읽는다. 읽기 사이에 예약 작업이 끼면 실패 코드로 갈라 푸시가 두 번 가지 않게 한다.
-- 되돌리기: PR 2 만 되돌리면 앱은 다시 `/discard` 를 부르고 결과를 지운다. 서버는 그대로 둬도 된다. PR 1 을 머지 뒤 되돌려야 하면 판 0005 로 함수 본문을 판 0003 꼴로 되돌린다.
+- 되돌리기: PR 2a 만 되돌리면 앱은 다시 `/discard` 를 부르고 결과를 지운다. 기기 판 8 의 `left` 열은 남아도 읽지 않는다. 서버는 그대로 둬도 된다.
+- 서버 PR 을 머지 뒤 되돌려야 하면 다음 판으로 함수 본문을 그 앞 판 꼴로 되돌린다.
+
+### 2차 묶음 리뷰 반영 (2026-11-28, 지적 23건)
+
+| 관점 | 지적 | 반영 여부와 까닭 |
+| --- | --- | --- |
+| dod | D26 판정이 멱등 장치 없이도 통과 | 반영. 늦은 `nuno_finish_attempt` 는 청구 상태를 못 적어 늘 `kept_reserved` 다(0003 690-693줄). 시도 셋을 `billed`, `not_billed`, `unknown` 으로 두고 숫자로 본다 |
+| dod | D30 을 두 프로세스로 따로 띄울 방법이 없음 | 반영. `e2e-api.mjs` 가 API 와 worker 를 함께 내린다(9, 169-174줄). `--only` 선택지를 PR 1b 에 넣고 worker 생존을 판정 항목으로 |
+| dod | D33 이 「모든 룩」 만 봐서 엉뚱한 룩북을 못 가림 | 반영. 사용자 룩북 「겨울 여행」 경우를 시나리오와 `lookbook-grid.spec.ts` 에 더함 |
+| dod | D31 남은 조건에 예산 기본값 빠짐 | 반영. 남은 조건 넷째로 `cost_budget_defaults` 넣기 |
+| db | 예약 조건이 확정 합을 안 봄 | 반영. `reserved_usd + settled_usd + 예약액 <= budget_usd`, 정산 뒤 다음 예약 시험 추가 |
+| db | 외래 키가 기존 afterAll 정리를 깨뜨림 | 반영. `gold.db.test.ts:48`, `generation.db.test.ts:89` 확인. `ON DELETE SET NULL`, 1a 첫 단계에서 test:db 두 번 통과 확인 |
+| db | 판 비교를 함수로 옮기면 보호된 시험이 깨짐 | 반영. `gold.db.test.ts:284-301` 두 단언 확인. 라우트 비교는 남기고 기준만 DB 판, 함수는 사용자 판 다음 지금 판 |
+| db | `cost_daily` 여러 행 잠금 순서 없음 | 반영. `nuno_budget_lock` 한 길, 정산은 `budget_day, id` 순서. 판 0003 머리말은 고치지 않으므로 판 0005 머리말과 AGENTS.md 에 적음 |
+| db | 고르기 정렬이 동점에서 흔들림 | 반영. `ORDER BY priority, provider, id`. 우선순위 고유 색인은 운영 중 켜기를 막아 버린 안으로 적음 |
+| db | 새 시험 시각 규칙이 거꾸로 | 반영. `nuno_claim_job` 이 `p_now` 를 안 봄, gold 2030-04-01 작업이 queued 로 남음 확인. 날짜 규칙과 자기 작업 단언, 전후 차이 단언 |
+| simple | PR 1 서버가 400줄을 크게 넘음 | 반영. `nuno_submit_job` 본문만 129줄. 판 하나에 PR 하나로 1a, 1b, 1c |
+| simple | D29 의 적어 둔 URL 은 늘 403 | 반영. `RESULT_URL_TTL_SECONDS` 10분, `file-routes.ts` 가 기한을 먼저 봄. 새로 서명한 URL 과 `store.read` 로 판정 |
+| simple | PR 2 앱이 300줄보다 큼 | 반영. 2a(D8, D9, D34)와 2b(D33, D23, D32)로 나눔 |
+| simple | 결과 키 변경은 D28 에 필요 없음 | 반영. sweep 이 다시 접수하지 않고 키는 자기 작업 것뿐임 확인. 결정 8 을 빼고 승인 항목 지움 |
+| simple | provider, trial 행이 시험 없이 들어감 | 반영. 이번에는 `total` 행만. 나머지는 S5-22 와 함께 |
+| simple | `cost_daily` 를 모든 시험이 같이 씀 | 반영. 위 시각 규칙과 합쳐 날짜를 시험마다 나누고 바꾼 값은 되돌림 |
+| docs | 판 올리는 순서가 기술 검토 v6 와 반대 | 반영. 3076줄 확인. 앱을 먼저 내면 최신 앱도 409 를 받음. 서버 먼저로 고침 |
+| docs | 사진 보관 안내 원문이 실제 앱과 다름 | 반영. `garment-media.ts:52` 원본 보관, 기술 검토 v6 77줄 기기 누끼 확인. 원문을 쓰지 않고 초안과 질문으로 |
+| docs | 「나가기」 가 기기 줄을 지우면 다시 볼 때 입은 옷이 빔 | 반영. `loadJobItems`, `keepJob` 이 그 줄만 읽음 확인. 기기 판 8 `left` 표시로 |
+| docs | 보관 기간만 바뀌면 같은 판이 두 문구를 가리킴 | 반영. 보관 기간을 바꾸면 판도 올리는 규칙, D34 시나리오도 함께 올림 |
+| docs | 「룩 N개를 모두 봤어요」 를 뺀 것이 와이어프레임과 다름 | 반영. `v28_app.js:2332` 의 `done: n>0&&k>=n` 확인. 룩이 있으면 보임 |
+| docs | `_layout.tsx` 등록과 GLOSSARY 155줄 누락 | 반영. `OVERLAY_SCREENS` 에 없으면 `headerShown` 이 꺼지지 않음 확인. 표 두 줄 더함 |
+| docs | 스키마 v4 에 없는 표와 열의 문서 동기화 없음 | 반영. 스키마 v4 633줄이 시도 표 열을 예고하지만 열 이름과 기본 상한 표는 없음. 순서 4 와 기획자 확인에 더함 |
