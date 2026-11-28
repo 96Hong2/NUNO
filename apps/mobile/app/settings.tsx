@@ -137,12 +137,11 @@ export default function SettingsScreen() {
         title="사진 보관 안내"
         onClose={() => setSheet(null)}
       >
-        <Text style={styles.sheetText}>
-          내 사진으로 만들기와 옷 추가에 쓰는 사진은 분석이 끝나면 기기와 NUNO 서버에서 바로 지워요.
-          {retention.kind === "ready"
-            ? ` AI 업체 서버의 보관 기간은 ${retention.days}일이에요.`
-            : null}
-        </Text>
+        {retention.kind === "ready" ? (
+          <Text style={styles.sheetText}>
+            {`완성 룩을 만들 때 보내는 트윈 그림과 옷 사진은 AI 업체 서버에 ${retention.days}일 보관돼요.`}
+          </Text>
+        ) : null}
         {retention.kind === "loading" ? (
           <ActivityIndicator aria-label="보관 기간을 불러오는 중" color={INK} />
         ) : null}
@@ -154,9 +153,7 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
         ) : null}
-        <Text style={styles.sheetText}>
-          옷 추가는 배경을 지운 옷 이미지만, 트윈은 고른 기본 모습과 얼굴을 다듬은 값만 저장해요.
-        </Text>
+        <Text style={styles.sheetText}>옷 추가에 쓴 원본 사진은 이 기기에만 남아요.</Text>
       </OverlaySheet>
       <ConfirmSheet
         visible={sheet === "signOut"}
