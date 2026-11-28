@@ -12,6 +12,12 @@ import {
 /** 선점 기한. 공급사 시한에 결과 저장과 검사 몫 30초를 더한다. 넘기면 예약 작업이 실패와 풀기로 정리한다. */
 export const LEASE_SECONDS = PROVIDER_TIMEOUT_MS / 1000 + 30;
 
+/**
+ * 접수 상태로 기다리는 상한. 넘긴 작업은 공급사를 부르지 않고 실패와 풀기다.
+ * 기획자가 정한 임시값이고, 공급사 응답 시간을 잰 뒤 확정한다.
+ */
+export const QUEUE_WAIT_SECONDS = 5 * 60;
+
 export interface ClaimedJob {
   jobId: string;
   userId: string;
@@ -80,17 +86,41 @@ function attemptRecord(result: CallResult) {
   }
 }
 
-/** 접수 작업 하나를 선점해 끝까지 돌린다. 접수 작업이 없으면 null. */
+interface ClaimRow {
+  job_id: string;
+  user_id: string;
+  input_manifest: unknown;
+  payment_kind: "trial" | "gold";
+  queue_timed_out: boolean;
+}
+
+/**
+ * 접수 작업 하나를 선점한다. 선점 함수가 대기 상한을 넘긴 작업을 만나면 그 작업을 queue_timeout 으로 끝내고
+ * 그 행을 준다. 그때는 실패를 알리고 다시 부른다. 한 번에 한 건이라 부를 때마다 트랜잭션 하나다.
+ */
+async function claimJob(deps: WorkerDeps, leaseToken: string): Promise<ClaimRow | null> {
+  for (;;) {
+    const [row] = await deps.db.query<ClaimRow>("SELECT * FROM nuno_claim_job($1, $2, $3, $4)", [
+      leaseToken,
+      LEASE_SECONDS,
+      deps.now(),
+      QUEUE_WAIT_SECONDS,
+    ]);
+    if (!row) return null;
+    if (!row.queue_timed_out) return row;
+    await deps.push.send({ userId: row.user_id, jobId: row.job_id, status: "failed" });
+  }
+}
+
+/**
+ * 접수 작업 하나를 선점해 끝까지 돌린다. 접수 작업이 없으면 null.
+ * 대기 상한을 넘긴 작업은 공급사를 부르지 않고 실패로 끝낸 뒤 다음 작업을 본다.
+ */
 export async function runNextJob(
   deps: WorkerDeps,
   leaseToken: string = randomUUID(),
 ): Promise<{ jobId: string; outcome: JobOutcome } | null> {
-  const [row] = await deps.db.query<{
-    job_id: string;
-    user_id: string;
-    input_manifest: unknown;
-    payment_kind: "trial" | "gold";
-  }>("SELECT * FROM nuno_claim_job($1, $2, $3)", [leaseToken, LEASE_SECONDS, deps.now()]);
+  const row = await claimJob(deps, leaseToken);
   if (!row) return null;
   const [config] = await deps.db.query<{ id: string; provider: string; model: string }>(
     `SELECT c.id, c.provider, c.model
@@ -256,6 +286,59 @@ export async function settleBudgets(deps: Pick<WorkerDeps, "db" | "now">): Promi
     if (row.status !== "skipped") settled += 1;
   }
   return settled;
+}
+
+/** 한 바퀴에서 대기 만료 함수와 결과 정리 함수를 부르는 최대 횟수. 남은 것은 다음 바퀴가 다룬다. */
+const EXPIRE_CALLS_PER_SWEEP = 100;
+
+/**
+ * 예약 작업. 대기 상한을 넘긴 접수 작업을 실패와 풀기로 끝내고 알린다. 끝낸 작업 수를 낸다.
+ * 선점이 밀려 있어도 그 작업들이 상한 직후에 끝나게 한다. 선점 함수도 상한을 따로 보므로 공급사로 가는 길을 막는 것은 이 함수가 아니다.
+ * 작업마다 문장 하나, 곧 트랜잭션 하나로 부른다. 한 트랜잭션이 여러 사용자 행을 잠그지 않는다.
+ */
+export async function expireQueuedJobs(
+  deps: Pick<WorkerDeps, "db" | "push" | "now">,
+): Promise<number> {
+  let expired = 0;
+  for (let call = 0; call < EXPIRE_CALLS_PER_SWEEP; call += 1) {
+    const [row] = await deps.db.query<{ job_id: string; user_id: string; expired: boolean }>(
+      "SELECT * FROM nuno_expire_next_queued_job($1, $2)",
+      [deps.now(), QUEUE_WAIT_SECONDS],
+    );
+    if (!row) break;
+    if (!row.expired) continue;
+    expired += 1;
+    await deps.push.send({ userId: row.user_id, jobId: row.job_id, status: "failed" });
+  }
+  return expired;
+}
+
+/**
+ * 예약 작업. 룩북에 저장하지 않은 채 보관 기한이 지난 결과의 파일을 지우고 DB 를 deleted 로 적는다.
+ * 파일이 먼저다. 그 사이에 죽으면 DB 는 gen30 으로 남아 다음 바퀴가 다시 지운다. DB 로 찾지 못하는 파일이 남지 않는다.
+ * 지움으로 적은 결과 수를 낸다.
+ */
+export async function expireResults(
+  deps: Pick<WorkerDeps, "db" | "store" | "now">,
+): Promise<number> {
+  const at = deps.now();
+  const due = await deps.db.query<{ id: string; r2_key: string }>(
+    `SELECT id, r2_key FROM generation_results
+     WHERE storage_state = 'gen30' AND delete_due_at <= $1
+     ORDER BY delete_due_at, id
+     LIMIT ${EXPIRE_CALLS_PER_SWEEP}`,
+    [at],
+  );
+  let expired = 0;
+  for (const row of due) {
+    await deps.store.remove(row.r2_key);
+    const [done] = await deps.db.query<{ ok: boolean }>("SELECT nuno_expire_result($1, $2) AS ok", [
+      row.id,
+      at,
+    ]);
+    if (done?.ok) expired += 1;
+  }
+  return expired;
 }
 
 export interface DevProviderMode {

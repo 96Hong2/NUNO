@@ -4,8 +4,8 @@ export interface ResultStore {
   copy(fromKey: string, toKey: string): Promise<void>;
   /** 없는 키를 지워도 오류가 아니다. */
   remove(key: string): Promise<void>;
-  /** 앱이 결과를 여는 주소. 기한은 `RESULT_URL_TTL_SECONDS` 다. */
-  signedUrl(key: string, now: Date): Promise<{ url: string; expiresAt: string }>;
+  /** 앱이 결과를 여는 주소. 기한은 `RESULT_URL_TTL_SECONDS` 이고, `notAfter` 가 더 이르면 그 시각이다. */
+  signedUrl(key: string, now: Date, notAfter?: Date): Promise<{ url: string; expiresAt: string }>;
 }
 
 /** 출력 검사. 검사 회사가 정해지면 진짜 어댑터를 더한다. */

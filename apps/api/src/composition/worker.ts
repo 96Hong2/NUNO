@@ -6,6 +6,8 @@ import { createLogPushSender } from "../adapters/log-push.ts";
 import { openPostgres } from "../adapters/postgres.ts";
 import {
   devProviderMode,
+  expireQueuedJobs,
+  expireResults,
   runNextJob,
   settleBudgets,
   sweepJobs,
@@ -71,6 +73,7 @@ let active = 0;
 const claimTimer = setInterval(() => {
   if (active >= MAX_ACTIVE_JOBS) return;
   active += 1;
+  // 대기 상한을 넘긴 접수 작업은 선점 함수가 공급사를 부르지 않고 끝낸다.
   runNextJob(deps)
     .then((done) => {
       if (done) console.log(`작업 ${done.jobId}: ${done.outcome}`);
@@ -89,6 +92,10 @@ const sweep = async () => {
       console.log(`예약 작업: 선점 기한이 지난 작업 ${swept}건을 실패와 풀기로 정리했다`);
     const settled = await settleBudgets(deps);
     if (settled > 0) console.log(`예약 작업: 끝난 작업의 예산 예약 ${settled}건을 정산했다`);
+    const expired = await expireQueuedJobs(deps);
+    if (expired > 0) console.log(`예약 작업: 대기 상한을 넘긴 접수 작업 ${expired}건을 끝냈다`);
+    const removed = await expireResults(deps);
+    if (removed > 0) console.log(`예약 작업: 보관 기한이 지난 결과 ${removed}건을 지웠다`);
   } catch (error) {
     console.error("예약 작업 실패", error);
   }
@@ -103,5 +110,7 @@ function stop() {
 }
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
-console.log(`worker: ${CLAIM_INTERVAL_MS}ms 마다 선점, ${SWEEP_INTERVAL_MS}ms 마다 예약 작업`);
+console.log(
+  `worker: ${CLAIM_INTERVAL_MS}ms 마다 선점(대기 상한 확인 포함), ${SWEEP_INTERVAL_MS}ms 마다 예약 작업`,
+);
 if (devRoutes) console.log("개발 전용 가짜 공급사 모드를 사용자별로 읽는다(NUNO_DEV_ROUTES=1)");
