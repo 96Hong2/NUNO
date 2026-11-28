@@ -33,6 +33,8 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 - 골드 원장, 작업 상태, 결과 파일 상태는 판 0003 의 DB 함수로만 바뀐다. 함수는 맨 먼저 그 사용자의 `users` 행을 잠근다.
 - 원장 표(`gold_entries`, `gold_transactions`)는 고치기와 지우기를 트리거가 막는다. 바로잡을 때는 새 거래를 더한다.
 - worker 가 부르는 함수는 상태, 선점 토큰, 선점 기한이 맞아야 쓴다. 기한은 `LEASE_SECONDS` 다.
+- 작업은 접수 때 공급사 설정 줄 ID 와 판을 적는다. `nuno_start_attempt` 가 부르기 전마다 지금 줄과 비교한다.
+  다르면 시도 줄 없이 `provider_changed` 나 `consent_outdated` 로 실패와 풀기다.
 - 결과 사진은 포트 `ResultStore` 다. 지금은 로컬 디스크와 `/v1/files` 서명 주소(기한 `RESULT_URL_TTL_SECONDS`)뿐이다.
 - 실제 공급사 어댑터는 입력 올리기와 입력 검사가 갖춰지기 전에는 worker 에 꽂지 않는다.
 - worker 시험은 가장 오래된 접수 작업부터 선점한다. 그래서 `generation.db.test.ts` 는 다른 시험보다 이른 시각으로 접수한다.
@@ -41,7 +43,12 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 
 - 세션 토큰은 32바이트 난수(base64url)이고 DB 에는 SHA-256 만 둔다. 만료는 `SESSION_DAYS`.
 - 요청은 `Authorization: Bearer <토큰>` 이다. 사용자 ID 는 `requireUser` 가 세션에서만 붙이고, 요청 본문에서 받지 않는다.
-- 동의 문구 판은 `CONSENT_TEXT_VERSION` 이다. 앱이 보낸 판이 다르면 409 `consent_text_outdated`.
+- 동의 문구 판과 AI 업체 자료 보관 기간은 지금 쓰는 공급사 설정 줄(`nuno_current_provider_config`)에 있다.
+  앱이 보낸 판이 그 줄의 판과 다르면 409 `consent_text_outdated`. `CONSENT_TEXT_VERSION` 은 열 기본값일 뿐이다.
+- 판은 서버 설정 줄을 먼저 올리고, 새 문구를 담은 앱을 그 뒤에 내보낸다. 앱을 먼저 내면 최신 앱도 409 를 받는다.
+- 설정 줄의 공급사, 모델, 나라, 보관 기간을 바꾸면 같은 줄의 `consent_text_version` 도 함께 올린다.
+  판을 올리지 않은 UPDATE 는 판 0004 의 트리거가 거절한다. 판은 내리지 못하므로 되돌릴 때도 올린다.
+  판을 올리지 않으려면 새 줄을 넣고 옛 줄을 끈다. 접수된 작업은 `provider_changed` 로 끝난다.
 - 개발 전용 주소는 `/v1/dev` 아래에만 두고 `NUNO_DEV_ROUTES=1` 일 때만 단다. 값이 없으면 그 주소는 404 다.
 - `POST /v1/dev/login` 의 신원 provider 는 코드 상수 `dev` 다. 요청에서 받지 않는다.
 

@@ -8,6 +8,7 @@ import {
   devProviderMode,
   runNextJob,
   sweepJobs,
+  type ClaimedJob,
   type ProviderChoice,
   type WorkerDeps,
 } from "../generation/worker.ts";
@@ -44,13 +45,14 @@ const db = openPostgres(url);
 const devRoutes = env.NUNO_DEV_ROUTES === "1";
 
 // 실제 공급사 어댑터는 키와 입력 올리기가 갖춰지면 더한다. 그때까지는 가짜 공급사다.
-async function chooseProvider(job: { userId: string }): Promise<ProviderChoice> {
+// 모델은 작업을 받은 공급사 설정 줄의 값을 시도 줄에 적는다.
+async function chooseProvider(job: ClaimedJob): Promise<ProviderChoice> {
   const mode = devRoutes
     ? await devProviderMode(db, job.userId)
     : { mode: "succeed" as const, delayMs: 0, failCheckOnce: false };
   return {
     provider: createFakeProvider(mode.mode, 0.04, { delayMs: mode.delayMs, ...fakeImage }),
-    model: "fake",
+    model: job.providerConfig?.model ?? "fake",
     failCheckOnce: mode.failCheckOnce,
   };
 }

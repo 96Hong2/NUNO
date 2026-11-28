@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { SqlClient } from "../db/sql-client.ts";
 import { badRequest, readJsonObject, text } from "../http/request-body.ts";
 import type { AppleAuth } from "./apple.ts";
-import { CONSENT_KIND, CONSENT_TEXT_VERSION, consentProvider, consentState } from "./consent.ts";
+import { CONSENT_KIND, consentProvider, consentState, currentProviderConfig } from "./consent.ts";
 import { requireUser, type AuthEnv } from "./require-user.ts";
 import { signIn } from "./session.ts";
 
@@ -62,20 +62,24 @@ export function accountRoutes({ db, now, apple }: AccountDeps): Hono<AuthEnv> {
     c.json(await consentProvider(db)),
   );
 
+  // 설정 「사진 보관 안내」 와 동의 화면이 읽는 AI 업체 서버의 자료 보관 기간. 켜 둔 공급사가 없으면 null.
+  routes.get("/v1/consents/generation-transfer/retention", auth, async (c) =>
+    c.json({ retentionDays: (await currentProviderConfig(db))?.retentionDays ?? null }),
+  );
+
   routes.post("/v1/consents", auth, async (c) => {
     const body = await readJsonObject(c);
     if (body?.kind !== CONSENT_KIND) return badRequest(c, "unknown_consent_kind");
     if (!Number.isInteger(body.textVersion)) return badRequest(c, "invalid_body");
-    if (body.textVersion !== CONSENT_TEXT_VERSION) {
-      return c.json({ error: "consent_text_outdated" }, 409);
-    }
     // 받는 곳을 화면에 적지 못했으면 동의를 받지 않는다.
-    if ((await consentProvider(db)).provider === null) {
-      return c.json({ error: "provider_unavailable" }, 409);
+    const config = await currentProviderConfig(db);
+    if (!config) return c.json({ error: "provider_unavailable" }, 409);
+    if (body.textVersion !== config.consentTextVersion) {
+      return c.json({ error: "consent_text_outdated" }, 409);
     }
     const [row] = await db.query<{ id: string }>(
       "SELECT nuno_agree_consent($1, $2, $3, $4) AS id",
-      [c.get("userId"), CONSENT_KIND, CONSENT_TEXT_VERSION, now()],
+      [c.get("userId"), CONSENT_KIND, config.consentTextVersion, now()],
     );
     return c.json({ consentId: row?.id }, 201);
   });
