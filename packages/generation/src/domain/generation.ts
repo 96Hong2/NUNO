@@ -11,12 +11,10 @@ export const SIGNUP_TRIAL_COUNT = 2;
 
 /**
  * 앱에 든 동의 문구의 판 번호. 서버 판과 다르면 서버가 409 `consent_text_outdated` 를 준다.
- * 아래 보관 일수와 문구를 바꾸면 이 판을 올린다.
+ * 동의 화면 문구를 바꾸면 이 판을 올린다. AI 업체 보관 일수는 서버가 준 값을 보이고,
+ * 서버는 공급사 설정 줄의 보관 일수를 바꿀 때 그 줄의 판을 함께 올린다.
  */
 export const CONSENT_TEXT_VERSION = 1;
-
-/** 동의 문구 「받은 자료는 N일 두고 지워요」 의 N. 공급사 계약의 보관 기본값이다. */
-export const PROVIDER_RETENTION_DAYS = 30;
 
 /** 동의가 없거나, 거뒀거나, 앱 문구와 판이 다르면 동의 화면을 먼저 연다. */
 export function consentNeeded(

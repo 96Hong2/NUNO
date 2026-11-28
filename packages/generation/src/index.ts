@@ -16,7 +16,6 @@ export {
   mayHaveBeenAccepted,
   nextAfterRejection,
   outfitKeyOf,
-  PROVIDER_RETENTION_DAYS,
   SIGNUP_TRIAL_COUNT,
   stageButtonNote,
   UNANSWERED_NOTICE,
@@ -32,6 +31,7 @@ export type {
   SubmitNext,
 } from "./domain";
 export {
+  addGenerationRequestLeft,
   attachGenerationJob,
   createGenerationRequestTable,
   deleteAllGenerationRequests,
@@ -41,6 +41,7 @@ export {
   insertGenerationRequest,
   latestUnsavedJobId,
   listWatchedRequests,
+  markGenerationLeft,
   markGenerationSeen,
   readGenerationRequestByJob,
   updateGenerationStatus,

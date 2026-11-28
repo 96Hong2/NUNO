@@ -18,7 +18,6 @@ export {
   nextAfterRejection,
   outfitKeyOf,
   PROMPT_VERSION,
-  PROVIDER_RETENTION_DAYS,
   SIGNUP_TRIAL_COUNT,
   stageButtonNote,
   UNANSWERED_NOTICE,

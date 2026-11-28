@@ -21,6 +21,19 @@ export const createGenerationRequestTable: Omit<Migration, "version"> = {
   },
 };
 
+/**
+ * 「나가기」 표시 칸을 더하는 옮기기 단계. 나간 결과의 줄은 지우지 않는다.
+ * 결과는 서버에 30일 남고, 다시 열 때 입은 옷과 트윈을 이 줄의 입력 목록에서 읽는다.
+ */
+export const addGenerationRequestLeft: Omit<Migration, "version"> = {
+  name: "add-generation-requests-left",
+  async up(tx) {
+    await tx.exec(
+      "ALTER TABLE generation_requests ADD COLUMN left_result INTEGER NOT NULL DEFAULT 0",
+    );
+  },
+};
+
 /** 접수 응답을 받기 전 상태. 받은 뒤에는 서버 작업 상태를 그대로 적는다. */
 const SENDING_STATUS = "sending";
 
@@ -102,15 +115,20 @@ export async function deleteGenerationRequest(db: SqlExecutor, requestId: string
   await db.run("DELETE FROM generation_requests WHERE request_id = ?", [requestId]);
 }
 
-/** 결과를 룩북에 저장했거나 「나가기」 로 지웠다. 그 작업 줄을 지운다. */
+/** 「나가기」: 저장하지 않고 나간 결과라고 적는다. 「다 된 완성 룩 보기」 가 이 결과를 다시 열지 않는다. */
+export async function markGenerationLeft(db: SqlExecutor, jobId: string): Promise<void> {
+  await db.run("UPDATE generation_requests SET left_result = 1 WHERE job_id = ?", [jobId]);
+}
+
+/** 결과를 룩북에 저장했거나 더 볼 수 없다. 그 작업 줄을 지운다. */
 export async function deleteGenerationRequestByJob(db: SqlExecutor, jobId: string): Promise<void> {
   await db.run("DELETE FROM generation_requests WHERE job_id = ?", [jobId]);
 }
 
-/** 다 만들었지만 아직 저장하지도 지우지도 않은 작업 가운데 가장 최근 것 */
+/** 다 만들었지만 아직 저장하지도 「나가기」 하지도 않은 작업 가운데 가장 최근 것 */
 export async function latestUnsavedJobId(db: SqlExecutor): Promise<string | null> {
   const row = await db.get<{ job_id: string }>(
-    "SELECT job_id FROM generation_requests WHERE status = 'succeeded' ORDER BY created_at DESC LIMIT 1",
+    "SELECT job_id FROM generation_requests WHERE status = 'succeeded' AND left_result = 0 ORDER BY created_at DESC LIMIT 1",
   );
   return row?.job_id ?? null;
 }

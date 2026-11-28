@@ -1,9 +1,10 @@
 import { consentNeeded } from "@nuno/generation";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   loadAccount,
+  loadPhotoRetention,
   onAccountChange,
   signOut,
   withdrawConsent,
@@ -11,21 +12,39 @@ import {
 } from "../src/composition/account";
 import { useAppToast } from "../src/ui/app-toast";
 import { ConfirmSheet } from "../src/ui/generate-sheets";
+import { OverlaySheet } from "../src/ui/overlay-sheet";
 
 const INK = "#151314";
 const SUB = "#5F5C56";
 
-// 설정: 「개인정보와 안전」 의 완성 룩 만들기 동의, 「계정」 의 로그아웃. 가입 전에는 두 칸 모두 숨긴다.
+type RetentionLoad = { kind: "loading" } | { kind: "ready"; days: number } | { kind: "failed" };
+
+// 설정: 「개인정보와 안전」 의 완성 룩 만들기 동의와 사진 보관 안내, 「계정」 의 로그아웃.
+// 가입 전에는 두 칸 모두 숨긴다.
 export default function SettingsScreen() {
   const router = useRouter();
   const toast = useAppToast();
   const [account, setAccount] = useState<AccountState | null>(null);
-  const [sheet, setSheet] = useState<"withdraw" | "signOut" | null>(null);
+  const [sheet, setSheet] = useState<"withdraw" | "signOut" | "retention" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [retention, setRetention] = useState<RetentionLoad>({ kind: "loading" });
 
   const reload = useCallback(() => void loadAccount().then(setAccount), []);
   useFocusEffect(reload);
   useEffect(() => onAccountChange(reload), [reload]);
+
+  // 「사진 보관 안내」 는 열 때마다 서버 값을 다시 읽는다. 서버가 보관 기간을 바꾸면 다음에 열 때 바뀐다.
+  const loadRetention = useCallback(() => {
+    setRetention({ kind: "loading" });
+    void loadPhotoRetention().then(
+      (days) => setRetention(days === null ? { kind: "failed" } : { kind: "ready", days }),
+      () => setRetention({ kind: "failed" }),
+    );
+  }, []);
+  const openRetention = () => {
+    loadRetention();
+    setSheet("retention");
+  };
 
   const agreed = account?.signedIn ? !consentNeeded(account.consent) : false;
   const back = () => (router.canGoBack() ? router.back() : router.replace("/my"));
@@ -80,6 +99,10 @@ export default function SettingsScreen() {
               </View>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
+            <Pressable role="button" onPress={openRetention} style={[styles.row, styles.divider]}>
+              <Text style={[styles.rowTitle, styles.rowText]}>사진 보관 안내</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
           </View>
           {account.signedIn ? (
             <>
@@ -109,6 +132,29 @@ export default function SettingsScreen() {
         }
         onClose={() => setSheet(null)}
       />
+      <OverlaySheet
+        visible={sheet === "retention"}
+        title="사진 보관 안내"
+        onClose={() => setSheet(null)}
+      >
+        {retention.kind === "ready" ? (
+          <Text style={styles.sheetText}>
+            {`완성 룩을 만들 때 보내는 트윈 그림과 옷 사진은 AI 업체 서버에 ${retention.days}일 보관돼요.`}
+          </Text>
+        ) : null}
+        {retention.kind === "loading" ? (
+          <ActivityIndicator aria-label="보관 기간을 불러오는 중" color={INK} />
+        ) : null}
+        {retention.kind === "failed" ? (
+          <View style={styles.missing}>
+            <Text style={styles.missingText}>보관 기간을 불러오지 못했어요</Text>
+            <Pressable role="button" onPress={loadRetention} style={styles.retry}>
+              <Text style={styles.retryLabel}>다시 불러오기</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        <Text style={styles.sheetText}>옷 추가에 쓴 원본 사진은 이 기기에만 남아요.</Text>
+      </OverlaySheet>
       <ConfirmSheet
         visible={sheet === "signOut"}
         title="로그아웃할까요?"
@@ -116,7 +162,11 @@ export default function SettingsScreen() {
         action="로그아웃"
         busy={busy}
         onConfirm={() =>
-          void confirm(signOut, "로그아웃했어요", "로그아웃하지 못했어요. 잠시 후 다시 시도해 주세요")
+          void confirm(
+            signOut,
+            "로그아웃했어요",
+            "로그아웃하지 못했어요. 잠시 후 다시 시도해 주세요",
+          )
         }
         onClose={() => setSheet(null)}
       />
@@ -143,4 +193,22 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 16, fontWeight: "600", color: INK },
   rowSub: { fontSize: 13, color: SUB },
   chevron: { fontSize: 22, color: "#B5B2AC" },
+  divider: { borderTopWidth: 1, borderTopColor: "#EDECEA" },
+  sheetText: { fontSize: 14, lineHeight: 22, color: INK },
+  missing: {
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#EDECEA",
+  },
+  missingText: { fontSize: 15, lineHeight: 21, fontWeight: "700", color: INK },
+  retry: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#F4F3F1",
+  },
+  retryLabel: { fontSize: 14, fontWeight: "700", color: INK },
 });

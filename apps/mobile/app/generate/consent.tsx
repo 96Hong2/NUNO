@@ -1,4 +1,3 @@
-import { PROVIDER_RETENTION_DAYS } from "@nuno/generation";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -9,11 +8,11 @@ const INK = "#151314";
 const SUB = "#5F5C56";
 
 // 첫 사용 동의: 「이대로 입히기」 전에 한 번. 체크 줄 셋을 다 골라야 「동의하고 만들기」 가 된다.
-// 받는 곳(공급사 이름과 나라)은 서버가 켜 둔 공급사 줄에서 읽는다. 못 읽으면 동의를 받지 않는다.
+// 받는 곳(공급사 이름과 나라)과 보관 기간은 서버가 켜 둔 공급사 줄에서 읽는다. 못 읽으면 동의를 받지 않는다.
 
 type ReceiverLoad =
   | { kind: "loading" }
-  | { kind: "ready"; provider: string; country: string | null }
+  | { kind: "ready"; provider: string; country: string | null; retentionDays: number }
   | { kind: "missing" };
 
 export default function ConsentScreen() {
@@ -30,8 +29,13 @@ export default function ConsentScreen() {
     void loadConsentProvider().then(
       (found) =>
         setLoad(
-          found?.provider
-            ? { kind: "ready", provider: found.provider, country: found.country }
+          found?.provider && found.retentionDays !== null
+            ? {
+                kind: "ready",
+                provider: found.provider,
+                country: found.country,
+                retentionDays: found.retentionDays,
+              }
             : { kind: "missing" },
         ),
       () => setLoad({ kind: "missing" }),
@@ -48,7 +52,7 @@ export default function ConsentScreen() {
     },
     {
       title: `받는 곳은 ${receiver}예요`,
-      sub: `받은 자료는 ${PROVIDER_RETENTION_DAYS}일 두고 지워요`,
+      sub: ready ? `받은 자료는 ${load.retentionDays}일 두고 지워요` : null,
     },
     { title: "AI 업체는 보낸 자료를 학습에 쓰지 않아요", sub: null },
   ];
