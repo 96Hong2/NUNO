@@ -39,17 +39,32 @@
 
 ## D20: 그날 생성 예산이 0원일 때 (2026-11-28, 판 5, 로컬 Docker Postgres 18)
 
-- 터미널 둘에서 `node scripts/e2e-api.mjs --only=worker` 와 `--only=api` 로 `nuno_e2e` DB 에 판 5 를 옮기고 띄웠다(API 9087).
+### 화면 판정: 개발 DB `nuno_dev`, Expo 웹 코디 무대
+
+- `node scripts/e2e-api.mjs --dev --only=worker` 로 `nuno_dev` 에 판 5 를 옮기고 worker 를 띄웠다.
   - 스크립트가 넣은 하루 전체 예산 기본값은 1000달러다.
+- 다른 작업 트리가 8787 을 쓰고 있어 API 만 같은 환경 변수로 9087 에 띄웠다. DB 는 같은 `nuno_dev` 다.
+- Expo 웹은 8491 에 `EXPO_PUBLIC_API_URL=http://localhost:9087` 로 띄웠다.
 - 관리자 psql 로 오늘(한국 날짜 2026-11-28) `cost_daily` 의 `total` 행 `budget_usd` 를 0 으로 두었다.
+- 새 기기에서 온보딩을 건너뛰고 피팅룸 코디 무대를 열었다. 처음 입혀 둔 코디 그대로 「이대로 입히기」 를 눌렀다.
+  - 가입 시트의 「시험 계정으로 계속하기」 → 동의 화면의 「모두 동의하기」 → 「동의하고 만들기」.
+  - 「완성 룩 만들기」 시트의 「무료로 만들기」 를 눌렀다.
+- 완성 룩 화면에 「만들지 못했어요.」 와 「무료 1장을 돌려드렸어요」 가 보였다.
+  - 그 아래 「돌려받은 무료 사진 +1장」 과 「같은 코디로 다시 만들기」 단추가 보였다.
+  - 스크린숏: `d20-budget-exhausted-free.jpg`.
+- psql: 그 작업 `failed`, `budget_exhausted`, `payment_kind` `trial`, `generation_attempts` 0행, 골드 묶음 `released` 4.
+  - 잔액 `trial` 8, `hold` 0. 오늘 예산 행은 예약 0, 확정 0 그대로. worker 로그 「작업 …: failed」 와 실패 푸시.
+- 끝나고 오늘 행의 상한을 기본값 1000 으로 되돌렸다.
+
+### API 판정: e2e DB `nuno_e2e`
+
+- 화면 판정 전에 `node scripts/e2e-api.mjs --only=worker` 와 `--only=api` 로 `nuno_e2e` 에서 같은 조건을 API 로 보았다.
 - 무료 장으로 낸 경우: 새 시험 계정으로 동의하고 `POST /v1/generation-jobs` 를 불렀다. 접수 202, `paymentKind` `trial`.
   - 4초 뒤 작업 조회: `status` `failed`, `failureCode` `budget_exhausted`, `refund` 무료 장 4.
-  - psql: 그 작업의 `generation_attempts` 0행(공급사 호출 기록 0건). 골드 묶음 `released`, 4.
-  - 잔액: `trial` 8, `hold` 0. 예산 행은 예약 0, 확정 0 그대로. worker 로그 「작업 …: failed」 와 실패 푸시.
+  - psql: 시도 0행, 골드 묶음 `released` 4. 잔액 `trial` 8, `hold` 0. 예산 행은 예약 0, 확정 0 그대로.
 - 골드로 낸 경우: 시험용 골드 4 를 받고 `payWith` `gold` 로 접수했다. 접수 202, `paymentKind` `gold`.
   - 작업 조회: `failed`, `budget_exhausted`, `refund` 골드 4. 시도 0행, 골드 묶음 `released`.
   - 「내 골드」: 잔액 4. 내역은 「시험용 골드」 4, 「완성 룩 1장」 -4, 「완성 룩 환불」 4.
-- 끝나고 오늘 행의 상한을 기본값 1000 으로 되돌렸다.
 - 같은 흐름과 「상한을 한 장 값만 남기면 둘째 작업은 공급사를 부르지 않는다」 는 DB 시험 `budget.db.test.ts` 가 본다.
 
 ## D26: 예산 예약 뒤 worker 를 내리고 정산을 두 번 (2026-11-28, 판 5)
@@ -59,12 +74,16 @@
   - 작업 셋을 선점하고 `nuno_start_attempt` 로 예약만 한다. 예약 합이 한 장 값(0.04달러)의 3배만큼 는다.
   - 관리자로 시도 A 는 청구 0.03달러, B 는 청구 없음으로 적고 C 는 모름으로 둔다.
   - 선점 기한 뒤 `nuno_sweep_jobs` 로 세 작업이 `lease_expired` 로 실패하고 무료 장이 돌아온다.
-  - `nuno_settle_budgets` 첫 실행 뒤 예약 합은 A, B 몫(0.08달러)만 줄고 확정 합은 0.03달러 는다.
+  - 정산(`settleBudgets`, 시도마다 `nuno_settle_next_budget`) 첫 실행 뒤 예약 합은 A, B 몫(0.08달러)만 줄고 확정 합은 0.03달러 는다.
   - 둘째 실행 뒤 두 값이 그대로다. 시도 기록은 A `settled`, B `released`, C `kept_reserved`.
   - A 의 옛 선점 토큰으로 늦게 부른 `nuno_finish_attempt` 는 false 이고 예산 행과 A 청구액이 그대로다.
 - 정산 함수의 「예약 상태인 시도만」 조건을 잠시 풀어 돌리면 이 시험이 실패했다. 조건을 되돌린 뒤 다시 통과했다.
 
 ## D30: 생성 도중 API 만 내렸다 다시 띄우기 (2026-11-28, 판 5)
+
+판 5 기준 선행 판정이다. 최종 판정이 아니다.
+- 계획은 D19, D22, D30 을 대기 만료가 worker 1초 바퀴에 들어간 뒤 한 번에 판정하고, 명령은 `--dev` 로 개발 DB 에서 하라고 정했다.
+- 이 기록은 그보다 먼저 `--dev` 없이 `nuno_e2e` 에서 했다. 대기 만료가 들어간 worker 로 `--dev --only=worker`, `--dev --only=api` 로 다시 판정해야 한다.
 
 - 터미널 1 `node scripts/e2e-api.mjs --only=worker`, 터미널 2 `--only=api`(9087). 같은 `nuno_e2e` DB 와 결과 폴더를 쓴다.
 - 새 시험 계정의 가짜 공급사를 지연 10초로 두고 접수했다(07:18:45 UTC). 2초 뒤 작업은 `generating`.
