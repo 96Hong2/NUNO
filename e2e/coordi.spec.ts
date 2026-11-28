@@ -10,7 +10,7 @@ async function openCoordi(page: Page) {
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
 }
 
-test("견본 아우터를 누르면 입고 다시 누르면 벗고, 옷 비우기는 되돌리기로 돌아온다", async ({
+test("견본 아우터를 누르면 입고 다시 누르면 벗고, 모두 벗기기는 되돌리기로 돌아온다", async ({
   page,
 }) => {
   const outside: string[] = [];
