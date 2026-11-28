@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// 옷 추가에 쓴 원본 사진은 배경을 지운 뒤 기기에서 지운다(기획 결정 2026-11-28 K24).
+// 옷 추가에 쓴 원본 사진은 배경을 지운 뒤 기기에서 지운다.
 // 웹은 옷 그림을 OPFS `garments/<옷 ID>/` 에 쓴다. 옷을 추가한 뒤 그 폴더에 누끼와 카드 그림만 남았는지 본다.
 
 interface OpfsEntry {

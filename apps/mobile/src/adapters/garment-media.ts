@@ -40,7 +40,7 @@ export const garmentMedia: GarmentMedia = {
   render: untouched,
   renderPreview: untouched,
 
-  async store(id, photo, rendered) {
+  async store(id, _photo, rendered) {
     const directory = new Directory(Paths.document, "garments", id);
     directory.create({ intermediates: true, idempotent: true });
     const copy = async (from: string, name: string) => {
@@ -51,11 +51,6 @@ export const garmentMedia: GarmentMedia = {
     };
     const cutoutPath = await copy(rendered.cutoutUri, "cutout.png");
     const thumbPath = await copy(rendered.cutoutUri, "thumb.png");
-    // 사진 고르기가 앱 캐시 폴더에 둔 원본 사본을 지운다. 사진 앱의 원래 사진은 건드리지 않는다.
-    if (photo.originalUri.startsWith(Paths.cache.uri)) {
-      const original = new File(photo.originalUri);
-      if (original.exists) original.delete();
-    }
     return { originalPath: cutoutPath, cutoutPath, thumbPath };
   },
 
@@ -77,6 +72,13 @@ export const garmentMedia: GarmentMedia = {
 
   release() {
     // 아이폰 파일 주소는 놓아줄 것이 없다.
+  },
+
+  discardOriginal(photo) {
+    // 사진 고르기가 앱 캐시 폴더에 둔 원본 사본만 지운다. 사진 앱의 원래 사진은 건드리지 않는다.
+    if (!photo.originalUri.startsWith(Paths.cache.uri)) return;
+    const original = new File(photo.originalUri);
+    if (original.exists) original.delete();
   },
 
   resolve(path) {

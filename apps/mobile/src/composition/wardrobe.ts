@@ -218,9 +218,10 @@ export function updateDraft(patch: Partial<Omit<GarmentDraft, "id" | "method" | 
   draft = { ...draft, ...patch };
 }
 
-/** 담거나 나가면 초안과 그 그림 주소를 놓아준다. */
+/** 담거나 나가면 초안과 그 그림 주소를 놓아주고, 고른 원본 사진 사본을 지운다. */
 export function clearDraft(): void {
   if (draft) {
+    garmentMedia.discardOriginal(draft.photo);
     garmentMedia.release(draft.photo.originalUri);
     garmentMedia.release(draft.photo.cutoutUri);
     if (draft.rendered) garmentMedia.release(draft.rendered.cutoutUri);

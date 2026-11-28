@@ -321,6 +321,10 @@ export const garmentMedia: GarmentMedia = {
     URL.revokeObjectURL(uri);
   },
 
+  discardOriginal() {
+    // 웹 원본은 blob 주소라 release 가 해제한다. 따로 지울 파일이 없다.
+  },
+
   renderPreview: (photo, edits) => renderEdits(photo, edits, { trim: false }),
 
   async store(id, _photo, rendered): Promise<StoredGarmentFiles> {
