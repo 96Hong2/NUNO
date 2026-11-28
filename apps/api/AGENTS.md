@@ -52,9 +52,14 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 - 여러 사용자를 도는 정리는 한 건마다 트랜잭션 하나로 부른다. 한 트랜잭션이 여러 사용자 행을 잠그지 않는다.
 - 결과 사진은 포트 `ResultStore` 다. 지금은 로컬 디스크와 `/v1/files` 서명 주소(기한 `RESULT_URL_TTL_SECONDS`)뿐이다.
   gen30 결과의 주소 기한은 보관 기한(`delete_due_at`)을 넘지 않는다(`signedUrl` 의 `notAfter`).
-- 실제 공급사 어댑터는 입력 올리기와 입력 검사가 갖춰지기 전에는 worker 에 꽂지 않는다.
+- 옷 사진은 판 0007 `uploads` 다. 앱은 `POST /v1/uploads` 로 발급받고 `PUT /v1/uploads/:id` 로 올린다.
+  - PUT 은 그 사용자의 확정 전 줄인지 본 뒤 본문을 받는다. 크기 `UPLOAD_MAX_BYTES`, 형식 PNG, JPEG 를 검사하고 `job-in/` 에 둔다.
+  - 앱 전체 본문 상한(`MAX_BODY_BYTES`)은 이 PUT 한 주소만 빼고 건다. 큰 본문을 받는 주소를 더할 때는 같은 자리에서 뺀다.
+  - 접수와 worker 는 `nuno_job_uploads` 가 준 그 사용자의 줄만 쓴다. worker 는 해시가 확정 때와 다르면 `input_invalid` 다.
+  - `job-in/` 파일은 `/v1/files` 서명 주소로 내보내지 않는다(`signed-url.ts` 의 결과 키 꼴).
+- 실제 공급사 어댑터는 트윈 기준 사진과 앱의 옷 사진 올리기가 갖춰지기 전에는 worker 에 꽂지 않는다.
 - worker 시험은 가장 오래된 접수 작업부터 선점한다. 그래서 `generation.db.test.ts` 는 다른 시험보다 이른 시각으로 접수한다.
-  새 worker 시험은 2021~2029년에서 겹치지 않는 날짜를 맡는다. 선점이 그 시각으로 상한 지난 앞선 작업을 끝내고 지나간다.
+  새 worker 시험은 2021~2029년에서 겹치지 않는 날짜를 맡는다. 2027년은 `upload.db.test.ts` 가 쓴다. 선점이 그 시각으로 상한 지난 앞선 작업을 끝내고 지나간다.
 
 ## 로그인과 세션
 

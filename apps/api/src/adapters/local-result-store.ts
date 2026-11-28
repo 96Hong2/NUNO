@@ -13,10 +13,7 @@ export interface LocalResultStoreConfig {
 }
 
 /** 로컬 디스크 결과 저장. 파일은 API 의 `/v1/files` 서명 주소로만 내보낸다. */
-export interface LocalResultStore extends ResultStore {
-  /** 파일이 없으면 null. */
-  read(key: string): Promise<Uint8Array | null>;
-}
+export type LocalResultStore = ResultStore;
 
 const missing = (error: unknown) => (error as { code?: string }).code === "ENOENT";
 

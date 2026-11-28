@@ -218,3 +218,43 @@
 - 같은 생성 요청 ID 와 같은 본문으로 두 번 다시 접수했다. 두 번 모두 202 와 처음 작업 ID, `status` `succeeded`.
 - psql: 그 요청 ID 의 `generation_jobs` 1행, 골드 묶음 1건(`captured`), 시도 1행(`completed`, `billed`, `settled`).
 - 첫 시도(07:51:56 접수)는 API 를 내리는 명령이 pid 를 잘못 잡아 내리지 못했다. 그 작업은 그대로 `succeeded` 로 끝났고 판정에 쓰지 않았다.
+
+## D21: 옷 사진 올리기와 입력 검사 (2026-11-28, 판 7)
+
+- 로컬 Docker Postgres 18, `COMPOSE_PROJECT_NAME=nuno-d21`, `NUNO_DB_PORT=54519`, DB `nuno_e2e`.
+- API 와 worker 는 `node scripts/e2e-api.mjs`(`NUNO_E2E_API_PORT=8971`)로 함께 띄웠다. 가짜 공급사다.
+- 계정 A, B 는 `POST /v1/dev/login` 의 새 subject 로 만들고 동의했다. 줄 수는 관리자 `psql` 로 셌다.
+- 「바꿔치기」 는 확정한 `job-in/` 파일을 디스크에서 다른 바이트로 덮어쓴 것이다.
+
+```
+## 1. 계정 A 가 올린 ID 를 계정 B 가 쓴다
+A 발급: 08b8e788-f0a6-479c-9d0b-9888e71551d5
+A 가 ok.png 를 올림: 200 
+B 가 A 의 ID 로 접수: {"error":"invalid_upload"} 422
+B 의 작업 줄 수: 0
+B 가 A 의 확정 전 ID(272eb57a-755f-4793-a770-a44e5955447b)에 올림: 404 
+그 줄 상태: issued
+
+## 2. 크기와 형식
+8MiB+1 바이트: 413 
+글자 파일: 415 
+끝이 잘린 PNG: 415 
+그 줄 상태와 파일 키: issued,없음
+그 ID 로 접수: {"error":"invalid_upload"} 422
+A 의 작업 줄 수: 0
+
+## 3. 확정 뒤 파일을 바꿔치기하면 공급사에 보내지 않는다
+올림: 200 
+바꾼 파일: job-in/c91a7549-de32-43d8-91e8-9e68b4430151/d0a31fa5-1420-415e-b5fe-d08bad458134/c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77.png
+접수: {"jobId":"7950cd39-77b5-45f1-a585-8e59c948137a","status":"queued","paymentKind":"trial"} 202
+작업 상태와 실패 코드: failed,input_invalid
+시도 줄 수(공급사 호출): 0
+묶음 상태: released
+
+## 4. 바꾸지 않은 파일은 공급사에 간다
+접수: {"jobId":"a51f97b9-9292-4f75-8f82-26f524379002","status":"queued","paymentKind":"trial"} 202
+작업 상태: succeeded,
+시도 줄 수: 1
+```
+
+- DB 시험 `apps/api/src/generation/upload.db.test.ts` 8건은 `pnpm test:db` 두 바퀴(새 DB, 덤프 복원 DB)에서 통과했다. 전체 86건 통과.

@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import type { AppleAuth } from "./account/apple.ts";
@@ -8,6 +8,7 @@ import type { SqlClient } from "./db/sql-client.ts";
 import { fileRoutes, type FileRoutesDeps } from "./generation/file-routes.ts";
 import type { ResultStore } from "./generation/ports.ts";
 import { devGenerationRoutes, generationRoutes } from "./generation/routes.ts";
+import { UPLOAD_CONTENT_PATH, uploadRoutes } from "./generation/upload-routes.ts";
 import { devGoldRoutes, goldRoutes } from "./gold/routes.ts";
 import { lookbookRoutes } from "./lookbook/routes.ts";
 
@@ -55,19 +56,20 @@ export function createApp(db: SqlClient, options: AppOptions = {}): Hono {
       cors({
         origin: [...webOrigins],
         allowHeaders: ["Authorization", "Content-Type"],
-        allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         credentials: false,
       }),
     );
   }
 
-  app.use(
-    "*",
-    bodyLimit({
-      maxSize: MAX_BODY_BYTES,
-      onError: (c) => c.json({ error: "body_too_large" }, 413),
-    }),
-  );
+  const appBodyLimit = bodyLimit({
+    maxSize: MAX_BODY_BYTES,
+    onError: (c) => c.json({ error: "body_too_large" }, 413),
+  });
+  // 옷 사진을 받는 PUT 한 주소만 이 상한에서 빠진다. 그 주소는 올리기 라우트가 자기 상한을 단다.
+  const limitBody: MiddlewareHandler = (c, next) =>
+    c.req.method === "PUT" && UPLOAD_CONTENT_PATH.test(c.req.path) ? next() : appBodyLimit(c, next);
+  app.use("*", limitBody);
 
   app.get("/v1/health", async (c) => c.json({ ok: true, schemaVersion: await schemaVersion(db) }));
 
@@ -83,6 +85,7 @@ export function createApp(db: SqlClient, options: AppOptions = {}): Hono {
   app.route("/", goldRoutes({ db, now }));
   if (results) {
     app.route("/", generationRoutes({ db, now, store: results }));
+    app.route("/", uploadRoutes({ db, now, store: results }));
     app.route("/", lookbookRoutes({ db, now, store: results }));
   }
   if (files) app.route("/", fileRoutes({ ...files, now }));

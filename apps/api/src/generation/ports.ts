@@ -1,5 +1,10 @@
-/** 결과 사진을 두는 곳. 지금은 로컬 디스크, 버킷과 키가 오면 R2 어댑터가 같은 꼴을 구현한다. */
+/**
+ * 결과 사진과 올린 입력 사진을 두는 곳(비공개 버킷 하나). 지금은 로컬 디스크다.
+ * 버킷과 키가 오면 R2 어댑터가 같은 꼴을 구현한다.
+ */
 export interface ResultStore {
+  /** 파일이 없으면 null. */
+  read(key: string): Promise<Uint8Array | null>;
   put(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
   copy(fromKey: string, toKey: string): Promise<void>;
   /** 없는 키를 지워도 오류가 아니다. */

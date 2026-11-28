@@ -30,7 +30,7 @@ const REJECTIONS: Record<string, 402 | 403 | 409 | 429 | 503> = {
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,100}$/;
 /** 화면이 보여 준 결제. 없으면 접수 함수가 무료 잔액으로 고른다. */
 const PAY_WITH = new Set(["trial", "gold"]);
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** 입력 목록 JSON 글자 수 상한. 트윈 판과 옷 몇 벌이면 이보다 훨씬 작다. */
 const MANIFEST_MAX_CHARS = 16_384;
 const WORN_ITEMS_MAX_CHARS = 16_384;
@@ -56,6 +56,22 @@ const JOB_VIEW = `
   WHERE j.user_id = $1`;
 
 const notFound = (c: Context) => c.json({ error: "not_found" }, 404);
+
+/**
+ * 입력 목록 옷의 올리기 ID. 꼴이 틀린 ID 가 있으면 null.
+ * 올리기가 없는 옷(기본 제공 옷)과 객체가 아닌 칸은 건너뛴다.
+ */
+function manifestUploadIds(manifest: Record<string, unknown>): string[] | null {
+  const items = Array.isArray(manifest.items) ? manifest.items : [];
+  const ids = new Set<string>();
+  for (const item of items) {
+    if (typeof item !== "object" || item === null || !("uploadId" in item)) continue;
+    const id = (item as { uploadId: unknown }).uploadId;
+    if (typeof id !== "string" || !UUID.test(id)) return null;
+    ids.add(id.toLowerCase());
+  }
+  return [...ids];
+}
 
 /** 「이대로 입히기」 접수, 작업 조회, 결과 버리기와 저장. 사용자 ID 는 세션에서만 얻는다. */
 export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthEnv> {
@@ -102,6 +118,16 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
     if (!Number.isInteger(consentVersion)) return badRequest(c, "invalid_body");
     if (payWith !== null && (typeof payWith !== "string" || !PAY_WITH.has(payWith))) {
       return badRequest(c, "invalid_body");
+    }
+    // 그 사용자가 올려 확정한 파일만 입력으로 받는다. 꼴이 틀린 ID, 남의 ID, 없는 ID 는 같은 답이다.
+    const uploadIds = manifestUploadIds(manifest as Record<string, unknown>);
+    if (!uploadIds) return c.json({ error: "invalid_upload" }, 422);
+    if (uploadIds.length > 0) {
+      const owned = await db.query<{ id: string }>(
+        "SELECT id FROM nuno_job_uploads($1, $2, $3)",
+        [c.get("userId"), uploadIds, now()],
+      );
+      if (owned.length !== uploadIds.length) return c.json({ error: "invalid_upload" }, 422);
     }
     // 앱 번들 문구가 지금 공급사 설정 줄의 판과 다르면 동의 주소와 같은 409 를 준다.
     // 그사이 판이 바뀌면 접수 함수가 같은 코드로 한 번 더 막는다.
