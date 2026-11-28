@@ -23,3 +23,16 @@
 - 개발 API 와 worker 를 다시 띄웠다. 선점 기한 뒤 첫 예약 작업(20:47:15)이 작업을 `failed`(`lease_expired`)로 바꾸고 묶음을 `released` 로 풀었다.
 - 그 뒤 「내 골드」: 무료 장 2, 골드 0. worker 기록 「예약 작업: 선점 기한이 지난 작업 1건을 실패와 풀기로 정리했다」.
 - 늦게 온 결과가 상태와 골드를 바꾸지 못하는 것은 DB 시험 `generation.db.test.ts` 가 본다(같은 선점 토큰으로 기한 뒤 완료를 부르면 그대로).
+
+## D34 서버 값: AI 업체 서버의 사진 보관 기간 응답 (2026-11-28, 판 4, 로컬 Docker Postgres 18)
+
+- `node scripts/e2e-api.mjs` 로 새 `nuno_e2e` DB 에 판 4 를 옮기고 API 를 8987 에 띄웠다. 가짜 공급사 줄 하나를 켰다.
+- 시험 계정으로 로그인하고 `GET /v1/consents/generation-transfer/retention` 을 불렀다.
+  - 처음: `{"retentionDays":30}`(새 열의 기본값).
+  - 관리자 psql 로 그 줄의 `retention_days` 를 7, `consent_text_version` 을 2 로 함께 올린 뒤: `{"retentionDays":7}`.
+  - 같은 때 `GET /v1/consents/generation-transfer`: `{"currentVersion":2,"provider":"fake","country":"대한민국"}`.
+  - 같은 때 옛 판 1 로 `POST /v1/consents`: 409 `{"error":"consent_text_outdated"}`.
+  - 두 값을 30 과 1 로 되돌린 뒤: `{"retentionDays":30}`.
+  - 토큰 없이 부르면 401 `{"error":"unauthorized"}`.
+- 같은 흐름을 DB 시험 `apps/api/src/account/photo-retention.db.test.ts` 가 `pnpm test:db` 두 바퀴에서 본다.
+- 화면 판정(설정 「사진 보관 안내」 시트)은 앱 묶음에서 한다.

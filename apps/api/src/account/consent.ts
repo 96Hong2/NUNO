@@ -4,15 +4,43 @@ import type { SqlClient } from "../db/sql-client.ts";
 export const CONSENT_KIND = "generation_transfer";
 
 /**
- * 동의 화면 문구의 판 번호. 앱 번들 문구와 판이 다르면 동의를 받지 않는다(409).
- * 쓰는 공급사를 바꾸면 이 판을 먼저 올린다.
+ * 판 0004 의 `provider_configs.consent_text_version` 기본값. 지금 판은 이 상수가 아니라 쓰는 공급사 설정 줄에서 읽는다.
  */
 export const CONSENT_TEXT_VERSION = 1;
+
+/** 지금 쓰는 공급사 설정 줄. 켜 둔 줄이 없으면 null 이고, 그동안 동의와 접수를 받지 않는다. */
+export interface CurrentProviderConfig {
+  id: string;
+  consentTextVersion: number;
+  /** AI 업체 서버가 받은 자료를 두는 날 수 */
+  retentionDays: number;
+  provider: string;
+  country: string;
+}
+
+export async function currentProviderConfig(db: SqlClient): Promise<CurrentProviderConfig | null> {
+  const [row] = await db.query<{
+    id: string;
+    consent_text_version: number;
+    retention_days: number;
+    provider: string;
+    country: string;
+  }>("SELECT * FROM nuno_current_provider_config()");
+  if (!row) return null;
+  return {
+    id: row.id,
+    consentTextVersion: row.consent_text_version,
+    retentionDays: row.retention_days,
+    provider: row.provider,
+    country: row.country,
+  };
+}
 
 export interface ConsentState {
   agreed: boolean;
   textVersion: number | null;
-  currentVersion: number;
+  /** 지금 공급사 설정 줄의 판. 켜 둔 줄이 없으면 null */
+  currentVersion: number | null;
 }
 
 /** 철회하지 않은 마지막 동의가 지금 판이면 동의한 것이다. */
@@ -24,28 +52,26 @@ export async function consentState(db: SqlClient, userId: string): Promise<Conse
     [userId, CONSENT_KIND],
   );
   const textVersion = row?.text_version ?? null;
+  const currentVersion = (await currentProviderConfig(db))?.consentTextVersion ?? null;
   return {
-    agreed: textVersion === CONSENT_TEXT_VERSION,
+    agreed: textVersion !== null && textVersion === currentVersion,
     textVersion,
-    currentVersion: CONSENT_TEXT_VERSION,
+    currentVersion,
   };
 }
 
 export interface ConsentProvider {
-  currentVersion: number;
+  currentVersion: number | null;
   provider: string | null;
   country: string | null;
 }
 
-/** 동의 화면에 적을 받는 곳. 켜 둔 공급사 가운데 우선순위가 가장 앞선 줄이다. */
+/** 동의 화면에 적을 받는 곳. 지금 쓰는 공급사 설정 줄이다. */
 export async function consentProvider(db: SqlClient): Promise<ConsentProvider> {
-  const [row] = await db.query<{ provider: string; country: string }>(
-    `SELECT provider, country FROM provider_configs
-     WHERE enabled ORDER BY priority, provider LIMIT 1`,
-  );
+  const config = await currentProviderConfig(db);
   return {
-    currentVersion: CONSENT_TEXT_VERSION,
-    provider: row?.provider ?? null,
-    country: row?.country ?? null,
+    currentVersion: config?.consentTextVersion ?? null,
+    provider: config?.provider ?? null,
+    country: config?.country ?? null,
   };
 }

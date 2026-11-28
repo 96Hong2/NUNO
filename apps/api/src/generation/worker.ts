@@ -17,7 +17,20 @@ export interface ClaimedJob {
   userId: string;
   manifest: unknown;
   paymentKind: "trial" | "gold";
+  /** 접수 때 작업에 적은 공급사 설정 줄. 판 0004 전에 받았거나 그 줄을 지웠으면 null */
+  providerConfig: { id: string; provider: string; model: string } | null;
 }
+
+/**
+ * 시도 시작 함수가 공급사를 부르기 전에 작업을 실패로 끝낼 때 적는 코드.
+ * 이 코드로 끝났으면 worker 가 푸시를 보낸다. 다른 코드는 예약 작업이 끝내고 푸시도 그쪽이 보낸다.
+ */
+const START_REFUSALS: ReadonlySet<string> = new Set([
+  "account_inactive",
+  "consent_withdrawn",
+  "provider_changed",
+  "consent_outdated",
+]);
 
 export interface ProviderChoice {
   provider: GenerationProvider;
@@ -78,11 +91,18 @@ export async function runNextJob(
     payment_kind: "trial" | "gold";
   }>("SELECT * FROM nuno_claim_job($1, $2, $3)", [leaseToken, LEASE_SECONDS, deps.now()]);
   if (!row) return null;
+  const [config] = await deps.db.query<{ id: string; provider: string; model: string }>(
+    `SELECT c.id, c.provider, c.model
+     FROM generation_jobs j JOIN provider_configs c ON c.id = j.provider_config_id
+     WHERE j.id = $1`,
+    [row.job_id],
+  );
   const job: ClaimedJob = {
     jobId: row.job_id,
     userId: row.user_id,
     manifest: row.input_manifest,
     paymentKind: row.payment_kind,
+    providerConfig: config ?? null,
   };
 
   let outcome: JobOutcome;
@@ -128,7 +148,7 @@ async function runClaimed(
       "SELECT nuno_start_attempt($1, $2, $3, $4, $5) AS id",
       [job.jobId, leaseToken, choice.provider.name, choice.model, now()],
     );
-    if (!attempt?.id) return "lost";
+    if (!attempt?.id) return refusedBeforeCall(deps, job.jobId);
 
     const started = Date.now();
     const result: CallResult = await callProvider(choice.provider, request, {
@@ -188,6 +208,17 @@ async function runClaimed(
     await store.remove(retry.key);
   }
   return failJob(deps, job, leaseToken, "check_failed");
+}
+
+/** 시도 줄을 받지 못했을 때. 시도 시작 함수가 작업을 끝냈으면 failed, 선점을 잃었으면 lost 다. */
+async function refusedBeforeCall(deps: WorkerDeps, jobId: string): Promise<JobOutcome> {
+  const [row] = await deps.db.query<{ status: string; failure_code: string | null }>(
+    "SELECT status, failure_code FROM generation_jobs WHERE id = $1",
+    [jobId],
+  );
+  return row?.status === "failed" && row.failure_code && START_REFUSALS.has(row.failure_code)
+    ? "failed"
+    : "lost";
 }
 
 /** 예약 작업. 선점 기한이 지난 작업을 실패와 풀기로 끝내고 남은 결과 파일을 지운다. 정리한 작업 수를 낸다. */

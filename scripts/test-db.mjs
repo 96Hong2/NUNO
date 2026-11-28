@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // `pnpm test:db`: 실제 Postgres 에 붙는 DB 시험을 돈다. docker-compose.yml 의 test-a, test-b 를 nuno-test 이름으로 띄운다.
+// COMPOSE_PROJECT_NAME 이 있으면 `<그 이름>-test` 로 띄운다.
 // 1. test-a: 역할 설정(apps/api/db/setup.sql), 판 옮기기를 적용하고 DB 시험을 돈다.
 // 2. test-b: 역할만 만든 다른 Postgres 에 test-a 의 pg_dump 를 넣는다. 판 옮기기를 돌리지 않고 같은 DB 시험을 돈다.
 // 끝나면 두 컨테이너를 지운다. 로컬 개발 DB(postgres 서비스)는 건드리지 않는다.
@@ -14,7 +15,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ADMIN = "postgres:nuno-local";
 const API_PASSWORD = "nuno-api-local";
 const local = process.argv.includes("--local");
-const project = local ? ["compose"] : ["compose", "-p", "nuno-test", "--profile", "test"];
+// worktree 여럿이 함께 돌 때는 COMPOSE_PROJECT_NAME 을 서로 다르게 준다. 시험 컨테이너는 그 이름 뒤에 -test 를 붙인다.
+const testProject = process.env.COMPOSE_PROJECT_NAME
+  ? `${process.env.COMPOSE_PROJECT_NAME}-test`
+  : "nuno-test";
+const project = local ? ["compose"] : ["compose", "-p", testProject, "--profile", "test"];
 const PORTS = {
   postgres: Number(process.env.NUNO_DB_PORT ?? 54329),
   "test-a": Number(process.env.NUNO_TEST_DB_PORT ?? 54330),

@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { CONSENT_TEXT_VERSION } from "../account/consent.ts";
+import { currentProviderConfig } from "../account/consent.ts";
 import { requireUser, type AuthEnv } from "../account/require-user.ts";
 import type { SqlClient } from "../db/sql-client.ts";
 import { badRequest, readJsonObject } from "../http/request-body.ts";
@@ -16,6 +16,8 @@ export interface GenerationDeps {
 /** 접수 거절 코드와 HTTP 상태. */
 const REJECTIONS: Record<string, 402 | 403 | 409 | 429 | 503> = {
   consent_required: 403,
+  consent_text_outdated: 409,
+  provider_unavailable: 503,
   payment_changed: 409,
   account_inactive: 403,
   insufficient_gold: 402,
@@ -95,8 +97,11 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
     if (payWith !== null && (typeof payWith !== "string" || !PAY_WITH.has(payWith))) {
       return badRequest(c, "invalid_body");
     }
-    // 앱 번들 문구가 서버 판과 다르면 동의 주소와 같은 409 를 준다. DB 에는 서버 판을 넘긴다.
-    if (consentVersion !== CONSENT_TEXT_VERSION) {
+    // 앱 번들 문구가 지금 공급사 설정 줄의 판과 다르면 동의 주소와 같은 409 를 준다.
+    // 그사이 판이 바뀌면 접수 함수가 같은 코드로 한 번 더 막는다.
+    const config = await currentProviderConfig(db);
+    if (!config) return c.json({ error: "provider_unavailable" }, 503);
+    if (consentVersion !== config.consentTextVersion) {
       return c.json({ error: "consent_text_outdated" }, 409);
     }
 
@@ -110,7 +115,7 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
       requestId,
       requestHash(manifest),
       manifestJson,
-      CONSENT_TEXT_VERSION,
+      config.consentTextVersion,
       now(),
       payWith,
     ]);

@@ -256,6 +256,7 @@ export function nextAfterRejection(code: string): SubmitNext {
     case "consent_text_outdated":
       return { kind: "notice", message: "동의 문구가 바뀌었어요. 앱을 업데이트해 주세요" };
     case "switch_off":
+    case "provider_unavailable":
       return {
         kind: "notice",
         message: "지금은 완성 룩을 만들 수 없어요. 잠시 후 다시 시도해 주세요",
@@ -269,13 +270,14 @@ export function nextAfterRejection(code: string): SubmitNext {
   }
 }
 
-/** 서버가 일부러 준 접수 거절 코드. 이 코드면 5xx 라도 서버가 작업을 받지 않았다(switch_off 는 503) */
+/** 서버가 일부러 준 접수 거절 코드. 이 코드면 5xx 라도 서버가 작업을 받지 않았다(switch_off, provider_unavailable 은 503) */
 const SERVER_REJECTIONS: ReadonlySet<string> = new Set([
   "consent_required",
   "payment_changed",
   "account_inactive",
   "insufficient_gold",
   "switch_off",
+  "provider_unavailable",
   "trial_daily_limit",
   "request_mismatch",
 ]);

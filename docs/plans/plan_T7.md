@@ -316,6 +316,8 @@ PR 은 차례로 쌓는다. 앞 PR 이 머지되기 전이면 다음 브랜치�
 | D16 | 환경 없음 | Xcode, Apple 개발자 계정, APNs 가 없다. 서버 `devices` 와 푸시 포트까지만 만들었다(PR E) |
 | D17 | 일부 | 실행 방식은 따로 도는 worker(설계 결정 7). 시험 1 통과(`commands.md`). 시험 2, 3 은 공급사 키 대기. 시험 4 는 동의 화면과 철회 줄을 그렸고, 받는 옷 수 초과 시트는 결정 D13 대기 |
 | D18 | 통과 | `commands.md`. 운영 설정 개발 전용 주소 셋 모두 404 |
+| D25 | 통과 (2026-11-28) | `pnpm test:db` 1/2, 2/2 의 `job-guards.db.test.ts`. 접수 뒤 판을 2 로 올리면 `consent_outdated`, 시도 0행, 공급사 호출 0번, 묶음 풀기, 무료 장 8. 다른 줄을 켜거나 줄을 지우면 `provider_changed`. 다시 만들기 회차 앞에서 판이 올라도 둘째 시도 없음. `nuno_start_attempt` 의 두 비교를 빼고 돌리면 이 넷이 실패함을 확인 |
+| D34 | 판정 전(서버 값만 확인, 화면은 앱 묶음) | `commands.md` 「D34 서버 값」. 보관 기간 응답이 30 → 7 → 30 으로 서버 줄을 따라감. `photo-retention.db.test.ts` |
 
 - 그 밖에 본 것: 작업 감시 알림 `watcher-toast.jpg`, 저장 안 한 결과 알약 `unsaved-result-chip.jpg`, 동의 철회 시트 `withdraw-sheet.jpg`.
 - 가짜 공급사는 늘 같은 그림(하린 온보딩 착장)을 돌려준다. 결과 사진이 코디와 달라 보이는 것은 그 때문이다.
@@ -710,6 +712,19 @@ PR 2b (D33, D23 e2e, D32 e2e)
 - `nuno_start_attempt` 가 빈 값을 줄 때 worker 가 작업 상태를 다시 읽는다. 읽기 사이에 예약 작업이 끼면 실패 코드로 갈라 푸시가 두 번 가지 않게 한다.
 - 되돌리기: PR 2a 만 되돌리면 앱은 다시 `/discard` 를 부르고 결과를 지운다. 기기 판 8 의 `left` 열은 남아도 읽지 않는다. 서버는 그대로 둬도 된다.
 - 서버 PR 을 머지 뒤 되돌려야 하면 다음 판으로 함수 본문을 그 앞 판 꼴로 되돌린다.
+
+### 2차 묶음 구현 중 바뀐 것 (PR 1a)
+
+- 보관 일수는 새 주소 `GET /v1/consents/generation-transfer/retention` 이 `{ retentionDays }` 로 준다(설계 결정 10 의 승인 없는 쪽). `account.db.test.ts` 는 고치지 않았다.
+  - `/v1/consents/generation-transfer` 응답은 세 칸 그대로다. 켜 둔 줄이 없으면 `currentVersion` 도 `null` 이다.
+- `POST /v1/consents` 는 켜 둔 줄을 먼저 보고(없으면 409 `provider_unavailable`) 그다음 판을 비교한다. 지금 판이 줄에서 오므로 순서를 바꿨다.
+- `nuno_submit_job` 도 켜 둔 줄이 없으면 `provider_unavailable` 을 준다. 라우트는 같은 코드를 503 으로 준다.
+- `nuno_submit_job` 의 지금 판 비교는 `IS DISTINCT FROM` 이다. 함수를 바로 부르며 판을 빈 값으로 넘겨도 `consent_text_outdated` 로 막는다.
+  - 앱 `SERVER_REJECTIONS` 에 `provider_unavailable` 을 더했다. 빼면 앱이 503 을 「접수됐을 수 있음」 으로 보고 작업 감시를 건다.
+- worker 는 선점한 작업이 적은 설정 줄(`providerConfig`: ID, 공급사, 모델)을 읽어 `chooseProvider` 에 넘긴다. 시도 줄의 모델은 그 줄의 값이다.
+  - 이를 위해 `nuno_api` 에 `generation_jobs` 의 `provider_config_id`, `consent_text_version` 읽기를 줬다.
+- 시도 시작 실패 코드 가운데 이번 판이 적는 넷(`account_inactive`, `consent_withdrawn`, `provider_changed`, `consent_outdated`)이면 worker 가 `failed` 와 푸시다. `budget_exhausted` 는 판 0005 에서 더한다.
+- `scripts/test-db.mjs` 가 `COMPOSE_PROJECT_NAME` 이 있으면 시험 컨테이너를 `<그 이름>-test` 로 띄운다. worktree 여럿이 함께 `pnpm test:db` 를 돌 때 서로의 컨테이너를 내리지 않게 한다.
 
 ### 2차 묶음 리뷰 반영 (2026-11-28, 지적 23건)
 
