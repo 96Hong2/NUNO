@@ -2,7 +2,7 @@ import type { GarmentCategory } from "./garment-attributes";
 import type { Rect } from "./geometry";
 
 /**
- * 「트윈에 맞춰 볼게요」 에서 맞춘 옷 자리. 기준 상자 대비 비율이라 트윈이 바뀌어도 같은 자리에 놓인다.
+ * 「트윈에 맞춰 보세요」 에서 맞춘 옷 자리. 기준 상자 대비 비율이라 트윈이 바뀌어도 같은 자리에 놓인다.
  * x 는 상자 가운데에서, y 는 그 종류가 붙는 자리(anchorOf)에서 옮긴 거리를 상자 폭과 높이로 나눈 값이다.
  * scale 은 상자에 맞춘 크기 대비 배율이다.
  */

@@ -123,10 +123,10 @@ test("가입 시트, 무료 상태 시트, 만드는 중, 무대 단추 상태�
   await expect(done).toBeVisible();
   await expect(done).toHaveCSS("background-color", "rgb(21, 19, 20)");
 
-  // 결과 화면 「안전 확인 끝」, 「입은 옷 1벌」 과 옷의 칸, 저장 알림 「모든 룩에 저장했어요」 와 「룩북에서 보기」
+  // 결과 화면 「안전 확인 완료」, 「입은 옷 1벌」 과 옷의 칸, 저장 알림 「모든 룩에 저장했어요」 와 「룩북에서 보기」
   await done.click();
   await expect(page.getByText("✦ AI 생성")).toBeVisible();
-  await expect(page.getByText("안전 확인 끝", { exact: true })).toBeVisible();
+  await expect(page.getByText("안전 확인 완료", { exact: true })).toBeVisible();
   await expect(page.getByText("주름과 핏은 실제와 다를 수 있어요")).toBeVisible();
   const worn = page.getByLabel("입은 옷", { exact: true });
   await expect(worn.getByRole("heading", { name: "입은 옷 1벌" })).toBeVisible();
@@ -160,7 +160,7 @@ test("무료 장 작업을 가짜 공급사가 안전 기준으로 거절하면 
   await expect(title).toContainText("만들지 못했어요.");
   await expect(title).toContainText("무료 1장을 돌려드렸어요");
   await expect(page.getByText("안전 기준을 통과하지 못했어요", { exact: true })).toBeVisible();
-  await expect(page.getByText("돌려받은 무료 장", { exact: true })).toBeVisible();
+  await expect(page.getByText("돌려받은 무료 사진", { exact: true })).toBeVisible();
   await expect(page.getByText("+1장", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "같은 코디로 다시 만들기" })).toHaveCount(0);
 

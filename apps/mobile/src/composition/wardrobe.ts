@@ -86,6 +86,12 @@ export async function loadRecentGarments(): Promise<ClosetView> {
   return { counts, garments: await Promise.all(garments.map(withThumb)) };
 }
 
+/** 옷 추가 완료 화면의 「내 옷장 N / 100칸」 에 쓰는 칸별 옷 수 */
+export async function loadClosetCounts(): Promise<ClosetCounts> {
+  const { db } = await getDeviceDb();
+  return countCloset(db);
+}
+
 export async function toggleFavorite(id: string, favorite: boolean): Promise<void> {
   const { db } = await getDeviceDb();
   await setFavorite(db, id, favorite, now());
@@ -124,7 +130,7 @@ export async function loadClosetImages(closet: ClosetKey): Promise<GarmentDetail
   );
 }
 
-/** 「치수 고치기」 의 「저장」 */
+/** 「치수 수정」 의 「저장」 */
 export async function saveGarmentFit(id: string, fit: GarmentFit): Promise<void> {
   const { db } = await getDeviceDb();
   await updateGarmentFit(db, id, fit, now());
@@ -160,7 +166,7 @@ export interface GarmentDraft {
   form: DraftForm | null;
 }
 
-/** 「어떤 옷인가요?」 와 「트윈에 맞춰 볼게요」 입력 칸. 글자 칸은 적은 그대로 둔다. */
+/** 「어떤 옷인가요?」 와 「트윈에 맞춰 보세요」 입력 칸. 글자 칸은 적은 그대로 둔다. */
 export interface DraftForm {
   category: GarmentCategory;
   color: GarmentColor;
@@ -245,7 +251,7 @@ export function renderDraft(photo: PreparedPhoto, edits: GarmentEdits) {
 export async function saveDraft(): Promise<{ id: string; closet: ClosetKey; name: string }> {
   const current = draft;
   if (!current?.rendered || !current.form)
-    throw new Error("담을 옷이 없다. 사진 고르기부터 다시 한다");
+    throw new Error("추가할 옷 정보가 없어요. 사진을 다시 골라 주세요");
   const { form, rendered } = current;
   const name = normalizeGarmentName(form.name, defaultGarmentName(form.color, form.category));
   const files = await garmentMedia.store(current.id, current.photo, rendered);

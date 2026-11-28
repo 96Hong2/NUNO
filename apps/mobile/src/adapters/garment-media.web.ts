@@ -53,14 +53,14 @@ function canvas(width: number, height: number): HTMLCanvasElement {
 
 function context(element: HTMLCanvasElement): CanvasRenderingContext2D {
   const ctx = element.getContext("2d", { willReadFrequently: true });
-  if (!ctx) throw new Error("canvas 2d 를 열지 못했다");
+  if (!ctx) throw new Error("이미지를 처리하지 못했어요. 다시 시도해 주세요");
   return ctx;
 }
 
 function toBlob(element: HTMLCanvasElement, type = "image/png", quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     element.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("그림을 굽지 못했다"))),
+      (blob) => (blob ? resolve(blob) : reject(new Error("이미지를 만들지 못했어요. 다시 시도해 주세요"))),
       type,
       quality,
     );

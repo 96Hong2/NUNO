@@ -19,7 +19,7 @@ export function SuggestPanel({ picks, onWear, onRetry, onClose }: SuggestPanelPr
       <View style={styles.panelHead}>
         <View style={styles.flex}>
           <Text style={styles.panelTitle}>지금 코디에 어울리는 옷</Text>
-          <Text style={styles.panelSub}>옷장에 있는 옷에서 골랐어요</Text>
+          <Text style={styles.panelSub}>내 옷장에서 골랐어요</Text>
         </View>
         <Pressable role="button" onPress={onRetry} style={styles.retry}>
           <Text style={styles.retryLabel}>↻ 다시 추천</Text>
@@ -30,7 +30,7 @@ export function SuggestPanel({ picks, onWear, onRetry, onClose }: SuggestPanelPr
       </View>
       <View style={styles.picks}>
         {picks.length === 0 ? (
-          <Text style={styles.panelSub}>더 어울리는 옷을 찾지 못했어요</Text>
+          <Text style={styles.panelSub}>추천할 옷이 아직 없어요</Text>
         ) : (
           picks.map((item) => (
             <View key={item.key} style={styles.pick}>

@@ -45,7 +45,7 @@ export default function CropScreen() {
 
   const proceed = () => {
     if (faceVisible) {
-      toast.show("얼굴이 보이지 않게 네모를 옮기거나 붓으로 가려 주세요");
+      toast.show("얼굴이 보이지 않게 자르기 영역을 옮기거나 붓으로 가려 주세요");
       return;
     }
     if (leaving.current) return;
@@ -57,7 +57,7 @@ export default function CropScreen() {
   return (
     <FlowScreen
       title="옷만 보이도록 잘라 주세요"
-      sub="사진에 사람이 보여요. 얼굴과 몸은 보내기 전에 가려요. 옷만 남도록 네모를 맞춰 주세요."
+      sub="사진에 사람이 보여요. 얼굴과 몸은 보내기 전에 가려요. 옷만 남도록 자르기 영역을 맞춰 주세요."
       onBack={() => router.back()}
       footer={
         <>
@@ -68,7 +68,7 @@ export default function CropScreen() {
             onPress={() => setCovering(!covering)}
             style={styles.cover}
           >
-            <Text style={styles.coverLabel}>{covering ? "네모 맞추기" : "붓으로 가리기"}</Text>
+            <Text style={styles.coverLabel}>{covering ? "자르기 영역 맞추기" : "붓으로 가리기"}</Text>
           </Pressable>
         </>
       }

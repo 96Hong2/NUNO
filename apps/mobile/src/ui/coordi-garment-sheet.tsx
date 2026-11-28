@@ -275,7 +275,7 @@ export function CoordiGarmentSheet(props: GarmentSheetProps) {
   );
 }
 
-// 크기는 와이어프레임 v27 코디 옷 칸: 칩 높이 36, 거르기 줄 36, 코디 카드 72x96, 옷 카드 네 열(390 폭에서 84).
+// 크기는 와이어프레임 v27 코디 옷 칸: 칩 높이 36, 필터 줄 36, 코디 카드 72x96, 옷 카드 네 열(390 폭에서 84).
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
   flex: { flex: 1 },

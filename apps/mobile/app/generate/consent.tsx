@@ -73,11 +73,11 @@ export default function ConsentScreen() {
       if (router.canDismiss()) router.dismissAll();
       router.navigate({ pathname: "/fitting/coordi", params: { make: "1" } });
     } else if (result === "outdated") {
-      toast.show("앱을 업데이트해 주세요");
+      toast.show("동의 문구가 바뀌었어요. 앱을 업데이트해 주세요");
     } else if (result === "unavailable") {
       setLoad({ kind: "missing" });
     } else {
-      toast.show("동의를 보내지 못했어요. 잠시 뒤에 다시 해 주세요");
+      toast.show("동의를 보내지 못했어요. 잠시 후 다시 시도해 주세요");
     }
   };
 

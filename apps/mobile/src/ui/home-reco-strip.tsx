@@ -30,7 +30,7 @@ interface HomeRecoStripProps {
 
 /**
  * 홈 시트 칸이 비었을 때 빈 안내 대신 보이는 추천 코디 줄.
- * 첫 판은 피팅룸 코디 탭 「추천 코디」 와 같은 NUNO 추천 코디를 쓴다. 넓히기 단계에서 다른 사용자의 공개 룩북이 더해진다.
+ * 1차 출시는 피팅룸 코디 탭 「추천 코디」 와 같은 NUNO 추천 코디를 쓴다. 2차 출시에서 다른 사용자의 공개 룩북이 더해진다.
  * 목록 이름에 「추천 코디」 를 넣지 않는다. 탭을 옮겨도 홈이 남아 코디 탭의 「추천 코디」 목록과 이름이 겹친다.
  */
 export function HomeRecoStrip({ twinKey, action, onPick }: HomeRecoStripProps) {

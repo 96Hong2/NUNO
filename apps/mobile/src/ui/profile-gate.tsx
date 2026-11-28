@@ -38,7 +38,7 @@ export function ProfileProvider({ load, children }: ProfileProviderProps) {
   if (error !== null && profile === null) {
     return (
       <View style={styles.center}>
-        <Text style={styles.title}>저장소를 열지 못했어요</Text>
+        <Text style={styles.title}>이 기기에 저장한 정보를 불러오지 못했어요</Text>
         <Text style={styles.body}>
           다른 탭에서 NUNO 가 열려 있으면 그 탭을 닫고 다시 시도해 주세요.
         </Text>

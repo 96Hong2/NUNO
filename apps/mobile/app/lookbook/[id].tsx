@@ -147,7 +147,7 @@ export default function LookbookBookScreen() {
     const ok = await setLookFavorite(server.key, on);
     setBusy(false);
     if (!ok) {
-      notify("즐겨찾기를 바꾸지 못했어요. 잠시 뒤에 다시 해 주세요");
+      notify("즐겨찾기를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요");
       return;
     }
     const looks = book.looks.map((item) =>
@@ -185,7 +185,7 @@ export default function LookbookBookScreen() {
     const result = await copyLook(server.key, pickedRow.id);
     setBusy(false);
     if (!result.ok) {
-      notify("룩북에 넣지 못했어요. 잠시 뒤에 다시 해 주세요");
+      notify("룩북에 넣지 못했어요. 잠시 후 다시 시도해 주세요");
       return;
     }
     setSheet(null);
@@ -200,7 +200,7 @@ export default function LookbookBookScreen() {
   const undoMove = async (lookId: string, fromLookbookId: string) => {
     const result = await moveLook(lookId, fromLookbookId);
     if (!result.ok) {
-      toast.show("되돌리지 못했어요. 잠시 뒤에 다시 해 주세요");
+      toast.show("되돌리지 못했어요. 잠시 후 다시 시도해 주세요");
       return;
     }
     setCurrentKey(lookId);
@@ -222,7 +222,7 @@ export default function LookbookBookScreen() {
       notify(
         result.error === "already_in_lookbook"
           ? `이미 「${pickedRow.title}」 룩북에 있어요`
-          : "옮기지 못했어요. 잠시 뒤에 다시 해 주세요",
+          : "옮기지 못했어요. 잠시 후 다시 시도해 주세요",
       );
       return;
     }
@@ -238,7 +238,7 @@ export default function LookbookBookScreen() {
   const create = async (title: string) => {
     const made = await createLookbook(title);
     if (!made) {
-      notify("룩북을 만들지 못했어요. 잠시 뒤에 다시 해 주세요");
+      notify("룩북을 만들지 못했어요. 잠시 후 다시 시도해 주세요");
       return;
     }
     // 만든 뒤 「다른 룩북에 넣기」 로 돌아와 새 룩북을 골라 둔다. 넣는 것은 사용자가 고른다.

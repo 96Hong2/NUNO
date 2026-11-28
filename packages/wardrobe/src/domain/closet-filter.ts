@@ -1,13 +1,13 @@
 import type { Garment } from "./garment";
 import type { Season } from "./garment-attributes";
 
-/** 옷장 「거르기」 시트에서 고른 조건. 종류 칩과 따로 걸린다. */
+/** 옷장 「필터」 시트에서 고른 조건. 종류 칩과 따로 걸린다. */
 export interface ClosetFilter {
   /** 「즐겨찾기」: 별을 누른 옷만 */
   favoriteOnly: boolean;
   /** 「룩에 안 쓴 옷」: 어느 룩에도 입은 옷으로 들지 않은 옷만 */
   unusedOnly: boolean;
-  /** 「계절」: 고른 계절 가운데 하나라도 든 옷만. 비었으면 계절로 거르지 않는다 */
+  /** 「계절」: 고른 계절 가운데 하나라도 든 옷만. 비었으면 계절 필터를 적용하지 않는다 */
   seasons: readonly Season[];
 }
 
@@ -17,7 +17,7 @@ export const NO_CLOSET_FILTER: ClosetFilter = {
   seasons: [],
 };
 
-/** 「거르기 N」 의 N: 켠 줄 수. 계절은 몇 개를 골라도 한 줄이다. */
+/** 「필터 N」 의 N: 켠 줄 수. 계절은 몇 개를 골라도 한 줄이다. */
 export function closetFilterCount(filter: ClosetFilter): number {
   return (
     (filter.favoriteOnly ? 1 : 0) + (filter.unusedOnly ? 1 : 0) + (filter.seasons.length > 0 ? 1 : 0)
@@ -25,7 +25,7 @@ export function closetFilterCount(filter: ClosetFilter): number {
 }
 
 /**
- * 거르기 조건에 맞는 옷만 남긴다. 순서는 그대로다.
+ * 필터 조건에 맞는 옷만 남긴다. 순서는 그대로다.
  * lookCounts 는 옷 ID 별 룩 수다. 없는 ID 는 0 으로 본다.
  */
 export function closetFilter<T extends Pick<Garment, "id" | "isFavorite" | "seasons">>(

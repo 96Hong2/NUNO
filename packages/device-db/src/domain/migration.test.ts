@@ -22,7 +22,7 @@ describe("pendingMigrations", () => {
   });
 
   it("기기 판이 앱이 아는 마지막 판보다 높으면 던진다", () => {
-    expect(() => pendingMigrations([step(1)], 2)).toThrow(/앱을 새 판으로/);
+    expect(() => pendingMigrations([step(1)], 2)).toThrow(/앱을 최신 버전으로 업데이트해 주세요/);
   });
 });
 

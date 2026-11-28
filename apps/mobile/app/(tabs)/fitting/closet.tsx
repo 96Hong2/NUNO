@@ -66,7 +66,7 @@ const CHIPS: { key: string; label: string; filter: GarmentFilter }[] = [
 // 피팅룸 「옷장」: 「내 옷」, 「담은 옷」 두 칸. 칸은 주소의 closet 값으로 연다.
 // add=1 이면 「옷을 어떻게 추가할까요?」 시트를 연다(피팅룸 머리 줄 「+ 옷 추가」 가 쓴다).
 // moving=1 이면 「여러 벌 옮기기」 중이다. 피팅룸 머리 줄이 이 값을 보고 「+ 옷 추가」 를 숨긴다.
-// 종류 칩과 「거르기」 조건은 칸마다 따로 기억한다.
+// 종류 칩과 「필터」 조건은 칸마다 따로 기억한다.
 export default function ClosetScreen() {
   const params = useLocalSearchParams<{ closet?: string; add?: string; moving?: string }>();
   const router = useRouter();
@@ -163,7 +163,7 @@ export default function ClosetScreen() {
     ]);
   };
 
-  // 「룩에 안 쓴 옷」 을 켰는데 룩 수를 아직 못 읽었으면 거르지 않고 상태 글을 보인다(모든 옷이 룩 0개로 남지 않게).
+  // 「룩에 안 쓴 옷」 을 켰는데 룩 수를 아직 못 읽었으면 필터를 적용하지 않고 상태 글을 보인다(모든 옷이 룩 0개로 남지 않게).
   const countsMissing = filter.unusedOnly && lookCounts === null;
   const garments =
     view && !countsMissing
@@ -269,7 +269,7 @@ export default function ClosetScreen() {
                 <Text style={styles.filteredEmptyText}>조건에 맞는 옷이 없어요</Text>
                 {filterCount > 0 ? (
                   <Pressable role="button" onPress={resetFilter} style={styles.resetButton}>
-                    <Text style={styles.resetLabel}>거르기 초기화</Text>
+                    <Text style={styles.resetLabel}>필터 초기화</Text>
                   </Pressable>
                 ) : null}
               </View>

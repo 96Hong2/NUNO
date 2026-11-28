@@ -1,5 +1,12 @@
 // wardrobe 도메인: 순수 타입과 함수만 둔다. 시각과 ID 는 인자로 받는다.
-export { CLOSET_LABELS, isClosetKey, saveButtonLabel, type ClosetKey } from "./closet";
+export {
+  CLOSET_LABELS,
+  CLOSET_SLOT_LIMIT,
+  closetSlotsLabel,
+  isClosetKey,
+  saveButtonLabel,
+  type ClosetKey,
+} from "./closet";
 export {
   closetFilter,
   closetFilterCount,

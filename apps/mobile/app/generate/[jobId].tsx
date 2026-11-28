@@ -296,7 +296,7 @@ export default function GenerateJobScreen() {
         </View>
         <View style={styles.safetyRow}>
           <View style={styles.safetyPill}>
-            <Text style={styles.safetyLabel}>안전 확인 끝</Text>
+            <Text style={styles.safetyLabel}>안전 확인 완료</Text>
           </View>
           <Text style={styles.fitNote}>주름과 핏은 실제와 다를 수 있어요</Text>
         </View>
@@ -325,7 +325,7 @@ export default function GenerateJobScreen() {
         ) : null}
       </ScrollView>
       <View style={styles.bar}>
-        <Text style={styles.barNote}>저장한 룩은 나만 봐요. 공개는 룩북에서 정해요</Text>
+        <Text style={styles.barNote}>저장한 룩은 나만 볼 수 있어요</Text>
         <Pressable
           role="button"
           aria-label={saved ? "룩북에 저장했어요" : undefined}

@@ -10,7 +10,7 @@ async function openCoordi(page: Page) {
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
 }
 
-test("견본 아우터를 누르면 입고 다시 누르면 벗고, 옷 비우기는 되돌리기로 돌아온다", async ({
+test("견본 아우터를 누르면 입고 다시 누르면 벗고, 모두 벗기기는 되돌리기로 돌아온다", async ({
   page,
 }) => {
   const outside: string[] = [];
@@ -64,6 +64,6 @@ test("무대 「내 옷으로 추천」 은 범위 창 없이 옷장에 있는 �
   await page.getByRole("button", { name: "내 옷으로 추천" }).click();
   await expect(page.getByRole("dialog", { name: "추천 범위" })).toHaveCount(0);
   const panel = page.getByRole("region", { name: "지금 코디에 어울리는 옷" });
-  await expect(panel).toContainText("옷장에 있는 옷에서 골랐어요");
+  await expect(panel).toContainText("내 옷장에서 골랐어요");
   await expect(page.getByText(/찜한 스토어 옷|스토어 전체/)).toHaveCount(0);
 });

@@ -126,7 +126,7 @@ export default function TwinPickScreen() {
 
       <View style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}>
         <Text style={styles.hint}>
-          키와 체형도 트윈 탭에서 바꿀 수 있어요{"\n"}몸 치수는 받지 않아요
+          키와 체형도 트윈 탭에서 바꿀 수 있어요{"\n"}몸 치수는 넣지 않아도 돼요
         </Text>
         <Pressable
           role="button"

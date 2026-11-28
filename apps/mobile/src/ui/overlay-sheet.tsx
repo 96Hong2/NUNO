@@ -32,7 +32,7 @@ export function OverlaySheet({
   if (!visible) return null;
   return (
     <View style={styles.layer}>
-      <Pressable role="button" aria-label="시트 닫기" style={styles.backdrop} onPress={onClose} />
+      <Pressable role="button" aria-label="닫기" style={styles.backdrop} onPress={onClose} />
       <View role="dialog" aria-label={title} style={styles.sheet}>
         <View style={styles.grip} />
         <View style={styles.head}>

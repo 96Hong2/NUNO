@@ -160,13 +160,18 @@ test("D3~D8: 동의 화면을 먼저 거쳐 무료 장으로 만들고, 만드�
   await expect(page.getByRole("img", { name: "완성 룩 사진" }).first()).toBeVisible();
 
   const leave = page.getByRole("dialog", { name: "저장하지 않고 나갈까요?" });
+  // 시트 층에서 뒤 배경 「닫기」 는 dialog 보다 앞에 놓인다. 시트 안 ✕ 도 이름이 「닫기」 다.
+  const backdrop = leave
+    .locator("xpath=..")
+    .getByRole("button", { name: "닫기", exact: true })
+    .first();
   await page.getByRole("button", { name: "뒤로" }).click();
   await expect(leave).toContainText("나가면 이 사진은 사라져요");
-  await page.getByRole("button", { name: "시트 닫기" }).click();
+  await backdrop.click();
   await expect(leave).toHaveCount(0);
   await page.goBack();
   await expect(leave).toBeVisible();
-  await page.getByRole("button", { name: "시트 닫기" }).click();
+  await backdrop.click();
   await expect(page.getByText("✦ AI 생성")).toBeVisible();
 
   await page.getByRole("button", { name: "내 룩북에 저장" }).click();

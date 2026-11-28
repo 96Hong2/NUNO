@@ -72,7 +72,7 @@ test("「내 옷으로 추천」 을 누르면 범위 창 없이 「지금 코�
   await expect(page.getByRole("dialog", { name: "추천 범위" })).toHaveCount(0);
   const panel = page.getByRole("region", { name: "지금 코디에 어울리는 옷" });
   await expect(panel).toBeVisible();
-  await expect(panel).toContainText("옷장에 있는 옷에서 골랐어요");
+  await expect(panel).toContainText("내 옷장에서 골랐어요");
   await expect(page.getByRole("list", { name: "최근 입혀 본 코디", exact: true })).toHaveCount(0);
   await expect(page.getByRole("list", { name: "추천 코디", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "최근 입혀 본 코디", exact: true })).toHaveCount(0);

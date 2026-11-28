@@ -1,9 +1,9 @@
-import type { GarmentMethod } from "@nuno/wardrobe";
+import { closetSlotsLabel, type GarmentMethod } from "@nuno/wardrobe";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 interface AddGarmentSheetProps {
   visible: boolean;
-  /** 시트 아래 줄 「내 옷 N벌, 담은 옷 N벌」 */
+  /** 시트 아래 줄 「내 옷장 N / 100칸」 */
   counts: { mine: number; wanted: number } | null;
   onPick: (method: GarmentMethod) => void;
   onClose: () => void;
@@ -18,11 +18,11 @@ const METHODS: { method: GarmentMethod; icon: string; label: string; hint: strin
 // 보이지 않는 시트가 남아 다음 단계 입력칸의 초점을 빼앗는다. 그래서 웹에서는 움직임 없이 바로 닫는다.
 const SHEET_ANIMATION = Platform.OS === "web" ? "none" : "slide";
 
-/** 「옷 추가」 를 누르면 뜨는 「옷을 어떻게 추가할까요?」 시트. 링크와 스토어로 넣기는 넓히기 단계에 연다. */
+/** 「옷 추가」 를 누르면 뜨는 「옷을 어떻게 추가할까요?」 시트. 링크와 스토어로 넣기는 2차 출시에 연다. */
 export function AddGarmentSheet({ visible, counts, onPick, onClose }: AddGarmentSheetProps) {
   return (
     <Modal visible={visible} transparent animationType={SHEET_ANIMATION} onRequestClose={onClose}>
-      <Pressable role="button" style={styles.backdrop} onPress={onClose} aria-label="시트 닫기" />
+      <Pressable role="button" style={styles.backdrop} onPress={onClose} aria-label="닫기" />
       <View role="dialog" aria-label="옷을 어떻게 추가할까요?" style={styles.sheet}>
         <View style={styles.grip} />
         <Text role="heading" aria-level={3} style={styles.title}>
@@ -44,9 +44,7 @@ export function AddGarmentSheet({ visible, counts, onPick, onClose }: AddGarment
           ))}
         </View>
         {counts ? (
-          <Text style={styles.count}>
-            내 옷 {counts.mine}벌, 담은 옷 {counts.wanted}벌
-          </Text>
+          <Text style={styles.count}>{closetSlotsLabel(counts)}</Text>
         ) : null}
       </View>
     </Modal>

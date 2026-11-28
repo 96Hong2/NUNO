@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// 기대값은 와이어프레임 v27 의 옷 추가 화면과 시안 v2 명세 4(옷 정보, 트윈에 맞춰 보기)에서 가져온다.
+// 기대값은 와이어프레임 v27 의 옷 추가 화면(옷장 칸 수 줄은 v28)과 시안 v2 명세 4(옷 정보, 트윈에 맞춰 보기)에서 가져온다.
 test.use({ viewport: { width: 390, height: 844 } });
 
 const FIXTURES = "e2e/fixtures/garments";
@@ -16,29 +16,30 @@ async function openCutout(page: Page) {
   await page.getByRole("button", { name: "옷 추가", exact: true }).first().click();
   const sheet = page.getByRole("dialog", { name: "옷을 어떻게 추가할까요?" });
   await expect(sheet.getByRole("heading", { name: "옷을 어떻게 추가할까요?" })).toBeVisible();
+  await expect(sheet.getByText("내 옷장 0 / 100칸", { exact: true })).toBeVisible();
   const chooser = page.waitForEvent("filechooser");
   await sheet.getByRole("button", { name: "앨범에서 고르기" }).click();
   await (await chooser).setFiles(`${FIXTURES}/knit-stripe.jpg`);
   await expect(page.getByRole("heading", { name: "배경을 지웠어요" })).toBeVisible();
 }
 
-test("배경 지우기에서 뒤로 가면 「넣던 옷을 버릴까요?」 가 뜨고, 「버리기」 를 누르면 옷장으로 돌아간다", async ({
+test("배경 지우기에서 뒤로 가면 「추가하던 옷을 삭제할까요?」 가 뜨고, 「삭제」 를 누르면 옷장으로 돌아간다", async ({
   page,
 }) => {
   await openCutout(page);
 
-  // 뒤로 → 확인 시트. 「계속 넣기」 는 시트만 닫는다.
+  // 뒤로 → 확인 시트. 「계속 추가」 는 시트만 닫는다.
   await page.getByRole("button", { name: "뒤로" }).click();
-  const discard = page.getByRole("dialog", { name: "넣던 옷을 버릴까요?" });
-  await expect(discard.getByRole("button", { name: "버리기" })).toBeVisible();
-  await expect(discard.getByRole("button", { name: "계속 넣기" })).toBeVisible();
-  await discard.getByRole("button", { name: "계속 넣기" }).click();
+  const discard = page.getByRole("dialog", { name: "추가하던 옷을 삭제할까요?" });
+  await expect(discard.getByRole("button", { name: "삭제" })).toBeVisible();
+  await expect(discard.getByRole("button", { name: "계속 추가" })).toBeVisible();
+  await discard.getByRole("button", { name: "계속 추가" }).click();
   await expect(discard).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "배경을 지웠어요" })).toBeVisible();
 
-  // 「버리기」 는 넣던 옷을 담지 않고 옷장으로 돌아간다.
+  // 「삭제」 는 추가하던 옷을 담지 않고 옷장으로 돌아간다.
   await page.getByRole("button", { name: "뒤로" }).click();
-  await discard.getByRole("button", { name: "버리기" }).click();
+  await discard.getByRole("button", { name: "삭제" }).click();
   await expect(page.getByRole("heading", { name: "배경을 지웠어요" })).toHaveCount(0);
   await expect(segment(page, "내 옷")).toHaveText(/내 옷 0/);
   await expect(segment(page, "담은 옷")).toHaveText(/담은 옷 0/);
@@ -86,7 +87,9 @@ test("이름을 비우고 「다음」 을 누르면 칸 아래 오류가 뜨고
 
   await expect(page.getByRole("heading", { name: "내 옷에 추가했어요" })).toBeVisible();
   await expect(page.getByText("브라운 스트라이프 니트", { exact: true })).toBeVisible();
-  await expect(page.getByText("사진으로 계산한 크기로 입혀요", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("사진으로 계산한 크기로 입혀요. 내 옷장 1 / 100칸", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "이 옷으로 코디하기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "한 벌 더 넣기" })).toBeVisible();
 
@@ -106,6 +109,9 @@ test("「사고 싶은 옷」 으로 고르면 「담은 옷에 추가」 뒤 �
   await page.getByRole("button", { name: "담은 옷에 추가" }).click();
 
   await expect(page.getByRole("heading", { name: "담은 옷에 추가했어요" })).toBeVisible();
+  await expect(
+    page.getByText("사진으로 계산한 크기로 입혀요. 내 옷장 1 / 100칸", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "한 벌 더 넣기" })).toBeVisible();
   await page.getByRole("button", { name: "닫기" }).click();
   await expect(segment(page, "담은 옷")).toHaveAttribute("aria-pressed", "true");

@@ -1,20 +1,26 @@
-import { CLOSET_LABELS } from "@nuno/wardrobe";
+import { CLOSET_LABELS, closetSlotsLabel } from "@nuno/wardrobe";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { wearGarment } from "../../../src/composition/outfit";
-import { loadGarment, type GarmentDetail } from "../../../src/composition/wardrobe";
+import {
+  loadClosetCounts,
+  loadGarment,
+  type GarmentDetail,
+} from "../../../src/composition/wardrobe";
 import { CloseIcon } from "../../../src/ui/line-icon";
 
 const INK = "#151314";
 const SUB = "#5F5C56";
 
 // 옷 넣기를 마친 화면: 「내 옷에 추가했어요」 또는 「담은 옷에 추가했어요」.
+// 이름 아래 줄은 와이어프레임처럼 맞춤 방식 뒤에 「내 옷장 N / 100칸」 을 잇는다.
 // X 는 그 옷이 든 옷장 칸으로 간다. 코디 무대는 내 옷만 입히므로 「이 옷으로 코디하기」 는 내 옷에만 둔다.
 export default function GarmentDoneScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const [garment, setGarment] = useState<GarmentDetail | null | undefined>(undefined);
+  const [slots, setSlots] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -23,8 +29,10 @@ export default function GarmentDoneScreen() {
       return;
     }
     let alive = true;
-    void loadGarment(id).then((loaded) => {
-      if (alive) setGarment(loaded);
+    void Promise.all([loadGarment(id), loadClosetCounts()]).then(([loaded, counts]) => {
+      if (!alive) return;
+      setSlots(closetSlotsLabel(counts));
+      setGarment(loaded);
     });
     return () => {
       alive = false;
@@ -52,6 +60,7 @@ export default function GarmentDoneScreen() {
 
   const mine = garment?.closet === "mine";
   const measured = garment ? Object.keys(garment.measurements).length : 0;
+  const fitLine = measured > 0 ? `치수 ${measured}개로 맞춰 입혀요` : "사진으로 계산한 크기로 입혀요";
 
   return (
     <View style={styles.screen}>
@@ -84,7 +93,7 @@ export default function GarmentDoneScreen() {
             {garment.name}
           </Text>
           <Text style={styles.sub}>
-            {measured > 0 ? `치수 ${measured}개로 맞춰 입혀요` : "사진으로 계산한 크기로 입혀요"}
+            {slots ? `${fitLine}. ${slots}` : fitLine}
           </Text>
           <View style={styles.footer}>
             {mine ? (
