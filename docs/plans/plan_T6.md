@@ -34,7 +34,7 @@
 | 다음 PR(키 전에): 가짜 공급사로 도는 호출 스크립트, 무작위 이름과 메타데이터 지우기, 대응표 분리, 모델별 상한 멈춤, 채점 CSV 열 | D5, D6 의 장치 | 혼자 한다. 상한 값은 결정 D3 승인 전까지 코드 상수 자리로 둔다. 돈이 드는 첫 실행이 상한 멈춤의 첫 시험이 되지 않게 키보다 먼저 만든다 |
 | 실제 공급사 어댑터와 실제 실행 판정 | D4~D8 | 기획자: 공급사 API 키(Seedream 5.5, GPT-Image-2.6, 조건부 셋째 모델 FASHN 이나 Qwen 도 422건 합에 든다), 시험 숫자 승인(결정 D3), 돈이 드는 첫 호출 |
 | 채점과 관문 기록 | D9 | 기획자와 바깥 평가자 2명 |
-| 개발 서버 배포 | D11 | 기획자: 빌린 AWS 계정 접근, DB 주소와 비밀번호 |
+| 개발 서버 배포 | D11 | 기획자: 개발 서버 계정 접근, DB 주소와 비밀번호 |
 | R2 비공개 버킷 | 없음(T6-1 문장) | 기획자: Cloudflare 계정과 키. T7-4 착수 전 조건이라 plan_T7 첫 subtask 에서 확인한다 |
 | CI 에서 DB 시험 | D1 | `.github` 는 고치지 않고 `pnpm verify` 가 컨테이너를 띄운다. 서버 DB 검토 v1 의 기획자 질문 3 과 닿아 PR 에 알린다. 원치 않으면 `verify` 에서 `test:db` 를 빼면 된다 |
 
@@ -48,7 +48,7 @@
 ## 확인한 사실 (2026-11-25)
 
 - 서버 DB 검토 v1 은 Hono, Drizzle, Better Auth 를 제안했고, 로드맵과 아키텍처 점검 v1 은 「T6, T7 plan 에서 확정한다」 고 했다.
-- 로드맵 v3: 로컬은 docker compose Postgres, 개발 서버는 빌린 AWS, 출시용은 따로. 앱은 API 주소만 알고 DB 에 닿지 않는다. 확장과 호스팅 전용 기능을 쓰지 않아 `pg_dump` 로 옮긴다.
+- 로드맵 v3: 로컬은 docker compose Postgres, 개발 서버는 RDS Postgres, 출시용은 따로. 앱은 API 주소만 알고 DB 에 닿지 않는다. 확장과 호스팅 전용 기능을 쓰지 않아 `pg_dump` 로 옮긴다.
 - 스키마 v1: `feature_switches`(key, enabled, reason, updated_at, updated_by), `provider_configs`(id, provider, model, model_version, mode, priority, country, subprocessor_countries, max_concurrency, price_usd, enabled, updated_at). 앱 사용자는 스위치 읽기만, 공급사 설정은 접근 없음.
 - 서버 검토 v1: 역할은 `nuno_owner`, `nuno_api`, `nuno_ops` 셋. CI 에 Postgres 서비스를 더하는 `.github` 수정은 기획자 허락이 필요하다.
 - 이 Mac 에 Docker Desktop 이 있다(29.9.3). GitHub Actions 의 ubuntu 러너에도 Docker 가 있어, 시험 명령이 스스로 컨테이너를 띄우면 `.github` 를 고치지 않아도 CI 에서 DB 시험이 돈다.
