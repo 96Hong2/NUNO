@@ -30,6 +30,7 @@ const START_REFUSALS: ReadonlySet<string> = new Set([
   "consent_withdrawn",
   "provider_changed",
   "consent_outdated",
+  "budget_exhausted",
 ]);
 
 export interface ProviderChoice {
@@ -234,6 +235,14 @@ export async function sweepJobs(
     await deps.push.send({ userId: row.user_id, jobId: row.job_id, status: "failed" });
   }
   return rows.length;
+}
+
+/** 예약 작업. 끝난 작업에 예약 상태로 남은 시도의 예산을 정산한다. 정산한 시도 수를 낸다. */
+export async function settleBudgets(deps: Pick<WorkerDeps, "db" | "now">): Promise<number> {
+  const [row] = await deps.db.query<{ count: number }>("SELECT nuno_settle_budgets($1) AS count", [
+    deps.now(),
+  ]);
+  return row?.count ?? 0;
 }
 
 export interface DevProviderMode {

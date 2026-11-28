@@ -7,6 +7,9 @@
 //     Docker DB 와 시험용 준비는 하지 않고 판 옮기기만 한다. 스위치와 공급사 줄은 그 DB 운영자가 정한다.
 // 두 경우 모두 역할 설정, 판 옮기기, 시험용 준비(generate_look 켜기, 가짜 공급사 줄)를 한 뒤
 // 개발 전용 주소를 켠 API 와 작업 worker 를 같은 환경으로 띄운다. 둘 중 하나가 죽으면 다른 것도 내린다.
+//   --only=api, --only=worker  그 프로세스 하나만 띄운다. 다른 터미널에서 같은 선택지로 나머지 하나를 띄우면
+//     둘이 같은 DB, 결과 폴더, 서명 키를 쓰고, 한쪽을 내려도 다른 쪽은 남는다. 이때는 DB 를 지우지 않는다.
+// 로컬 DB 의 시험용 준비에는 하루 전체 예산 기본값도 든다. 판은 기본값을 넣지 않아 없으면 공급사를 부르지 않는다.
 // 운영 DB 의 스위치는 운영자 몫이라 이 스크립트가 닿지 않는다.
 // 비밀번호는 docker-compose.yml 과 scripts/test-db.mjs 의 로컬 전용 값이다.
 import { spawn, spawnSync } from "node:child_process";
@@ -21,6 +24,14 @@ const API_PASSWORD = "nuno-api-local";
 const DB_PORT = Number(process.env.NUNO_DB_PORT ?? 54329);
 const dev = process.argv.includes("--dev");
 const remote = process.argv.includes("--remote");
+const onlyArg = process.argv.find((arg) => arg.startsWith("--only="));
+const only = onlyArg?.slice("--only=".length);
+if (only !== undefined && only !== "api" && only !== "worker") {
+  console.error(`--only 는 api 나 worker 다. 받은 값: ${only}`);
+  process.exit(1);
+}
+// 로컬 DB 의 하루 전체 예산 기본값(달러). scripts/test-db.mjs 와 같은 값이다.
+const LOCAL_DAILY_BUDGET_USD = 1000;
 
 // 결과 사진 서명 주소 키. 이 스크립트로 띄우는 로컬 서버에서만 쓰는 값이다.
 const FILE_URL_SECRET = "nuno-local-file-url-secret";
@@ -40,7 +51,8 @@ const target = dev
       port: Number(process.env.NUNO_E2E_API_PORT ?? 8877),
       origins:
         process.env.NUNO_WEB_ORIGINS ?? `http://localhost:${process.env.NUNO_E2E_PORT ?? 8091}`,
-      fresh: true,
+      // 한 프로세스만 띄울 때는 다른 터미널의 프로세스가 같은 DB 를 쓰고 있어 지우지 않는다.
+      fresh: only === undefined,
       resultDir: join(root, "apps/api/.local-results/e2e"),
     };
 
@@ -141,7 +153,10 @@ function startLocal() {
    INSERT INTO provider_configs
      (provider, model, model_version, mode, priority, country, max_concurrency, price_usd, enabled)
    VALUES ('fake', 'fake', '1', 'sync', 1, '대한민국', 4, 0.04, true)
-   ON CONFLICT (provider, model, model_version, mode) DO NOTHING;`,
+   ON CONFLICT (provider, model, model_version, mode) DO NOTHING;
+   INSERT INTO cost_budget_defaults (budget_kind, provider, budget_usd, updated_by)
+   VALUES ('total', '', ${LOCAL_DAILY_BUDGET_USD}, 'scripts/e2e-api.mjs')
+   ON CONFLICT (budget_kind, provider) DO NOTHING;`,
   );
 
   startServers({
@@ -170,14 +185,18 @@ function startServers({ label, databaseUrl, port, origins, resultDir }) {
   const processes = [
     ["api", ["apps/api/src/composition/main.ts"]],
     ["worker", ["apps/api/src/composition/worker.ts"]],
-  ].map(([name, args]) => {
-    const child = spawn(process.execPath, args, { cwd: root, env: serverEnv, stdio: "inherit" });
-    child.on("exit", (code, signal) => {
-      console.error(`${name} 가 끝났다(코드 ${code}, 신호 ${signal}). 나머지도 내린다`);
-      stopAll(code ?? 1);
+  ]
+    .filter(([name]) => only === undefined || name === only)
+    .map(([name, args]) => {
+      const child = spawn(process.execPath, args, { cwd: root, env: serverEnv, stdio: "inherit" });
+      child.on("exit", (code, signal) => {
+        console.error(
+          `${name} 가 끝났다(코드 ${code}, 신호 ${signal}). 이 스크립트가 띄운 것을 내린다`,
+        );
+        stopAll(code ?? 1);
+      });
+      return child;
     });
-    return child;
-  });
 
   function stopAll(code) {
     for (const child of processes) if (child.exitCode === null) child.kill("SIGTERM");
@@ -186,7 +205,11 @@ function startServers({ label, databaseUrl, port, origins, resultDir }) {
   process.on("SIGINT", () => stopAll(0));
   process.on("SIGTERM", () => stopAll(0));
 
-  console.log(
-    `${label}, API http://localhost:${port}, worker, 웹 출처 ${origins}, 결과 폴더 ${resultDir}`,
-  );
+  const started =
+    only === undefined
+      ? `API http://localhost:${port}, worker`
+      : only === "api"
+        ? `API http://localhost:${port} 만`
+        : "worker 만";
+  console.log(`${label}, ${started}, 웹 출처 ${origins}, 결과 폴더 ${resultDir}`);
 }
