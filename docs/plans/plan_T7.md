@@ -323,7 +323,12 @@ PR 은 차례로 쌓는다. 앞 PR 이 머지되기 전이면 다음 브랜치�
 | D34 | 통과 (2026-11-28, 화면과 e2e) | 설정 「사진 보관 안내」 시트에 서버 값 30일, 새 줄로 7일을 켜면 7일, 켜 둔 줄이 없으면 「보관 기간을 불러오지 못했어요」(`d34-*.jpg`, `photo-retention.spec.ts`) |
 | D20 | 통과 (2026-11-28, 명령과 화면과 DB) | 오늘 예산 상한 0원이면 무료와 골드 작업 모두 `budget_exhausted`, 시도 0행, 묶음 풀림. 개발 DB 화면에서 「만들지 못했어요」 와 무료 장 환급(`commands.md` 「D20」, `budget.db.test.ts`) |
 | D26 | 통과 (2026-11-28, DB) | 예약만 한 시도 셋을 정산 두 번 돌려도 예약 합과 확정 합이 한 번만 바뀜. 정산은 시도마다 트랜잭션 하나(`budget.db.test.ts`) |
-| D30 | 선행 판정 (2026-11-28, 명령) | 판 5 기준으로 API 만 내렸다 띄워도 worker 가 작업을 끝내고 같은 요청 ID 두 번 접수가 같은 작업 ID. 대기 만료가 들어간 판 6 뒤 다시 판정(`commands.md` 「D30」) |
+| D19 | 통과 (2026-11-28, DB) | `pnpm test:db` 1/2, 2/2 의 `gold.db.test.ts`. 4골드 계정의 서로 다른 요청 두 건 동시 접수에서 202 하나와 402 하나, 잔액 0(`commands.md` 「D19, D22, D27, D28, D29 의 DB 시험」) |
+| D22 | 통과 (2026-11-28, DB 와 명령) | `keep-again.db.test.ts`: 복사만 해 둔 뒤 다시 저장하면 룩 1행, 사진 200, gen30 파일 없음. 명령은 `commands.md` 「D22」 |
+| D27 | 통과 (2026-11-28, DB 와 명령) | `queue-retention.db.test.ts`: 5분 1초 뒤 `queue_timeout`, 시도 0행, 공급사 호출 0번, 골드 4 환급, 4분 59초에는 `queued`. 명령은 `commands.md` 「D27」 |
+| D28 | 통과 (2026-11-28, DB 시험 명령) | `pnpm test:db` 두 바퀴의 `queue-retention.db.test.ts`: 사진 저장 도중 선점 기한이 지나 예약 작업이 먼저 끝내면 worker 가 그 사진을 지우고, 정상 결과 행과 파일, 원장 수가 그대로 |
+| D29 | 통과 (2026-11-28, DB 와 명령) | `queue-retention.db.test.ts`: 기한 뒤 조회 주소 없음, 저장 404, 정리 뒤 파일 404 와 `deleted`, 저장한 결과는 200. 명령은 `commands.md` 「D29」 |
+| D30 | 통과 (2026-11-28, 명령, 판 6) | 판 6 worker 와 API 를 `--only=worker`, `--only=api` 로 따로 띄움. API 만 내린 동안 worker 가 작업을 `succeeded` 로 끝냄. 다시 띄운 API 에 같은 요청 ID 두 번 접수가 같은 작업 ID, 작업 1행과 묶음 1건(`commands.md` 「D30: 판 6 worker 로 API 만 내렸다 다시 띄우기」) |
 
 - 그 밖에 본 것: 작업 감시 알림 `watcher-toast.jpg`, 저장 안 한 결과 알약 `unsaved-result-chip.jpg`, 동의 철회 시트 `withdraw-sheet.jpg`.
 - 가짜 공급사는 늘 같은 그림(하린 온보딩 착장)을 돌려준다. 결과 사진이 코디와 달라 보이는 것은 그 때문이다.
@@ -754,6 +759,26 @@ PR 2b (D33, D23 e2e, D32 e2e)
 - 그 새 줄은 판 1 이라 시험 도중에는 판 1 이 30일과 7일을 함께 가리킨다. 새 줄을 넣을 때 판을 올리게 막는 장치는 아직 없다(트리거는 UPDATE 만 본다).
 - 「사진 보관 안내」 시트 글은 와이어프레임 v28 원문 대신 plan 초안 문장을 쓴다. 원문에는 앱에 없는 「내 사진으로 만들기」 와 지금 동작과 다른 「옷 추가 사진은 바로 지운다」 가 들어 있다.
 - 「나가기」 는 서버를 부르지 않는다. `/v1/generation-jobs/:id/discard` 와 `nuno_discard_result` 는 부르는 화면이 없지만 남겨 두었다(거둘지는 기획자 확인).
+### 2차 묶음 구현 중 바뀐 것 (PR 1c)
+
+- 대기 만료 함수는 `nuno_expire_next_queued_job(p_now, p_wait_seconds)` 다. 한 번 부를 때 접수 작업 한 건만 끝낸다.
+  - 판 0005 정산과 같은 까닭이다. 한 트랜잭션이 여러 사용자 행을 잠그면 worker 의 선점, 예약 작업과 교착이 생긴다.
+  - worker `expireQueuedJobs` 가 행이 없을 때까지(한 바퀴 최대 100번) 부른다. 고른 작업을 그사이 선점했으면 `expired = false` 다.
+  - 대기 상한이 0초 이하이면 오류를 낸다. 잘못 부르면 모든 접수 작업이 끝나기 때문이다.
+  - 대기 만료로 끝낸 작업도 worker 가 실패 푸시를 보낸다.
+- 보관 기한 판정은 새 파일 `apps/api/src/generation/result-retention.ts` 의 `isPastRetention` 하나다.
+  - 조회 라우트와 `keep-result.ts` 가 함께 쓴다. `routes.ts` 가 `keep-result.ts` 를 import 하므로 거꾸로 부르지 않게 따로 뒀다.
+- 시험 파일: `job-guards.db.test.ts` 는 main 에 있어 고치지 않았다. D27, D28, D29 는 새 파일 `queue-retention.db.test.ts` 에 썼다.
+  - 날짜는 `queue-retention.db.test.ts` 가 2023년, `keep-again.db.test.ts` 가 2024년이다.
+  - 두 파일 모두 선점 전에 그 시각으로 `expireQueuedJobs` 를 불러 그보다 앞서 남은 접수 작업을 비운다.
+  - 그다음 `runNextJob` 이 준 작업 ID 가 자기 작업인지 단언한다. 끝나면 접수 상태로 남기는 작업이 없다.
+  - `job-guards.db.test.ts` 는 2021-01 날짜로 접수하고 대기 만료를 부르지 않는다. 새 파일이 그보다 이른 접수 작업을 남기지 않아 그 파일의 선점 순서가 그대로다.
+- D28 시험은 worker 경로 그대로 본다. 결과 사진을 저장하는 도중에 시각을 선점 기한 너머로 돌리고 예약 작업을 먼저 돌린다.
+  - 그 뒤 worker 가 옛 토큰으로 `nuno_job_checking` 을 부르면 NULL 이고, worker 가 그 사진을 지운다.
+- D29 시험은 정리 함수를 0 이 나올 때까지 되풀이한다. 덤프로 옮긴 DB 에는 다른 파일이 남긴 기한 지난 결과가 앞에 있다.
+- D30 명령 판정은 `--dev` 대신 e2e 모드(`nuno_e2e`, API 9287)의 `--only=worker`, `--only=api` 로 했다.
+  - `--dev` 는 API 포트가 8787 로 정해져 있는데, 다른 세션의 프로세스가 8787 을 쓰고 있었다. 두 모드 모두 `--only` 이면 DB 를 지우지 않는다.
+
 ### 2차 묶음 리뷰 반영 (2026-11-28, 지적 23건)
 
 | 관점 | 지적 | 반영 여부와 까닭 |

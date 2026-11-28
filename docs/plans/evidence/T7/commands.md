@@ -81,9 +81,7 @@
 
 ## D30: 생성 도중 API 만 내렸다 다시 띄우기 (2026-11-28, 판 5)
 
-판 5 기준 선행 판정이다. 최종 판정이 아니다.
-- 계획은 D19, D22, D30 을 대기 만료가 worker 1초 바퀴에 들어간 뒤 한 번에 판정하고, 명령은 `--dev` 로 개발 DB 에서 하라고 정했다.
-- 이 기록은 그보다 먼저 `--dev` 없이 `nuno_e2e` 에서 했다. 대기 만료가 들어간 worker 로 `--dev --only=worker`, `--dev --only=api` 로 다시 판정해야 한다.
+판 5 기준으로 먼저 해 둔 기록이다. 최종 판정은 아래 「D30: 판 6 worker 로 API 만 내렸다 다시 띄우기」 절이다.
 
 - 터미널 1 `node scripts/e2e-api.mjs --only=worker`, 터미널 2 `--only=api`(9087). 같은 `nuno_e2e` DB 와 결과 폴더를 쓴다.
 - 새 시험 계정의 가짜 공급사를 지연 10초로 두고 접수했다(07:18:45 UTC). 2초 뒤 작업은 `generating`.
@@ -92,3 +90,100 @@
 - 07:19:10 API 를 다시 띄웠다. 같은 생성 요청 ID 와 같은 본문으로 두 번 다시 접수했다.
   - 두 번 모두 202 와 처음 작업 ID, `status` `succeeded`.
   - psql: 그 요청 ID 의 `generation_jobs` 1행, 골드 묶음 1건(`captured`), 시도 1행(`completed`, `billed`, `settled`).
+
+## D19, D22, D27, D28, D29 의 DB 시험 (2026-11-28, 판 6, 로컬 Docker Postgres 18)
+
+- `COMPOSE_PROJECT_NAME=nuno_t7b1c NUNO_TEST_DB_PORT=55472 NUNO_TEST_RESTORE_PORT=55473 pnpm test:db`
+  - 1/2 판을 옮긴 test-a: 시험 파일 10개, 시험 77개 통과.
+  - 2/2 test-a 덤프를 넣은 test-b(판 6, 판 옮기기 없이): 시험 파일 10개, 시험 77개 통과.
+- D19 `gold.db.test.ts` 「잔액이 4골드인 계정에서 서로 다른 요청 둘을 동시에 보내면 하나만 접수되고 잔액은 0 이다」
+  - 무료 장을 다 쓴 계정에 시험용 골드 4 를 주고 다른 요청 ID 두 건을 함께 보낸다. 응답은 202 하나와 402 하나, 「내 골드」 잔액 0.
+- D27 `queue-retention.db.test.ts` 「접수 뒤 대기 상한」 셋
+  - `QUEUE_WAIT_SECONDS` 는 300초.
+  - 골드 4 로 접수한 작업은 4분 59초에 대기 만료를 불러도 `queued` 다.
+  - 5분 1초에 worker 차례(대기 만료 → 선점)를 한 번 돌면 그 작업은 `failed`, `queue_timeout`, 시도 0행, 묶음 `released`.
+  - 무상 골드 4 와 묶음 0 으로 돌아오고, 실패 푸시가 한 번 간다. 조회는 `refund: { kind: "gold", amount: 4 }`.
+  - 같은 선점에서 3분 20초 뒤 접수한 다른 계정 작업만 공급사로 가서 `succeeded`(가짜 공급사 호출 1번).
+  - 다시 불러도 그 계정의 원장 거래와 기록 줄 수가 그대로다. 대기 상한 0초로 부르면 오류다.
+- D28 `queue-retention.db.test.ts` 「늦게 저장된 사진은 지워지고, 같은 사용자의 정상 결과 파일과 골드 원장은 바뀌지 않는다」
+  - 같은 계정의 첫 작업을 `succeeded` 로 끝내 gen30 결과 행과 파일을 적어 둔다.
+  - 둘째 작업은 worker 가 사진을 저장하는 도중에 시각을 선점 기한 너머로 돌리고 예약 작업(`sweepJobs`)을 먼저 돌린다.
+  - worker 결과는 `lost`, 늦게 저장된 사진 파일은 지워짐, 작업 `failed` `lease_expired`, 결과 행 없음, 묶음 `released`.
+  - 옛 선점 토큰으로 `nuno_job_checking` 은 NULL, `nuno_job_succeed` 는 false.
+  - 예약 작업 직후와 끝의 원장 거래 수와 기록 줄 수가 같다. 첫 작업의 결과 행과 파일 바이트가 그대로다. 푸시는 예약 작업의 실패 한 번뿐.
+- D29 `queue-retention.db.test.ts` 「기한이 지나면 조회가 주소를 주지 않고 저장을 거절하며, 정리 뒤에는 파일이 열리지 않고 DB 도 삭제 상태다」
+  - 결과 둘 가운데 하나만 「내 룩북에 저장」 했다. 저장하지 않은 결과의 `delete_due_at` 은 완료 시각 + 30일.
+  - 30일 1초 전: 조회가 주소를 주고 그 주소가 200.
+  - 30일 1초 뒤, 정리 전: 조회 `result` null, 저장 404, 저장 자리 복사본 없음, `nuno_keep_result` 직접 호출도 NULL, DB 는 아직 gen30.
+  - 정리(`expireResults`) 뒤: `storage_state = 'deleted'`, `deleted_at` 이 정리 시각, 파일 없음, 그 시각으로 새로 서명한 주소 404, 저장 404, 룩 0행.
+  - 저장한 결과는 행이 그대로이고 새로 서명한 `u/…` 주소가 200.
+- D22 `keep-again.db.test.ts` 「룩북에 룩이 1개 생기고, 그 룩의 사진이 열리며, gen30 파일은 지워진다」
+  - 끝난 결과 파일을 `u/<사용자>/looks/<결과 ID>.jpg` 로 `store.copy` 만 해 둔다(복사 직후 중단). DB 는 gen30 그대로.
+  - 다시 저장하면 200 과 룩 ID. 결과 행은 `kept` 와 저장 자리 키, gen30 파일 없음.
+  - `GET /v1/looks` 는 그 룩 하나이고, 받은 `imageUrl` 이 200 에 원래 바이트다. 한 번 더 저장하면 같은 룩 ID, 룩 1행.
+- 일부러 깨뜨려 확인: 조회, `keep-result.ts`, `nuno_keep_result` 의 기한 확인 셋을 빼고 돌리면 D29 시험이 실패한다
+  (`expected { …(6) } to match object { status: 'succeeded', result: null }`). 되돌린 뒤 두 바퀴 모두 통과.
+
+## 명령 판정 환경 (2026-11-28, 판 6)
+
+- 로컬 Docker Postgres 18, `COMPOSE_PROJECT_NAME=nuno_t7b1c`, `NUNO_DB_PORT=55471`, DB `nuno_e2e`, 결과 폴더 `apps/api/.local-results/e2e`.
+- 터미널 1 `node scripts/e2e-api.mjs --only=api`(`NUNO_E2E_API_PORT=9287`), 터미널 2 `node scripts/e2e-api.mjs --only=worker`.
+- `--dev` 는 API 포트가 8787 로 정해져 있는데 다른 세션의 개발 API 가 8787 을 쓰고 있어 e2e 모드로 했다. `--only` 는 두 모드 모두 DB 를 지우지 않는다.
+- 시각은 모두 UTC. 시험 계정은 `POST /v1/dev/login` 의 새 subject 로 만들고 동의한 뒤 접수했다.
+
+## D27: worker 가 내려간 동안 대기 상한 5분을 넘긴 작업
+
+- API 만 띄우고 worker 는 띄우지 않았다.
+- 07:45:05 계정 A 무료 장 작업 접수(202, `queued`, 묶음 `held` 4). 07:45:21 계정 B 무료 장 작업 접수.
+- 07:47:41 계정 C 무료 장 작업 접수(worker 를 띄울 때 아직 5분 안).
+- 07:50:35 무렵 worker 만 띄웠다. worker 로그:
+  - 「푸시(로그): … 작업 38aa05a3… failed」, 「… 작업 9093f4ce… failed」, 「예약 작업: 대기 상한을 넘긴 접수 작업 2건을 끝냈다」
+  - 「작업 28151206…: succeeded」
+- psql(관리자):
+
+| 작업 | 접수 | 끝남 | 상태 | 실패 코드 | 묶음 | 시도 행 |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | 07:45:05 | 07:50:39 | failed | queue_timeout | released | 0 |
+| B | 07:45:21 | 07:50:39 | failed | queue_timeout | released | 0 |
+| C | 07:47:41 | 07:50:40 | succeeded | | captured | 1 |
+
+- 계정 A 의 `GET /v1/generation-jobs/<A>`: `status` `failed`, `failureCode` `queue_timeout`, `result` null, `refund` `{"kind":"trial","amount":4}`.
+- 계정 A 의 `GET /v1/gold`: `trialCount` 2(무료 장이 돌아옴), `balance` 0.
+
+## D29: 저장하지 않은 결과의 보관 기한이 지난 뒤
+
+- 계정 하나로 결과 둘(작업 1, 2)을 받고 작업 2 만 「내 룩북에 저장」(200). 작업 1 은 gen30, `delete_due_at` 이 30일 뒤(2026-12-28 07:51:01).
+- 작업 1 을 조회해 받은 서명 주소 `curl` → 200 `image/webp`.
+- 관리자 psql 로 작업 1 결과의 `delete_due_at` 을 `now() - 1초`(07:51:10)로 옮겼다. 30일이 지난 상태를 만든 것이다.
+- 정리 전(07:51:11):
+  - 조회 `{"status":"succeeded", …, "result":null}`.
+  - 저장 `POST /v1/generation-jobs/<작업 1>/keep` → 404 `{"error":"not_found"}`.
+  - DB 는 아직 gen30. 앞서 받은 10분짜리 주소는 파일이 남아 있어 200.
+- 07:51:39 worker 예약 작업: 「예약 작업: 보관 기한이 지난 결과 1건을 지웠다」.
+- 정리 뒤:
+  - DB `storage_state` `deleted`, `deleted_at` 07:51:39. 결과 폴더 `gen30/<사용자 ID>/` 가 비었다.
+  - 앞서 받은 주소 `curl` → 404. 저장 → 404. 조회 `result` null.
+  - 저장한 작업 2 는 `kept`, `delete_due_at` 빈 값. `GET /v1/looks` 의 룩 1개, 그 `imageUrl` → 200.
+
+## D22: 보관 자리로 복사한 직후 서버를 내린 뒤 다시 저장
+
+- 새 계정으로 결과 하나를 받았다(gen30).
+- 저장 함수가 복사만 하고 내려간 상태를 만들려고 결과 폴더에서 gen30 파일을 `u/<사용자 ID>/looks/<결과 ID>.jpg` 로 `cp` 했다.
+  - 그때 gen30 파일과 보관 자리 파일이 함께 있고, DB 는 gen30 이다.
+- 이어서 아래 D30 에서 API 를 내렸다가 다시 띄웠다(07:52:16 내림, 07:52:45 다시 뜸).
+- 다시 띄운 API 로 저장 → 200 `{"lookId":"0224fdd2…"}`. 한 번 더 저장 → 같은 룩 ID.
+- DB: 결과 `kept`, 키 `u/<사용자 ID>/looks/<결과 ID>.jpg`. 그 계정의 `looks` 1행.
+- 결과 폴더: gen30 파일 없음, 보관 자리 파일 하나.
+- `GET /v1/looks`: 룩 1개, `imageUrl` `curl` → 200 `image/webp`.
+
+## D30: 판 6 worker 로 API 만 내렸다 다시 띄우기
+
+- 판 6 worker(1초마다 대기 만료 다음 선점)와 API 를 위 환경의 터미널 둘로 따로 띄웠다.
+- 새 계정의 가짜 공급사를 지연 15초로 두고 무료 장 작업을 접수했다(07:52:14, 작업 790164c7…). 2초 뒤 `generating`, 선점 기한 07:55:15.
+- 07:52:16 API 의 `e2e-api.mjs --only=api` 만 SIGTERM 으로 내렸다.
+  - `GET /v1/health` 는 연결되지 않았다(000). worker 의 `e2e-api.mjs --only=worker` 와 `worker.ts` 프로세스는 그대로 살아 있었다.
+- API 가 내려간 동안 worker 로그(07:52:31 전): 「푸시(로그): … 작업 790164c7… succeeded」, 「작업 790164c7…: succeeded」. 작업 행 `succeeded`.
+- 07:52:45 API 를 다시 띄웠다. `GET /v1/health` → `{"ok":true,"schemaVersion":6}`.
+- 같은 생성 요청 ID 와 같은 본문으로 두 번 다시 접수했다. 두 번 모두 202 와 처음 작업 ID, `status` `succeeded`.
+- psql: 그 요청 ID 의 `generation_jobs` 1행, 골드 묶음 1건(`captured`), 시도 1행(`completed`, `billed`, `settled`).
+- 첫 시도(07:51:56 접수)는 API 를 내리는 명령이 pid 를 잘못 잡아 내리지 못했다. 그 작업은 그대로 `succeeded` 로 끝났고 판정에 쓰지 않았다.
