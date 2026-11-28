@@ -289,6 +289,10 @@ D15 는 D14 결과와 상관없이 웹 흐름에서 판정한다. 「자르기�
 
 2026-11-28: 기획자 결정으로 D18 을 더했다. 옷 추가에 쓴 원본 사진은 배경을 지운 뒤 기기에서 지운다.
 D18 은 지금 앱 PR 에서 만들고 판정한다.
+2026-11-28 판정(https://github.com/96Hong2/NUNO/pull/36, 머지 6e346f8): D18 웹 통과.
+앨범 사진으로 옷을 추가한 뒤 옷 폴더에 cutout.png, thumb.png 만 있고 원본 파일은 없다. `evidence/decisions-1128/k24-opfs-after-add.txt`
+설정 「사진 보관 안내」 첫 줄 「옷 추가에 쓴 원본 사진은 배경을 지운 뒤 기기에서 지워요.」 `evidence/decisions-1128/k24-photo-retention-sheet.jpg`
+e2e `e2e/garment-original.spec.ts` 통과. 아이폰 어댑터의 원본 지우기는 Xcode 가 없어 「iOS 와 사람 확인 대기」 다.
 
 2026-11-27: 화면 이름이 「내 옷에 담기」 에서 「내 옷에 추가」 로 바뀜(와이어프레임 v27).
 
