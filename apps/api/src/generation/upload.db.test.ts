@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -274,6 +274,18 @@ describe("크기와 형식 검사", () => {
     await expectNotSubmittable(later, user, uploadId);
   });
 
+  it("확정 뒤 23시간에서 대기 상한 5분이 남지 않은 ID 는 접수 때 422 다", async () => {
+    const at = day("2027-06-03T02:00:00Z");
+    const user = await at.readyUser();
+    const uploadId = await at.uploaded(user.token);
+    expect(await uploadRow(uploadId)).toMatchObject({ status: "confirmed" });
+
+    // 22시간 56분 뒤: 접수 시각으로는 기한 안이지만 worker 가 5분 뒤 선점하면 기한 밖이다
+    await expectNotSubmittable(day("2027-06-04T00:56:00Z"), user, uploadId);
+    // 22시간 54분 뒤에는 접수된다
+    expect((await day("2027-06-04T00:54:00Z").postJob(user.token, [uploadId])).status).toBe(202);
+  });
+
   it("올리기 주소가 아닌 주소는 앱 전체 본문 상한이 그대로다", async () => {
     const at = day("2027-06-02T03:00:00Z");
     const user = await at.readyUser();
@@ -306,9 +318,12 @@ describe("다시 보내기와 상한", () => {
     const user = await at.readyUser();
     const uploadId = await at.uploaded(user.token);
     const before = await uploadRow(uploadId);
+    const written = (await stat(join(resultDir, before?.r2_key ?? "missing"))).mtimeMs;
 
     const again = await at.put(user.token, uploadId, PNG);
     expect(again.status).toBe(200);
+    // 확정된 파일은 다시 쓰지 않는다
+    expect((await stat(join(resultDir, before?.r2_key ?? "missing"))).mtimeMs).toBe(written);
     expect(((await again.json()) as { uploadId: string }).uploadId).toBe(uploadId);
 
     const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0xff, 0xd9]);

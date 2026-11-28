@@ -228,11 +228,11 @@
 
 ```
 ## 1. 계정 A 가 올린 ID 를 계정 B 가 쓴다
-A 발급: 08b8e788-f0a6-479c-9d0b-9888e71551d5
+A 발급: 3246a248-d83b-48d7-90a2-2f68f3780e4e
 A 가 ok.png 를 올림: 200 
 B 가 A 의 ID 로 접수: {"error":"invalid_upload"} 422
 B 의 작업 줄 수: 0
-B 가 A 의 확정 전 ID(272eb57a-755f-4793-a770-a44e5955447b)에 올림: 404 
+B 가 A 의 확정 전 ID(b0b7d4b4-8fad-4dd7-9211-3090c008de76)에 올림: 404 
 그 줄 상태: issued
 
 ## 2. 크기와 형식
@@ -245,16 +245,22 @@ A 의 작업 줄 수: 0
 
 ## 3. 확정 뒤 파일을 바꿔치기하면 공급사에 보내지 않는다
 올림: 200 
-바꾼 파일: job-in/c91a7549-de32-43d8-91e8-9e68b4430151/d0a31fa5-1420-415e-b5fe-d08bad458134/c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77.png
-접수: {"jobId":"7950cd39-77b5-45f1-a585-8e59c948137a","status":"queued","paymentKind":"trial"} 202
+바꾼 파일: job-in/5a638114-c1e7-4345-a50a-e5984433fcbb/e5358e31-464c-4b48-9070-0654b68d6c53/c414cd0e204de974f73753c7e28d7638e7b3691bb8b1a2bab6b25bb7fed7ce77.png
+접수: {"jobId":"4d481515-b705-492d-b122-75fd71570b1f","status":"queued","paymentKind":"trial"} 202
 작업 상태와 실패 코드: failed,input_invalid
 시도 줄 수(공급사 호출): 0
 묶음 상태: released
 
 ## 4. 바꾸지 않은 파일은 공급사에 간다
-접수: {"jobId":"a51f97b9-9292-4f75-8f82-26f524379002","status":"queued","paymentKind":"trial"} 202
+접수: {"jobId":"b97a46fd-a7fe-4c43-9581-30b703219d31","status":"queued","paymentKind":"trial"} 202
 작업 상태: succeeded,
 시도 줄 수: 1
+
+## 5. 확정한 ID 로 다시 올리기
+같은 ok.png 다시: 200 
+다른 JPEG: 409 
+그 ID 폴더의 파일 수: 1
 ```
 
-- DB 시험 `apps/api/src/generation/upload.db.test.ts` 8건은 `pnpm test:db` 두 바퀴(새 DB, 덤프 복원 DB)에서 통과했다. 전체 86건 통과.
+- 위 출력은 코드 리뷰 반영(커밋 셋째) 뒤 다시 띄운 API 로 한 것이다. 5절은 확정한 ID 의 재전송이다.
+- DB 시험 `apps/api/src/generation/upload.db.test.ts` 13건은 `pnpm test:db` 두 바퀴(새 DB, 덤프 복원 DB)에서 통과했다. 전체 91건 통과.

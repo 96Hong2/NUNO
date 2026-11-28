@@ -1,4 +1,5 @@
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import type { ResultStore } from "../generation/ports.ts";
 import { isSafeKey, signFileUrl } from "../generation/signed-url.ts";
@@ -29,9 +30,17 @@ export function createLocalResultStore(config: LocalResultStoreConfig): LocalRes
 
   return {
     async put(key, bytes) {
+      // 같은 폴더의 임시 파일에 다 쓴 뒤 이름을 바꾼다. 다른 프로세스가 반쯤 쓴 파일을 읽지 않는다.
       const path = pathOf(key);
       await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, bytes);
+      const temp = `${path}.${randomUUID()}.tmp`;
+      try {
+        await writeFile(temp, bytes);
+        await rename(temp, path);
+      } catch (error) {
+        await rm(temp, { force: true });
+        throw error;
+      }
     },
     async copy(fromKey, toKey) {
       const to = pathOf(toKey);

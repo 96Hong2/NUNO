@@ -53,7 +53,9 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 - 결과 사진은 포트 `ResultStore` 다. 지금은 로컬 디스크와 `/v1/files` 서명 주소(기한 `RESULT_URL_TTL_SECONDS`)뿐이다.
   gen30 결과의 주소 기한은 보관 기한(`delete_due_at`)을 넘지 않는다(`signedUrl` 의 `notAfter`).
 - 옷 사진은 판 0007 `uploads` 다. 앱은 `POST /v1/uploads` 로 발급받고 `PUT /v1/uploads/:id` 로 올린다.
-  - PUT 은 그 사용자의 확정 전 줄인지 본 뒤 본문을 받는다. 크기 `UPLOAD_MAX_BYTES`, 형식 PNG, JPEG 를 검사하고 `job-in/` 에 둔다.
+  - PUT 은 그 사용자의 줄인지 본 뒤 본문을 받는다. 크기 `UPLOAD_MAX_BYTES`, 형식 PNG, JPEG 를 검사하고 `job-in/` 에 둔다.
+  - 확정한 줄에 다시 올리면 파일을 다시 쓰지 않는다. 해시가 같으면 200, 다르면 409 다.
+  - 한 작업의 올린 옷 사진은 `MAX_UPLOADS_PER_JOB` 까지다. 접수는 대기 상한 뒤 시각으로 확정 뒤 23시간 기한을 본다.
   - 앱 전체 본문 상한(`MAX_BODY_BYTES`)은 이 PUT 한 주소만 빼고 건다. 큰 본문을 받는 주소를 더할 때는 같은 자리에서 뺀다.
   - 접수와 worker 는 `nuno_job_uploads` 가 준 그 사용자의 줄만 쓴다. worker 는 해시가 확정 때와 다르면 `input_invalid` 다.
   - `job-in/` 파일은 `/v1/files` 서명 주소로 내보내지 않는다(`signed-url.ts` 의 결과 키 꼴).

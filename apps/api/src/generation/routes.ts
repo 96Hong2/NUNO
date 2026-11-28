@@ -7,6 +7,7 @@ import { keepResult } from "../lookbook/keep-result.ts";
 import type { ResultStore } from "./ports.ts";
 import { requestHash } from "./request-hash.ts";
 import { manifestUploadIds } from "./upload-check.ts";
+import { QUEUE_WAIT_SECONDS } from "./worker.ts";
 import { isPastRetention } from "./result-retention.ts";
 
 export interface GenerationDeps {
@@ -114,12 +115,13 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
     }
     // 그 사용자가 올려 확정한 파일만 입력으로 받는다. 꼴이 틀린 ID, 남의 ID, 없는 ID 는 같은 답이다.
     // 같은 요청 ID 로 이미 접수한 작업이 있으면 접수 함수가 그 작업을 돌려주므로 다시 보지 않는다.
+    // worker 는 선점 시각으로 다시 본다. 접수는 대기 상한만큼 뒤의 시각으로 봐, 받은 작업이 기한에 걸리지 않게 한다.
     const uploadIds = manifestUploadIds(manifest);
     if (!uploadIds) return c.json({ error: "invalid_upload" }, 422);
     if (uploadIds.length > 0 && !(await hasJob(db, c.get("userId"), requestId))) {
       const owned = await db.query<{ id: string }>(
         "SELECT id FROM nuno_job_uploads($1, $2, $3)",
-        [c.get("userId"), uploadIds, now()],
+        [c.get("userId"), uploadIds, new Date(now().getTime() + QUEUE_WAIT_SECONDS * 1000)],
       );
       if (owned.length !== uploadIds.length) return c.json({ error: "invalid_upload" }, 422);
     }
