@@ -138,7 +138,9 @@ export function LeaveResultSheet({
 }) {
   return (
     <OverlaySheet visible={visible} title="저장하지 않고 나갈까요?" onClose={onClose}>
-      <Text style={styles.body}>나가면 이 사진은 사라져요</Text>
+      <Text style={styles.body}>
+        룩북에 저장하지 않은 완성 룩은 30일 뒤 지워져요. 그 전에는 알림에서 다시 볼 수 있어요
+      </Text>
       <Pressable
         role="button"
         disabled={busy}
