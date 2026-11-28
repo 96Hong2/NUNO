@@ -166,7 +166,10 @@ test("D3~D8: 동의 화면을 먼저 거쳐 무료 장으로 만들고, 만드�
     .getByRole("button", { name: "닫기", exact: true })
     .first();
   await page.getByRole("button", { name: "뒤로" }).click();
-  await expect(leave).toContainText("나가면 이 사진은 사라져요");
+  await expect(leave).toContainText(
+    "룩북에 저장하지 않은 완성 룩은 30일 뒤 지워져요. 그 전에는 알림에서 다시 볼 수 있어요",
+  );
+  await expect(leave).not.toContainText("나가면 이 사진은 사라져요");
   await backdrop.click();
   await expect(leave).toHaveCount(0);
   await page.goBack();
@@ -182,7 +185,7 @@ test("D3~D8: 동의 화면을 먼저 거쳐 무료 장으로 만들고, 만드�
   await expect(page.getByText("무료 1장 남음")).toBeVisible();
 });
 
-test("D9: 「나가기」 전에 적어 둔 결과 서명 주소는 나간 뒤 열리지 않는다. 만드는 중에 닫아도 끝나면 알림이 뜬다", async ({
+test("D9: 「나가기」 를 누른 뒤에도 결과는 남고, 작업 상태를 다시 조회해 받은 서명 주소로 사진이 온다. 만드는 중에 닫아도 끝나면 알림이 뜬다", async ({
   page,
 }) => {
   await wearCoat(page);
@@ -199,8 +202,8 @@ test("D9: 「나가기」 전에 적어 둔 결과 서명 주소는 나간 뒤 �
 
   const photo = page.getByRole("img", { name: "완성 룩 사진" }).first().locator("img");
   await expect(photo).toHaveAttribute("src", /\/v1\/files\//);
-  const url = (await photo.getAttribute("src")) ?? "";
-  expect((await page.request.get(url)).status()).toBe(200);
+  const jobId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
+  expect(jobId).toMatch(/^[0-9a-f-]{36}$/);
 
   await page.getByRole("button", { name: "뒤로" }).click();
   await page
@@ -208,7 +211,23 @@ test("D9: 「나가기」 전에 적어 둔 결과 서명 주소는 나간 뒤 �
     .getByRole("button", { name: "나가기" })
     .click();
   await expect(stageButton(page)).toBeVisible();
-  expect([403, 404]).toContain((await page.request.get(url)).status());
+  // 나간 결과는 무대의 「다 된 완성 룩 보기」 로 다시 열지 않는다.
+  await expect(page.getByRole("button", { name: "다 된 완성 룩 보기" })).toHaveCount(0);
+
+  const job = await page.request.get(`${API_URL}/v1/generation-jobs/${jobId}`, {
+    headers: { Authorization: `Bearer ${await tokenOf(page)}` },
+  });
+  expect(job.status()).toBe(200);
+  const { result } = (await job.json()) as { result: { url: string } | null };
+  expect(result?.url).toMatch(/\/v1\/files\/gen30\//);
+  const file = await page.request.get(result?.url ?? "");
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-type"]).toMatch(/^image\//);
+  expect((await file.body()).length).toBeGreaterThan(0);
+  expect(
+    sql(`SELECT storage_state FROM generation_results
+         WHERE job_id = '${jobId}' AND deleted_at IS NULL`),
+  ).toBe("gen30");
 });
 
 test("D10: 무료 장 작업을 가짜 공급사가 거절하면 「만들지 못했어요」 가 뜨고 무료 장이 돌아오며 골드는 그대로다", async ({

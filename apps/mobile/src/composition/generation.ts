@@ -9,6 +9,7 @@ import {
   latestUnsavedJobId,
   isFinishedStatus,
   listWatchedRequests,
+  markGenerationLeft,
   markGenerationSeen,
   mayHaveBeenAccepted,
   nextAfterRejection,
@@ -29,7 +30,7 @@ import { uuidGenerator } from "../adapters/uuid";
 import { forgetSession, sessionToken } from "./account";
 import { getDeviceDb } from "./device-db";
 
-// 「이대로 입히기」: 접수, 작업 조회, 결과 버리기와 저장, 작업 감시.
+// 「이대로 입히기」: 접수, 작업 조회, 결과 저장과 「나가기」, 작업 감시.
 // 요청 ID 는 보내기 전에 기기 표 generation_requests 에 적어, 응답 전에 앱이 꺼져도 같은 ID 로 다시 묻는다.
 
 export interface JobView {
@@ -211,17 +212,14 @@ export async function markJobSeen(jobId: string): Promise<void> {
   for (const listener of finishedListeners) listener();
 }
 
-/** 「나가기」: 결과를 지운다. 지운 뒤에는 적어 둔 서명 주소도 열리지 않는다 */
-export async function discardJob(jobId: string): Promise<boolean> {
-  const token = await sessionToken();
-  if (!token) return false;
-  const result = await apiRequest(`/v1/generation-jobs/${encodeURIComponent(jobId)}/discard`, {
-    method: "POST",
-    token,
-  });
-  const done = result.ok || result.status === 404;
-  if (done) await forgetJob(jobId);
-  return done;
+/**
+ * 「나가기」: 서버 결과는 지우지 않는다. 저장하지 않은 결과는 서버가 30일 뒤 지운다.
+ * 기기 줄은 남겨 다시 열 때 입은 옷을 보이고, 무대의 「다 된 완성 룩 보기」 대상에서만 뺀다.
+ */
+export async function leaveJob(jobId: string): Promise<void> {
+  const { db } = await getDeviceDb();
+  await markGenerationLeft(db, jobId);
+  for (const listener of finishedListeners) listener();
 }
 
 /**
@@ -252,7 +250,7 @@ export async function keepJob(jobId: string): Promise<string | null> {
   return result.data.lookId;
 }
 
-/** 저장했거나 지운 작업은 기기 요청 줄을 지운다. 저장 안 한 결과 찾기에서 빠진다 */
+/** 저장했거나 더 볼 수 없는 작업은 기기 요청 줄을 지운다. 저장 안 한 결과 찾기에서 빠진다 */
 async function forgetJob(jobId: string): Promise<void> {
   const { db } = await getDeviceDb();
   await deleteGenerationRequestByJob(db, jobId);

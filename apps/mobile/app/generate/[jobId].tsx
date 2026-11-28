@@ -18,9 +18,9 @@ import { useLocalSearchParams, usePreventRemove, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-  discardJob,
   dropUnviewableJob,
   keepJob,
+  leaveJob,
   loadJob,
   loadJobItems,
   markJobSeen,
@@ -175,7 +175,11 @@ export default function GenerateJobScreen() {
   const leave = async () => {
     if (busy) return;
     setBusy(true);
-    await discardJob(jobId);
+    try {
+      await leaveJob(jobId);
+    } catch {
+      // 표시를 적지 못해도 나간다. 무대에 「다 된 완성 룩 보기」 가 남을 뿐 결과는 그대로다.
+    }
     setBusy(false);
     setLeaveOpen(false);
     pendingLeave.current?.();

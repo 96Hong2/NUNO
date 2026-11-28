@@ -149,14 +149,34 @@ export async function signOut(): Promise<boolean> {
 export interface ConsentProvider {
   provider: string | null;
   country: string | null;
+  /** AI 업체 서버가 받은 자료를 두는 날 수. 켜 둔 공급사 줄이 없으면 null */
+  retentionDays: number | null;
 }
 
-/** 동의 화면의 받는 곳. 서버가 켜 둔 공급사 줄에서 읽는다 */
+/** AI 업체 서버의 자료 보관 기간(날 수). 서버가 켜 둔 공급사 줄 값이고, 못 읽으면 null */
+export async function loadPhotoRetention(): Promise<number | null> {
+  const token = await sessionToken();
+  if (!token) return null;
+  const result = await apiRequest<{ retentionDays: number | null }>(
+    "/v1/consents/generation-transfer/retention",
+    { token },
+  );
+  return result.ok ? result.data.retentionDays : null;
+}
+
+/** 동의 화면의 받는 곳과 보관 기간. 서버가 켜 둔 공급사 줄에서 읽는다 */
 export async function loadConsentProvider(): Promise<ConsentProvider | null> {
   const token = await sessionToken();
   if (!token) return null;
-  const result = await apiRequest<ConsentProvider>("/v1/consents/generation-transfer", { token });
-  return result.ok ? { provider: result.data.provider, country: result.data.country } : null;
+  const [result, retentionDays] = await Promise.all([
+    apiRequest<{ provider: string | null; country: string | null }>(
+      "/v1/consents/generation-transfer",
+      { token },
+    ),
+    loadPhotoRetention(),
+  ]);
+  if (!result.ok) return null;
+  return { provider: result.data.provider, country: result.data.country, retentionDays };
 }
 
 export type ConsentResult = "agreed" | "outdated" | "unavailable" | "failed";
