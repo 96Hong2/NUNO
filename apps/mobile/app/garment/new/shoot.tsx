@@ -5,7 +5,7 @@ import { FlowScreen } from "../../../src/ui/flow-screen";
 import { useStartGarment } from "../../../src/ui/use-start-garment";
 
 // 「사진 찍기」 1 / 4: 찍기 전 안내. 셔터를 누르면 기기 카메라가 열린다(웹은 파일 고르기 창).
-// 닫기(✕)는 옷장으로 돌아가 「옷을 어떻게 넣을까요?」 시트를 다시 연다.
+// 닫기(✕)는 옷장으로 돌아가 「옷을 어떻게 추가할까요?」 시트를 다시 연다.
 export default function ShootScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ from?: string }>();

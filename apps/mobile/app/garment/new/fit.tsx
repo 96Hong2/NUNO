@@ -74,7 +74,7 @@ const touchGap = (event: GestureResponderEvent): number | null => {
 // 4 / 4 「트윈에 맞춰 보세요」: 지금 트윈 기본 사진 위에 옷을 놓고 크기와 위치를 맞춘다.
 // 옷을 위아래로 끌어 옮기고 두 손가락으로 크기를 바꾼다. 「−」 「+」 「↑」 「↓」 는 정밀 조정용이다.
 // 맞춘 값은 기준 상자 대비 비율로 저장해 코디 무대가 같은 자리에 놓는다.
-// edit 에 옷 ID 를 주면 옷 상세 「고치기」 의 「치수 수정」 다. 단계 표시 없이 「저장」 으로 끝난다.
+// edit 에 옷 ID 를 주면 옷 상세 「수정」 으로 여는 「치수 수정」 이다. 단계 표시 없이 「저장」 으로 끝난다.
 export default function FitScreen() {
   const router = useRouter();
   const toast = useAppToast();

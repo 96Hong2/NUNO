@@ -269,7 +269,7 @@ export interface GarmentFit {
   placement: Garment["placement"];
 }
 
-/** 옷 상세 「고치기」 → 「치수 수정」 의 「저장」: 사이즈, 치수, 맞춘 자리만 바꾼다. */
+/** 옷 상세 「수정」 → 「치수 수정」 의 「저장」: 사이즈, 치수, 맞춘 자리만 바꾼다. */
 export async function updateGarmentFit(
   db: SqlExecutor,
   id: string,

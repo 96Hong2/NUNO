@@ -160,7 +160,7 @@ export interface GarmentDraft {
   form: DraftForm | null;
 }
 
-/** 「어떤 옷인가요?」 와 「트윈에 맞춰 볼게요」 입력 칸. 글자 칸은 적은 그대로 둔다. */
+/** 「어떤 옷인가요?」 와 「트윈에 맞춰 보세요」 입력 칸. 글자 칸은 적은 그대로 둔다. */
 export interface DraftForm {
   category: GarmentCategory;
   color: GarmentColor;

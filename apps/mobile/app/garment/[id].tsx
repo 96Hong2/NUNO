@@ -34,7 +34,7 @@ export default function GarmentDetailScreen() {
     setGarment(await loadGarment(id));
   }, [id]);
 
-  // 「고치기」 를 두 번 눌러 「치수 수정」 가 두 장 쌓이지 않게, 이 화면에 돌아올 때까지 막는다.
+  // 「수정」 을 두 번 눌러 「치수 수정」 이 두 장 쌓이지 않게, 이 화면에 돌아올 때까지 막는다.
   const opening = useRef(false);
   useFocusEffect(
     useCallback(() => {
@@ -137,7 +137,7 @@ export default function GarmentDetailScreen() {
                 }}
                 style={styles.fitEdit}
               >
-                <Text style={styles.fitEditLabel}>고치기</Text>
+                <Text style={styles.fitEditLabel}>수정</Text>
               </Pressable>
             </View>
             {garment.sizeLabel ? (

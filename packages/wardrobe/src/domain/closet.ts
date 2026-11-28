@@ -7,7 +7,7 @@ export function isClosetKey(value: unknown): value is ClosetKey {
   return value === "mine" || value === "wanted";
 }
 
-/** 「이 옷, 가지고 있나요?」 답에 따라 바뀌는 마지막 단추 글자. */
+/** 「이 옷을 가지고 있나요?」 답에 따라 바뀌는 마지막 단추 글자. */
 export function saveButtonLabel(closet: ClosetKey): string {
   return `${CLOSET_LABELS[closet]}에 담기`;
 }
