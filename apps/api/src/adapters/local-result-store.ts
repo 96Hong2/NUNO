@@ -1,4 +1,5 @@
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import type { ResultStore } from "../generation/ports.ts";
 import { isSafeKey, signFileUrl } from "../generation/signed-url.ts";
@@ -13,10 +14,7 @@ export interface LocalResultStoreConfig {
 }
 
 /** 로컬 디스크 결과 저장. 파일은 API 의 `/v1/files` 서명 주소로만 내보낸다. */
-export interface LocalResultStore extends ResultStore {
-  /** 파일이 없으면 null. */
-  read(key: string): Promise<Uint8Array | null>;
-}
+export type LocalResultStore = ResultStore;
 
 const missing = (error: unknown) => (error as { code?: string }).code === "ENOENT";
 
@@ -32,9 +30,17 @@ export function createLocalResultStore(config: LocalResultStoreConfig): LocalRes
 
   return {
     async put(key, bytes) {
+      // 같은 폴더의 임시 파일에 다 쓴 뒤 이름을 바꾼다. 다른 프로세스가 반쯤 쓴 파일을 읽지 않는다.
       const path = pathOf(key);
       await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, bytes);
+      const temp = `${path}.${randomUUID()}.tmp`;
+      try {
+        await writeFile(temp, bytes);
+        await rename(temp, path);
+      } catch (error) {
+        await rm(temp, { force: true });
+        throw error;
+      }
     },
     async copy(fromKey, toKey) {
       const to = pathOf(toKey);

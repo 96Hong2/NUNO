@@ -8,6 +8,7 @@ import {
   type GenerationRequest,
   type ProviderOutcome,
 } from "./provider.ts";
+import { manifestUploadIds, sha256Hex } from "./upload-check.ts";
 
 /** 선점 기한. 공급사 시한에 결과 저장과 검사 몫 30초를 더한다. 넘기면 예약 작업이 실패와 풀기로 정리한다. */
 export const LEASE_SECONDS = PROVIDER_TIMEOUT_MS / 1000 + 30;
@@ -163,16 +164,51 @@ async function failJob(
   return row?.failed ? "failed" : "lost";
 }
 
-/** 차례: 시도 줄 → 공급사 → 시도 마침 → gen30 저장 → 검사 중 → 검사 → 완료, 다시 만들기(한 번), 실패. */
+interface UploadRow {
+  id: string;
+  r2_key: string;
+  sha256: string;
+}
+
+/**
+ * 공급사에 보낼 옷 그림을 읽는다. 키는 DB 함수가 준 것만 쓰고, 입력 목록의 값으로 만들지 않는다.
+ * 그 사용자의 쓸 수 있는 확정 줄이 아니거나, 파일이 없거나, 해시가 확정 때와 다르면 null 이다.
+ * 해시가 같으면 올릴 때 크기와 형식 검사를 통과한 그 바이트다. 그때만 공급사를 부른다.
+ */
+async function loadGarmentImages(deps: WorkerDeps, job: ClaimedJob): Promise<Uint8Array[] | null> {
+  const ids = manifestUploadIds(job.manifest);
+  if (!ids) return null;
+  if (ids.length === 0) return [];
+  const rows = await deps.db.query<UploadRow>("SELECT * FROM nuno_job_uploads($1, $2, $3)", [
+    job.userId,
+    ids,
+    deps.now(),
+  ]);
+  if (rows.length !== ids.length) return null;
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const images: Uint8Array[] = [];
+  for (const id of ids) {
+    const row = byId.get(id);
+    if (!row) return null;
+    const bytes = await deps.store.read(row.r2_key);
+    if (!bytes || sha256Hex(bytes) !== row.sha256) return null;
+    images.push(bytes);
+  }
+  return images;
+}
+
+/** 차례: 입력 검사 → 시도 줄 → 공급사 → 시도 마침 → gen30 저장 → 검사 중 → 검사 → 완료, 다시 만들기(한 번), 실패. */
 async function runClaimed(
   deps: WorkerDeps,
   job: ClaimedJob,
   leaseToken: string,
 ): Promise<JobOutcome> {
   const { db, store, now } = deps;
+  const garmentImages = await loadGarmentImages(deps, job);
+  if (!garmentImages) return failJob(deps, job, leaseToken, "input_invalid");
   const choice = await deps.chooseProvider(job);
-  // 올리기와 입력 검사가 갖춰지기 전이라 입력 그림은 비워 둔다. 그때까지 실제 공급사 어댑터는 켜지 않는다.
-  const request: GenerationRequest = { twinImage: new Uint8Array(), garmentImages: [], prompt: "" };
+  // 트윈 그림은 기본 트윈 사진 표를 만들 때 채운다. 그 전에는 실제 공급사 어댑터를 켜지 않는다.
+  const request: GenerationRequest = { twinImage: new Uint8Array(), garmentImages, prompt: "" };
 
   for (const round of [1, 2]) {
     const [attempt] = await db.query<{ id: string | null }>(

@@ -6,6 +6,8 @@ import { badRequest, readJsonObject } from "../http/request-body.ts";
 import { keepResult } from "../lookbook/keep-result.ts";
 import type { ResultStore } from "./ports.ts";
 import { requestHash } from "./request-hash.ts";
+import { manifestUploadIds } from "./upload-check.ts";
+import { QUEUE_WAIT_SECONDS } from "./worker.ts";
 import { isPastRetention } from "./result-retention.ts";
 
 export interface GenerationDeps {
@@ -30,7 +32,7 @@ const REJECTIONS: Record<string, 402 | 403 | 409 | 429 | 503> = {
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,100}$/;
 /** 화면이 보여 준 결제. 없으면 접수 함수가 무료 잔액으로 고른다. */
 const PAY_WITH = new Set(["trial", "gold"]);
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** 입력 목록 JSON 글자 수 상한. 트윈 판과 옷 몇 벌이면 이보다 훨씬 작다. */
 const MANIFEST_MAX_CHARS = 16_384;
 const WORN_ITEMS_MAX_CHARS = 16_384;
@@ -56,6 +58,14 @@ const JOB_VIEW = `
   WHERE j.user_id = $1`;
 
 const notFound = (c: Context) => c.json({ error: "not_found" }, 404);
+
+async function hasJob(db: SqlClient, userId: string, requestId: string): Promise<boolean> {
+  const rows = await db.query(
+    "SELECT 1 FROM generation_jobs WHERE user_id = $1 AND idempotency_key = $2",
+    [userId, requestId],
+  );
+  return rows.length > 0;
+}
 
 /** 「이대로 입히기」 접수, 작업 조회, 결과 버리기와 저장. 사용자 ID 는 세션에서만 얻는다. */
 export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthEnv> {
@@ -102,6 +112,18 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
     if (!Number.isInteger(consentVersion)) return badRequest(c, "invalid_body");
     if (payWith !== null && (typeof payWith !== "string" || !PAY_WITH.has(payWith))) {
       return badRequest(c, "invalid_body");
+    }
+    // 그 사용자가 올려 확정한 파일만 입력으로 받는다. 꼴이 틀린 ID, 남의 ID, 없는 ID 는 같은 답이다.
+    // 같은 요청 ID 로 이미 접수한 작업이 있으면 접수 함수가 그 작업을 돌려주므로 다시 보지 않는다.
+    // worker 는 선점 시각으로 다시 본다. 접수는 대기 상한만큼 뒤의 시각으로 봐, 받은 작업이 기한에 걸리지 않게 한다.
+    const uploadIds = manifestUploadIds(manifest);
+    if (!uploadIds) return c.json({ error: "invalid_upload" }, 422);
+    if (uploadIds.length > 0 && !(await hasJob(db, c.get("userId"), requestId))) {
+      const owned = await db.query<{ id: string }>(
+        "SELECT id FROM nuno_job_uploads($1, $2, $3)",
+        [c.get("userId"), uploadIds, new Date(now().getTime() + QUEUE_WAIT_SECONDS * 1000)],
+      );
+      if (owned.length !== uploadIds.length) return c.json({ error: "invalid_upload" }, 422);
     }
     // 앱 번들 문구가 지금 공급사 설정 줄의 판과 다르면 동의 주소와 같은 409 를 준다.
     // 그사이 판이 바뀌면 접수 함수가 같은 코드로 한 번 더 막는다.
