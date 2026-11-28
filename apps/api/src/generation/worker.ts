@@ -8,7 +8,7 @@ import {
   type GenerationRequest,
   type ProviderOutcome,
 } from "./provider.ts";
-import { sha256Hex } from "./upload-check.ts";
+import { manifestUploadIds, sha256Hex } from "./upload-check.ts";
 
 /** 선점 기한. 공급사 시한에 결과 저장과 검사 몫 30초를 더한다. 넘기면 예약 작업이 실패와 풀기로 정리한다. */
 export const LEASE_SECONDS = PROVIDER_TIMEOUT_MS / 1000 + 30;
@@ -170,23 +170,14 @@ interface UploadRow {
   sha256: string;
 }
 
-/** 입력 목록 옷의 올리기 ID 를 적힌 차례대로. 접수 주소가 꼴을 이미 검사했다. */
-function uploadIdsOf(manifest: unknown): string[] {
-  const items = (manifest as { items?: unknown } | null)?.items;
-  if (!Array.isArray(items)) return [];
-  return items.flatMap((item: unknown) => {
-    const id = (item as { uploadId?: unknown } | null)?.uploadId;
-    return typeof id === "string" ? [id.toLowerCase()] : [];
-  });
-}
-
 /**
  * 공급사에 보낼 옷 그림을 읽는다. 키는 DB 함수가 준 것만 쓰고, 입력 목록의 값으로 만들지 않는다.
  * 그 사용자의 쓸 수 있는 확정 줄이 아니거나, 파일이 없거나, 해시가 확정 때와 다르면 null 이다.
  * 해시가 같으면 올릴 때 크기와 형식 검사를 통과한 그 바이트다. 그때만 공급사를 부른다.
  */
 async function loadGarmentImages(deps: WorkerDeps, job: ClaimedJob): Promise<Uint8Array[] | null> {
-  const ids = [...new Set(uploadIdsOf(job.manifest))];
+  const ids = manifestUploadIds(job.manifest);
+  if (!ids) return null;
   if (ids.length === 0) return [];
   const rows = await deps.db.query<UploadRow>("SELECT * FROM nuno_job_uploads($1, $2, $3)", [
     job.userId,

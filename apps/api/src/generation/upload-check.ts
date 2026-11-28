@@ -6,6 +6,27 @@ export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 /** 한 사용자가 한국 시간 하루에 발급받는 올리기 줄 상한. */
 export const UPLOADS_PER_DAY = 200;
 
+/** 작업 하나의 입력 목록에 넣을 수 있는 올린 옷 사진 수. worker 가 한 작업에 메모리로 올리는 양을 묶는다. */
+export const MAX_UPLOADS_PER_JOB = 10;
+
+const UPLOAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * 입력 목록 옷의 올리기 ID 를 적힌 차례대로 소문자로, 같은 ID 는 하나로 준다.
+ * 꼴이 틀린 ID 가 있거나 `MAX_UPLOADS_PER_JOB` 를 넘으면 null. 올리기가 없는 옷과 객체가 아닌 칸은 건너뛴다.
+ */
+export function manifestUploadIds(manifest: unknown): string[] | null {
+  const items = (manifest as { items?: unknown } | null)?.items;
+  const ids = new Set<string>();
+  for (const item of Array.isArray(items) ? items : []) {
+    if (typeof item !== "object" || item === null || !("uploadId" in item)) continue;
+    const id = (item as { uploadId: unknown }).uploadId;
+    if (typeof id !== "string" || !UPLOAD_ID.test(id)) return null;
+    ids.add(id.toLowerCase());
+  }
+  return ids.size > MAX_UPLOADS_PER_JOB ? null : [...ids];
+}
+
 export type UploadFormat = { contentType: "image/png" | "image/jpeg"; extension: "png" | "jpg" };
 
 const PNG_HEAD = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];

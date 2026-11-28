@@ -10,7 +10,7 @@ import { openPostgres } from "../adapters/postgres.ts";
 import { CONSENT_KIND, CONSENT_TEXT_VERSION } from "../account/consent.ts";
 import { createApp, MAX_BODY_BYTES } from "../app.ts";
 import type { GenerationProvider, GenerationRequest } from "./provider.ts";
-import { UPLOAD_MAX_BYTES } from "./upload-check.ts";
+import { MAX_UPLOADS_PER_JOB, UPLOAD_MAX_BYTES } from "./upload-check.ts";
 import { runNextJob, type WorkerDeps } from "./worker.ts";
 
 // 생성 입력 옷 사진 올리기와 입력 검사 시험. 실제 Postgres 에 붙고, 올리기 줄과 작업 줄은 관리자로 읽는다.
@@ -112,14 +112,14 @@ function day(at: string) {
     return uploadId;
   }
 
-  const postJob = (token: string, uploadIds: string[]) =>
+  const postJob = (token: string, uploadIds: string[], requestId = `req-${randomUUID()}`) =>
     request("/v1/generation-jobs", token, {
       method: "POST",
       json: {
-        requestId: `req-${randomUUID()}`,
+        requestId,
         manifest: {
           twin: { preset: "harin", version: 1 },
-          items: uploadIds.map((uploadId) => ({ id: `g:${randomUUID()}`, uploadId })),
+          items: uploadIds.map((uploadId) => ({ id: `g:${uploadId}`, uploadId })),
         },
         consentVersion: CONSENT_TEXT_VERSION,
       },
@@ -284,6 +284,67 @@ describe("크기와 형식 검사", () => {
     });
     expect(response.status).toBe(413);
     expect(await response.json()).toEqual({ error: "body_too_large" });
+  });
+});
+
+describe("다시 보내기와 상한", () => {
+  it("대문자로 쓴 올리기 ID 로 올려도 확정되고, 파일 키는 소문자 ID 아래다", async () => {
+    const at = day("2027-06-05T01:00:00Z");
+    const user = await at.readyUser();
+    const uploadId = await at.issue(user.token);
+
+    expect((await at.put(user.token, uploadId.toUpperCase(), PNG)).status).toBe(200);
+    const row = await uploadRow(uploadId);
+    expect(row?.status).toBe("confirmed");
+    expect(row?.r2_key?.startsWith(`job-in/${user.userId}/${uploadId}/`)).toBe(true);
+    // 올리기 ID 폴더 하나와 파일 하나
+    expect(await filesUnder(user.userId)).toHaveLength(2);
+  });
+
+  it("확정한 ID 로 같은 바이트를 다시 올리면 200, 다른 바이트면 409 이고 파일은 하나다", async () => {
+    const at = day("2027-06-05T02:00:00Z");
+    const user = await at.readyUser();
+    const uploadId = await at.uploaded(user.token);
+    const before = await uploadRow(uploadId);
+
+    const again = await at.put(user.token, uploadId, PNG);
+    expect(again.status).toBe(200);
+    expect(((await again.json()) as { uploadId: string }).uploadId).toBe(uploadId);
+
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0xff, 0xd9]);
+    const other = await at.put(user.token, uploadId, jpeg);
+    expect(other.status).toBe(409);
+    expect(await other.json()).toEqual({ error: "upload_already_confirmed" });
+    expect(await uploadRow(uploadId)).toEqual(before);
+    // 올리기 ID 폴더 하나와 파일 하나
+    expect(await filesUnder(user.userId)).toHaveLength(2);
+  });
+
+  it("올린 옷 사진이 상한보다 많은 입력 목록은 422 다", async () => {
+    const at = day("2027-06-05T03:00:00Z");
+    const user = await at.readyUser();
+    const ids: string[] = [];
+    for (let i = 0; i <= MAX_UPLOADS_PER_JOB; i += 1) ids.push(await at.uploaded(user.token));
+
+    const response = await at.postJob(user.token, ids);
+    expect(response.status).toBe(422);
+    expect(await jobCount(user.userId)).toBe(0);
+  });
+
+  it("같은 요청 ID 로 다시 보내면 올리기가 기한을 넘겼어도 앞서 접수한 작업을 준다", async () => {
+    const at = day("2027-06-06T01:00:00Z");
+    const user = await at.readyUser();
+    const uploadId = await at.uploaded(user.token);
+    const requestId = `req-${randomUUID()}`;
+    const first = await at.postJob(user.token, [uploadId], requestId);
+    expect(first.status).toBe(202);
+    const { jobId } = (await first.json()) as { jobId: string };
+
+    const later = day("2027-06-07T02:00:00Z");
+    const again = await later.postJob(user.token, [uploadId], requestId);
+    expect(again.status).toBe(202);
+    expect(((await again.json()) as { jobId: string }).jobId).toBe(jobId);
+    expect(await jobCount(user.userId)).toBe(1);
   });
 });
 

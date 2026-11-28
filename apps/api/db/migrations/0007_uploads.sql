@@ -1,7 +1,7 @@
 -- 판 7: 생성 입력으로 쓸 옷 사진 올리기.
 -- 앱은 올리기 줄을 발급받고 그림을 올린다. 서버가 크기, 형식, 해시를 검사한 뒤 확정한다.
 -- 접수와 worker 는 그 사용자의 확정 줄만 입력으로 쓴다. 다른 사용자의 올리기 ID 는 없는 ID 와 같게 다룬다.
--- 표는 nuno_api 에 열지 않고 함수 넷만 준다. 잠금 순서는 판 5 그대로 사용자가 맨 먼저다.
+-- 표는 nuno_api 에 열지 않고 함수 다섯만 준다. 잠금 순서는 판 5 그대로 사용자가 맨 먼저다.
 -- 공급사에 넘길 사본(job-in/)은 버킷 수명 주기 규칙이 1일 뒤 지운다. 그래서 확정 뒤 23시간까지만 입력으로 쓴다.
 
 CREATE TABLE uploads (
@@ -78,13 +78,16 @@ BEGIN
 END;
 $$;
 
--- 그림을 받기 전에 부른다. 그 사용자의 발급 줄이 아직 확정 전이면 true. 남의 줄과 없는 줄은 같은 답이다.
-CREATE FUNCTION nuno_upload_awaiting(p_user_id uuid, p_upload_id uuid) RETURNS boolean
+-- 그림을 받기 전에 부른다. 그 사용자의 줄이면 true. 남의 줄과 없는 줄은 같은 답이다.
+CREATE FUNCTION nuno_upload_owned(p_user_id uuid, p_upload_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM uploads up
-    WHERE up.id = p_upload_id AND up.user_id = p_user_id AND up.status = 'issued'
-  );
+  SELECT EXISTS (SELECT 1 FROM uploads up WHERE up.id = p_upload_id AND up.user_id = p_user_id);
+$$;
+
+-- 그 사용자의 줄이 확정됐으면 그 파일 키, 아니면 NULL. 같은 바이트를 다시 올렸는지 가릴 때 쓴다.
+CREATE FUNCTION nuno_upload_key(p_user_id uuid, p_upload_id uuid) RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT up.r2_key FROM uploads up WHERE up.id = p_upload_id AND up.user_id = p_user_id;
 $$;
 
 -- 그 사용자의 확정 줄 가운데 확정 뒤 23시간이 지나지 않은 줄만 준다.
@@ -101,5 +104,6 @@ $$;
 GRANT EXECUTE ON FUNCTION nuno_issue_upload(uuid, timestamptz, integer) TO nuno_api;
 GRANT EXECUTE ON FUNCTION nuno_confirm_upload(uuid, uuid, text, text, integer, text, timestamptz)
   TO nuno_api;
-GRANT EXECUTE ON FUNCTION nuno_upload_awaiting(uuid, uuid) TO nuno_api;
+GRANT EXECUTE ON FUNCTION nuno_upload_owned(uuid, uuid) TO nuno_api;
+GRANT EXECUTE ON FUNCTION nuno_upload_key(uuid, uuid) TO nuno_api;
 GRANT EXECUTE ON FUNCTION nuno_job_uploads(uuid, uuid[], timestamptz) TO nuno_api;

@@ -6,6 +6,7 @@ import { badRequest, readJsonObject } from "../http/request-body.ts";
 import { keepResult } from "../lookbook/keep-result.ts";
 import type { ResultStore } from "./ports.ts";
 import { requestHash } from "./request-hash.ts";
+import { manifestUploadIds } from "./upload-check.ts";
 import { isPastRetention } from "./result-retention.ts";
 
 export interface GenerationDeps {
@@ -57,20 +58,12 @@ const JOB_VIEW = `
 
 const notFound = (c: Context) => c.json({ error: "not_found" }, 404);
 
-/**
- * 입력 목록 옷의 올리기 ID. 꼴이 틀린 ID 가 있으면 null.
- * 올리기가 없는 옷(기본 제공 옷)과 객체가 아닌 칸은 건너뛴다.
- */
-function manifestUploadIds(manifest: Record<string, unknown>): string[] | null {
-  const items = Array.isArray(manifest.items) ? manifest.items : [];
-  const ids = new Set<string>();
-  for (const item of items) {
-    if (typeof item !== "object" || item === null || !("uploadId" in item)) continue;
-    const id = (item as { uploadId: unknown }).uploadId;
-    if (typeof id !== "string" || !UUID.test(id)) return null;
-    ids.add(id.toLowerCase());
-  }
-  return [...ids];
+async function hasJob(db: SqlClient, userId: string, requestId: string): Promise<boolean> {
+  const rows = await db.query(
+    "SELECT 1 FROM generation_jobs WHERE user_id = $1 AND idempotency_key = $2",
+    [userId, requestId],
+  );
+  return rows.length > 0;
 }
 
 /** 「이대로 입히기」 접수, 작업 조회, 결과 버리기와 저장. 사용자 ID 는 세션에서만 얻는다. */
@@ -120,9 +113,10 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
       return badRequest(c, "invalid_body");
     }
     // 그 사용자가 올려 확정한 파일만 입력으로 받는다. 꼴이 틀린 ID, 남의 ID, 없는 ID 는 같은 답이다.
-    const uploadIds = manifestUploadIds(manifest as Record<string, unknown>);
+    // 같은 요청 ID 로 이미 접수한 작업이 있으면 접수 함수가 그 작업을 돌려주므로 다시 보지 않는다.
+    const uploadIds = manifestUploadIds(manifest);
     if (!uploadIds) return c.json({ error: "invalid_upload" }, 422);
-    if (uploadIds.length > 0) {
+    if (uploadIds.length > 0 && !(await hasJob(db, c.get("userId"), requestId))) {
       const owned = await db.query<{ id: string }>(
         "SELECT id FROM nuno_job_uploads($1, $2, $3)",
         [c.get("userId"), uploadIds, now()],

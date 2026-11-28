@@ -39,11 +39,14 @@ export function uploadRoutes({ db, now, store }: UploadDeps): Hono<AuthEnv> {
     return c.json({ uploadId: row.upload_id, maxBytes: UPLOAD_MAX_BYTES }, 201);
   });
 
-  /** 본문을 받기 전에 그 사용자의 확정 전 줄인지 본다. 아니면 404 라 남의 ID 가 있는지 드러나지 않는다. */
-  const awaiting: MiddlewareHandler<AuthEnv> = async (c, next) => {
+  /**
+   * 본문을 받기 전에 그 사용자의 줄인지 본다. 아니면 404 라 남의 ID 가 있는지 드러나지 않는다.
+   * 이미 확정한 줄도 받는다. 응답이 끊겨 앱이 같은 바이트를 다시 보내면 같은 답을 준다.
+   */
+  const owned: MiddlewareHandler<AuthEnv> = async (c, next) => {
     const id = c.req.param("id") ?? "";
     if (!UUID.test(id)) return c.json({ error: "not_found" }, 404);
-    const [row] = await db.query<{ ok: boolean }>("SELECT nuno_upload_awaiting($1, $2) AS ok", [
+    const [row] = await db.query<{ ok: boolean }>("SELECT nuno_upload_owned($1, $2) AS ok", [
       c.get("userId"),
       id,
     ]);
@@ -54,13 +57,14 @@ export function uploadRoutes({ db, now, store }: UploadDeps): Hono<AuthEnv> {
   routes.put(
     "/v1/uploads/:id",
     auth,
-    awaiting,
+    owned,
     bodyLimit({
       maxSize: UPLOAD_MAX_BYTES,
       onError: (c) => c.json({ error: "upload_too_large" }, 413),
     }),
     async (c) => {
-      const id = c.req.param("id");
+      // DB 는 uuid 를 소문자 글자로 돌려준다. 키도 소문자로 만들어야 확정 함수의 키 비교가 맞는다.
+      const id = c.req.param("id").toLowerCase();
       const bytes = new Uint8Array(await c.req.arrayBuffer());
       const format = uploadFormat(bytes);
       if (!format) return c.json({ error: "unsupported_format" }, 415);
@@ -70,20 +74,28 @@ export function uploadRoutes({ db, now, store }: UploadDeps): Hono<AuthEnv> {
       const key = uploadKey(userId, id, sha256, format);
       // 같은 ID 로 동시에 올리면 확정은 한쪽만 된다. 진 쪽은 자기 파일을 지운다.
       // 같은 바이트면 키가 같으므로, 먼저 확정된 줄이 가리키는 파일이면 지우지 않는다.
+      const done = { uploadId: id, sha256, byteSize: bytes.length };
       await store.put(key, bytes, format.contentType);
-      const [row] = await db.query<{ ok: boolean }>(
-        "SELECT nuno_confirm_upload($1, $2, $3, $4, $5, $6, $7) AS ok",
-        [userId, id, key, sha256, bytes.length, format.contentType, now()],
-      );
-      if (!row?.ok) {
-        const [kept] = await db.query<{ r2_key: string }>(
-          "SELECT r2_key FROM nuno_job_uploads($1, $2, $3)",
-          [userId, [id], now()],
+      let confirmed: boolean;
+      try {
+        const [row] = await db.query<{ ok: boolean }>(
+          "SELECT nuno_confirm_upload($1, $2, $3, $4, $5, $6, $7) AS ok",
+          [userId, id, key, sha256, bytes.length, format.contentType, now()],
         );
-        if (kept?.r2_key !== key) await store.remove(key);
-        return c.json({ error: "not_found" }, 404);
+        confirmed = row?.ok === true;
+      } catch (error) {
+        await store.remove(key);
+        throw error;
       }
-      return c.json({ uploadId: id, sha256, byteSize: bytes.length });
+      if (confirmed) return c.json(done);
+      const [kept] = await db.query<{ r2_key: string | null }>(
+        "SELECT nuno_upload_key($1, $2) AS r2_key",
+        [userId, id],
+      );
+      // 같은 바이트를 다시 보냈으면 키가 같다. 그 파일은 확정된 파일이라 지우지 않고 같은 답을 준다.
+      if (kept?.r2_key === key) return c.json(done);
+      await store.remove(key);
+      return c.json({ error: "upload_already_confirmed" }, 409);
     },
   );
 
