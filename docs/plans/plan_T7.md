@@ -317,6 +317,9 @@ PR 은 차례로 쌓는다. 앞 PR 이 머지되기 전이면 다음 브랜치�
 | D17 | 일부 | 실행 방식은 따로 도는 worker(설계 결정 7). 시험 1 통과(`commands.md`). 시험 2, 3 은 공급사 키 대기. 시험 4 는 동의 화면과 철회 줄을 그렸고, 받는 옷 수 초과 시트는 결정 D13 대기 |
 | D18 | 통과 | `commands.md`. 운영 설정 개발 전용 주소 셋 모두 404 |
 | D25 | 통과 (2026-11-28) | `pnpm test:db` 1/2, 2/2 의 `job-guards.db.test.ts`. 접수 뒤 판을 2 로 올리면 `consent_outdated`, 시도 0행, 공급사 호출 0번, 묶음 풀기, 무료 장 8. 다른 줄을 켜거나 줄을 지우면 `provider_changed`. 다시 만들기 회차 앞에서 판이 올라도 둘째 시도 없음. `nuno_start_attempt` 의 두 비교를 빼고 돌리면 이 넷이 실패함을 확인 |
+| D23 | 통과 (2026-11-28, e2e 와 화면) | 브랜치 `t7/lookbook-grid` 의 `e2e/account-switch.spec.ts`. 로그아웃 뒤 둘째 계정에 앞 계정 룩, 알약, 알림 없음. 옷장과 「내 코디」 는 남음(`d23-*.jpg`) |
+| D32 | 통과 (2026-11-28, e2e 와 화면) | 브랜치 `t7/lookbook-grid` 의 `e2e/home-recent-looks.spec.ts`. 룩 9개 저장 뒤 「최근 저장한 룩」 은 최신 8장 2열(`d32-home-recent-top.jpg`, `d32-home-recent-bottom.jpg`) |
+| D33 | 통과 (2026-11-28, 화면) | Expo 웹 390x844. 「모든 룩」 크게 보기의 「전체 보기」 → 격자 9칸과 「룩 9개를 모두 봤어요」, 둘째 칸을 누르면 2/9 가 크게 열림(`d33-*.jpg`) |
 | D34 | 판정 전(서버 값만 확인, 화면은 앱 묶음) | `commands.md` 「D34 서버 값」. 보관 기간 응답이 30 → 7 → 30 으로 서버 줄을 따라감. `photo-retention.db.test.ts` |
 
 - 그 밖에 본 것: 작업 감시 알림 `watcher-toast.jpg`, 저장 안 한 결과 알약 `unsaved-result-chip.jpg`, 동의 철회 시트 `withdraw-sheet.jpg`.
