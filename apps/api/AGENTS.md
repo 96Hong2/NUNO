@@ -44,9 +44,15 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
   로컬 시험 DB 와 개발 DB 는 스크립트가 넣는다. 개발 서버와 운영 DB 는 운영자가 관리자로 넣는다.
 - 작업은 접수 때 공급사 설정 줄 ID 와 판을 적는다. `nuno_start_attempt` 가 부르기 전마다 지금 줄과 비교한다.
   다르면 시도 줄 없이 `provider_changed` 나 `consent_outdated` 로 실패와 풀기다.
+- 접수 상태로 `QUEUE_WAIT_SECONDS` 를 넘긴 작업은 판 0006 의 `nuno_expire_next_queued_job` 이 `queue_timeout` 으로 끝낸다.
+  worker 는 선점 전마다, 예약 작업에서도 부른다. 한 번에 한 건이라 부르는 쪽이 행이 없을 때까지 되풀이한다.
+- 저장하지 않은 결과(gen30)는 `delete_due_at` 이 지나면 조회가 주소를 주지 않고 저장이 404 다(정리 전에도).
+  예약 작업 `expireResults` 가 파일을 먼저 지우고 `nuno_expire_result` 로 deleted 를 적는다. 저장한 결과는 고르지 않는다.
+- 여러 사용자를 도는 정리는 한 건마다 트랜잭션 하나로 부른다. 한 트랜잭션이 여러 사용자 행을 잠그지 않는다.
 - 결과 사진은 포트 `ResultStore` 다. 지금은 로컬 디스크와 `/v1/files` 서명 주소(기한 `RESULT_URL_TTL_SECONDS`)뿐이다.
 - 실제 공급사 어댑터는 입력 올리기와 입력 검사가 갖춰지기 전에는 worker 에 꽂지 않는다.
 - worker 시험은 가장 오래된 접수 작업부터 선점한다. 그래서 `generation.db.test.ts` 는 다른 시험보다 이른 시각으로 접수한다.
+  새 worker 시험은 2021~2029년에서 겹치지 않는 날짜를 맡고, 선점 전에 그 시각으로 `expireQueuedJobs` 를 부른다.
 
 ## 로그인과 세션
 

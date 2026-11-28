@@ -6,6 +6,7 @@ import { badRequest, readJsonObject } from "../http/request-body.ts";
 import { keepResult } from "../lookbook/keep-result.ts";
 import type { ResultStore } from "./ports.ts";
 import { requestHash } from "./request-hash.ts";
+import { isPastRetention } from "./result-retention.ts";
 
 export interface GenerationDeps {
   db: SqlClient;
@@ -41,12 +42,13 @@ interface JobRow {
   failure_code: string | null;
   r2_key: string | null;
   storage_state: string | null;
+  delete_due_at: Date | null;
   hold_status: string | null;
   hold_amount: number | null;
 }
 
 const JOB_VIEW = `
-  SELECT j.id, j.status, j.payment_kind, j.failure_code, r.r2_key, r.storage_state,
+  SELECT j.id, j.status, j.payment_kind, j.failure_code, r.r2_key, r.storage_state, r.delete_due_at,
          h.status AS hold_status, h.amount AS hold_amount
   FROM generation_jobs j
   LEFT JOIN generation_results r ON r.job_id = j.id
@@ -62,16 +64,18 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
 
   async function view(row: JobRow | undefined) {
     if (!row) return null;
-    const showResult =
-      row.status === "succeeded" &&
-      row.r2_key !== null &&
-      (row.storage_state === "gen30" || row.storage_state === "kept");
+    const at = now();
+    // 저장하지 않은 결과는 보관 기한이 지나면 정리 전이라도 주소를 주지 않는다.
+    const viewable =
+      row.storage_state === "kept" ||
+      (row.storage_state === "gen30" && !isPastRetention(row.delete_due_at, at));
+    const showResult = row.status === "succeeded" && row.r2_key !== null && viewable;
     return {
       jobId: row.id,
       status: row.status,
       paymentKind: row.payment_kind,
       failureCode: row.failure_code,
-      result: showResult && row.r2_key ? await store.signedUrl(row.r2_key, now()) : null,
+      result: showResult && row.r2_key ? await store.signedUrl(row.r2_key, at) : null,
       refund:
         row.hold_status === "released"
           ? { kind: row.payment_kind, amount: row.hold_amount ?? 0 }
