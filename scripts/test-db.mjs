@@ -5,6 +5,7 @@
 // 2. test-b: 역할만 만든 다른 Postgres 에 test-a 의 pg_dump 를 넣는다. 판 옮기기를 돌리지 않고 같은 DB 시험을 돈다.
 // 끝나면 두 컨테이너를 지운다. 로컬 개발 DB(postgres 서비스)는 건드리지 않는다.
 // `pnpm db:local`(--local): 로컬 개발 DB nuno 에 역할과 판만 적용한다.
+// 두 경우 모두 하루 전체 예산 기본값을 넉넉히 넣는다. 판은 기본값을 넣지 않아 없으면 상한 0원이다.
 // Docker 가 없으면 건너뛰지 않고 멈춘다. 비밀번호는 docker-compose.yml 과 여기의 로컬 전용 값이다.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -65,6 +66,17 @@ function setupRoles(service) {
   psql(service, `ALTER ROLE nuno_api PASSWORD '${API_PASSWORD}';`);
 }
 
+/** 로컬 DB 의 하루 전체 예산 기본값(달러). 이미 있으면 그대로 둔다. 개발 서버와 운영 DB 에는 넣지 않는다. */
+const LOCAL_DAILY_BUDGET_USD = 1000;
+function localBudget(service) {
+  psql(
+    service,
+    `INSERT INTO cost_budget_defaults (budget_kind, provider, budget_usd, updated_by)
+     VALUES ('total', '', ${LOCAL_DAILY_BUDGET_USD}, 'scripts/test-db.mjs')
+     ON CONFLICT (budget_kind, provider) DO NOTHING;`,
+  );
+}
+
 function migrate(service) {
   run("node", ["apps/api/src/composition/run-migrations.ts"], {
     env: { ...process.env, DATABASE_ADMIN_URL: url(ADMIN, service) },
@@ -96,6 +108,7 @@ if (local) {
   docker(["up", "-d", "--wait", "postgres"]);
   setupRoles("postgres");
   migrate("postgres");
+  localBudget("postgres");
   console.log(`로컬 개발 DB: ${url("nuno_api:<로컬 비밀번호>", "postgres")}`);
   process.exit(0);
 }
@@ -106,6 +119,7 @@ try {
   docker(["up", "-d", "--wait", "test-a", "test-b"]);
   setupRoles("test-a");
   migrate("test-a");
+  localBudget("test-a");
   console.log("DB 시험 1/2: 판을 옮긴 test-a");
   dbTests("test-a");
 

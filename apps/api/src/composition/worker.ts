@@ -7,6 +7,7 @@ import { openPostgres } from "../adapters/postgres.ts";
 import {
   devProviderMode,
   runNextJob,
+  settleBudgets,
   sweepJobs,
   type ClaimedJob,
   type ProviderChoice,
@@ -80,13 +81,18 @@ const claimTimer = setInterval(() => {
     });
 }, CLAIM_INTERVAL_MS);
 
-const sweep = () =>
-  sweepJobs(deps)
-    .then((count) => {
-      if (count > 0)
-        console.log(`예약 작업: 선점 기한이 지난 작업 ${count}건을 실패와 풀기로 정리했다`);
-    })
-    .catch((error: unknown) => console.error("예약 작업 실패", error));
+// 선점 기한이 지난 작업을 먼저 끝내야 그 작업의 남은 예약을 같은 바퀴에서 정산한다.
+const sweep = async () => {
+  try {
+    const swept = await sweepJobs(deps);
+    if (swept > 0)
+      console.log(`예약 작업: 선점 기한이 지난 작업 ${swept}건을 실패와 풀기로 정리했다`);
+    const settled = await settleBudgets(deps);
+    if (settled > 0) console.log(`예약 작업: 끝난 작업의 예산 예약 ${settled}건을 정산했다`);
+  } catch (error) {
+    console.error("예약 작업 실패", error);
+  }
+};
 void sweep();
 const sweepTimer = setInterval(() => void sweep(), SWEEP_INTERVAL_MS);
 

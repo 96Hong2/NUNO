@@ -30,6 +30,7 @@ const START_REFUSALS: ReadonlySet<string> = new Set([
   "consent_withdrawn",
   "provider_changed",
   "consent_outdated",
+  "budget_exhausted",
 ]);
 
 export interface ProviderChoice {
@@ -234,6 +235,27 @@ export async function sweepJobs(
     await deps.push.send({ userId: row.user_id, jobId: row.job_id, status: "failed" });
   }
   return rows.length;
+}
+
+/** 예약 작업 한 바퀴에서 정산 함수를 부르는 최대 횟수. 남은 시도는 다음 바퀴가 정산한다. */
+const SETTLE_CALLS_PER_SWEEP = 100;
+
+/**
+ * 예약 작업. 끝난 작업에 예약 상태로 남은 시도의 예산을 정산한다. 정산한 시도 수를 낸다.
+ * 시도마다 문장 하나, 곧 트랜잭션 하나로 부른다. 여러 시도를 한 트랜잭션에서 정산하면 예산 행을 쥔 채
+ * 다른 사용자 행을 기다리게 되어 worker 와 교착이 생긴다.
+ */
+export async function settleBudgets(deps: Pick<WorkerDeps, "db" | "now">): Promise<number> {
+  let settled = 0;
+  for (let call = 0; call < SETTLE_CALLS_PER_SWEEP; call += 1) {
+    const [row] = await deps.db.query<{ status: string | null }>(
+      "SELECT nuno_settle_next_budget($1) AS status",
+      [deps.now()],
+    );
+    if (!row?.status) break;
+    if (row.status !== "skipped") settled += 1;
+  }
+  return settled;
 }
 
 export interface DevProviderMode {

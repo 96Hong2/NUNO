@@ -13,6 +13,7 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 | `pnpm --filter api start` | `DATABASE_URL`(nuno_api) 로 서버를 띄운다. 포트는 `PORT`, 없으면 8787 |
 | `pnpm --filter api worker` | 작업 worker 를 띄운다. API 와 같은 `DATABASE_URL`, 결과 폴더, 서명 키를 쓴다 |
 | `pnpm api:dev` (루트) | 로컬 DB `nuno_dev` 에 판을 옮기고 개발 전용 주소를 켠 API 와 worker 를 8787 에 띄운다. e2e 는 같은 스크립트가 `nuno_e2e` 로 띄운다 |
+| `node scripts/e2e-api.mjs [--dev] --only=api` 또는 `--only=worker` | API 나 worker 하나만 띄운다. 터미널 둘에서 하나씩 띄우면 한쪽만 내렸다 띄울 수 있다. DB 를 지우지 않는다 |
 | `pnpm api:rds` (루트) | 개발 서버 DB(RDS Postgres 18, DB `nuno`)를 쓴다. 판 옮기기는 관리 계정 `nuno`, API 는 `nuno_api`. 접속 주소는 `NUNO_RDS_ENV`(기본 `~/.config/nuno/rds.env`)에서 읽는다. RDS 는 SSL 이 강제라 주소에 `sslmode` 를 붙인다 |
 
 ## 규칙
@@ -33,6 +34,14 @@ Hono 로 만든 API 서버다. 워크스페이스 필터 이름은 `api` 다. �
 - 골드 원장, 작업 상태, 결과 파일 상태는 판 0003 의 DB 함수로만 바뀐다. 함수는 맨 먼저 그 사용자의 `users` 행을 잠근다.
 - 원장 표(`gold_entries`, `gold_transactions`)는 고치기와 지우기를 트리거가 막는다. 바로잡을 때는 새 거래를 더한다.
 - worker 가 부르는 함수는 상태, 선점 토큰, 선점 기한이 맞아야 쓴다. 기한은 `LEASE_SECONDS` 다.
+- 잠금 순서는 사용자 → 작업 → 시도 → 예산 행(날짜, 종류, 공급사 순)이다. 예산 행은 `nuno_budget_lock` 만 잠근다.
+- 하루 예산은 판 0005 의 `cost_daily` 다. 지금은 하루 전체(`total`) 행만 예약하고 정산한다.
+  - `nuno_start_attempt` 가 시도 줄을 만들기 전에 설정 줄의 `price_usd` 를 예약한다. 모자라면 `budget_exhausted` 다.
+  - 시도가 끝나면 `nuno_finish_attempt` 가, worker 가 죽었으면 예약 작업이 `nuno_settle_next_budget` 를 시도마다 한 번씩 불러 정산한다.
+  - 한 트랜잭션에서 예산 행을 쥔 채 다른 사용자 행을 잠그지 않는다. worker 와 교착이 생긴다.
+  - 청구 여부나 청구액을 모르면 예약액을 그대로 둔다(`kept_reserved`). 다시 정산하지 않는다.
+- 그날 행이 없으면 `cost_budget_defaults` 의 상한을 복사한다. 기본값이 없으면 상한 0원이라 공급사를 부르지 않는다.
+  로컬 시험 DB 와 개발 DB 는 스크립트가 넣는다. 개발 서버와 운영 DB 는 운영자가 관리자로 넣는다.
 - 작업은 접수 때 공급사 설정 줄 ID 와 판을 적는다. `nuno_start_attempt` 가 부르기 전마다 지금 줄과 비교한다.
   다르면 시도 줄 없이 `provider_changed` 나 `consent_outdated` 로 실패와 풀기다.
 - 결과 사진은 포트 `ResultStore` 다. 지금은 로컬 디스크와 `/v1/files` 서명 주소(기한 `RESULT_URL_TTL_SECONDS`)뿐이다.
