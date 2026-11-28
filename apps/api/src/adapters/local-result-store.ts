@@ -44,8 +44,8 @@ export function createLocalResultStore(config: LocalResultStoreConfig): LocalRes
     async remove(key) {
       await rm(pathOf(key), { force: true });
     },
-    signedUrl: (key, now) =>
-      Promise.resolve(signFileUrl(config.publicUrl, config.secret, key, now)),
+    signedUrl: (key, now, notAfter) =>
+      Promise.resolve(signFileUrl(config.publicUrl, config.secret, key, now, notAfter)),
     async read(key) {
       try {
         return await readFile(pathOf(key));

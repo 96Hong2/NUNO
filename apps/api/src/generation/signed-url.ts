@@ -14,15 +14,20 @@ export function isSafeKey(key: string): boolean {
 const signature = (secret: string, key: string, exp: number) =>
   createHmac("sha256", secret).update(`${key}\n${exp}`).digest("base64url");
 
-/** `/v1/files/<키>?exp=<초>&sig=<HMAC-SHA256>` 주소를 만든다. */
+/**
+ * `/v1/files/<키>?exp=<초>&sig=<HMAC-SHA256>` 주소를 만든다.
+ * `notAfter` 가 있으면 주소 기한을 그 시각 이전으로 자른다. 보관 기한 직전에 받은 주소가 기한 뒤에 열리지 않는다.
+ */
 export function signFileUrl(
   baseUrl: string,
   secret: string,
   key: string,
   now: Date,
+  notAfter?: Date,
 ): { url: string; expiresAt: string } {
   if (!isSafeKey(key)) throw new Error(`결과 파일 키 꼴이 아니다: ${key}`);
-  const exp = Math.floor(now.getTime() / 1000) + RESULT_URL_TTL_SECONDS;
+  const ttlEnd = Math.floor(now.getTime() / 1000) + RESULT_URL_TTL_SECONDS;
+  const exp = notAfter ? Math.min(ttlEnd, Math.floor(notAfter.getTime() / 1000)) : ttlEnd;
   const url = `${baseUrl.replace(/\/$/, "")}/v1/files/${key}?exp=${exp}&sig=${signature(secret, key, exp)}`;
   return { url, expiresAt: new Date(exp * 1000).toISOString() };
 }

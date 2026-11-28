@@ -325,9 +325,9 @@ PR 은 차례로 쌓는다. 앞 PR 이 머지되기 전이면 다음 브랜치�
 | D26 | 통과 (2026-11-28, DB) | 예약만 한 시도 셋을 정산 두 번 돌려도 예약 합과 확정 합이 한 번만 바뀜. 정산은 시도마다 트랜잭션 하나(`budget.db.test.ts`) |
 | D19 | 통과 (2026-11-28, DB) | `pnpm test:db` 1/2, 2/2 의 `gold.db.test.ts`. 4골드 계정의 서로 다른 요청 두 건 동시 접수에서 202 하나와 402 하나, 잔액 0(`commands.md` 「D19, D22, D27, D28, D29 의 DB 시험」) |
 | D22 | 통과 (2026-11-28, DB 와 명령) | `keep-again.db.test.ts`: 복사만 해 둔 뒤 다시 저장하면 룩 1행, 사진 200, gen30 파일 없음. 명령은 `commands.md` 「D22」 |
-| D27 | 통과 (2026-11-28, DB 와 명령) | `queue-retention.db.test.ts`: 5분 1초 뒤 `queue_timeout`, 시도 0행, 공급사 호출 0번, 골드 4 환급, 4분 59초에는 `queued`. 명령은 `commands.md` 「D27」 |
+| D27 | 통과 (2026-11-28, DB 와 명령) | `queue-retention.db.test.ts`: 5분 1초 뒤 `queue_timeout`, 시도 0행, 공급사 호출 0번, 골드 4 환급, 4분 59초에는 `queued`. 상한 지난 작업 105건을 두고 선점만 불러도 105건 모두 `queue_timeout`, 시도 0행. 명령은 `commands.md` 「D27」 |
 | D28 | 통과 (2026-11-28, DB 시험 명령) | `pnpm test:db` 두 바퀴의 `queue-retention.db.test.ts`: 사진 저장 도중 선점 기한이 지나 예약 작업이 먼저 끝내면 worker 가 그 사진을 지우고, 정상 결과 행과 파일, 원장 수가 그대로 |
-| D29 | 통과 (2026-11-28, DB 와 명령) | `queue-retention.db.test.ts`: 기한 뒤 조회 주소 없음, 저장 404, 정리 뒤 파일 404 와 `deleted`, 저장한 결과는 200. 명령은 `commands.md` 「D29」 |
+| D29 | 통과 (2026-11-28, DB 와 명령) | `queue-retention.db.test.ts`: 기한 1초 전에 받은 주소의 기한이 보관 기한이고 기한 뒤 정리 전에 403, 조회 주소 없음, 저장 404, 정리 뒤 파일 404 와 `deleted`, 저장한 결과는 200. 명령은 `commands.md` 「D29」 와 「D29 다시 판정」 |
 | D30 | 통과 (2026-11-28, 명령, 판 6) | 판 6 worker 와 API 를 `--only=worker`, `--only=api` 로 따로 띄움. API 만 내린 동안 worker 가 작업을 `succeeded` 로 끝냄. 다시 띄운 API 에 같은 요청 ID 두 번 접수가 같은 작업 ID, 작업 1행과 묶음 1건(`commands.md` 「D30: 판 6 worker 로 API 만 내렸다 다시 띄우기」) |
 
 - 그 밖에 본 것: 작업 감시 알림 `watcher-toast.jpg`, 저장 안 한 결과 알약 `unsaved-result-chip.jpg`, 동의 철회 시트 `withdraw-sheet.jpg`.
@@ -582,9 +582,10 @@ PR 2b (D33, D23 e2e, D32 e2e)
    - `apps/api/src/generation/worker.ts` 의 `QUEUE_WAIT_SECONDS = 300`, `LEASE_SECONDS` 바로 옆. 주석에 결정 D51 임시값, T6 실측 뒤 확정이라고 적는다.
    - 새 함수 `nuno_expire_queued_jobs(p_now, p_wait_seconds)` 에 인자로 넘긴다. 조건은 `status = 'queued' AND created_at <= p_now - 대기 상한` 이다.
    - 잠금 순서는 다른 함수와 같다: 사용자 행, 작업 행. 실패 코드는 `queue_timeout` 이고 `nuno_job_release` 로 푼다.
-   - worker 는 1초 선점마다 이 함수를 먼저 부르고, 60초 예약 작업에서도 부른다. 5분을 넘긴 작업이 선점되어 공급사로 가지 않는다.
+   - worker 는 60초 예약 작업에서 이 함수를 부른다. 선점 함수도 상한을 직접 본다(「PR 1c 코드 리뷰 반영」).
    - 버린 안: SQL 함수 안 상수. 시험이 값을 따로 알아야 하고 선점 기한과 자리가 갈린다.
-   - 버린 안: `nuno_sweep_jobs` 와 `nuno_claim_job` 에 인자 더하기. 서명이 바뀌어 DROP 이 들고, 기존 시험이 부르는 세 인자 호출(`generation.db.test.ts:473, 499`)이 깨진다.
+   - 버린 안: `nuno_sweep_jobs` 와 세 인자 `nuno_claim_job` 을 고쳐 인자 더하기. 서명이 바뀌어 DROP 이 들고, 기존 시험이 부르는 세 인자 호출(`generation.db.test.ts:473, 499`)이 깨진다.
+   - 그래서 선점은 세 인자 판을 두고 네 인자 판을 새로 더했다(「PR 1c 코드 리뷰 반영」).
    - 버린 안: 운영 설정 표의 값. 임시값이라 운영자가 바꿀 일이 아직 없다.
 5. 30일 정리 함수와 파일 지우기 순서
    - worker `expireResults` 가 60초 예약 작업에서 돈다.
@@ -770,7 +771,7 @@ PR 2b (D33, D23 e2e, D32 e2e)
   - 조회 라우트와 `keep-result.ts` 가 함께 쓴다. `routes.ts` 가 `keep-result.ts` 를 import 하므로 거꾸로 부르지 않게 따로 뒀다.
 - 시험 파일: `job-guards.db.test.ts` 는 main 에 있어 고치지 않았다. D27, D28, D29 는 새 파일 `queue-retention.db.test.ts` 에 썼다.
   - 날짜는 `queue-retention.db.test.ts` 가 2023년, `keep-again.db.test.ts` 가 2024년이다.
-  - 두 파일 모두 선점 전에 그 시각으로 `expireQueuedJobs` 를 불러 그보다 앞서 남은 접수 작업을 비운다.
+  - 그보다 앞서 남은 접수 작업은 선점이 그 시각으로 상한을 보고 끝낸다. `keep-again.db.test.ts` 는 선점 전에 `expireQueuedJobs` 도 부른다.
   - 그다음 `runNextJob` 이 준 작업 ID 가 자기 작업인지 단언한다. 끝나면 접수 상태로 남기는 작업이 없다.
   - `job-guards.db.test.ts` 는 2021-01 날짜로 접수하고 대기 만료를 부르지 않는다. 새 파일이 그보다 이른 접수 작업을 남기지 않아 그 파일의 선점 순서가 그대로다.
 - D28 시험은 worker 경로 그대로 본다. 결과 사진을 저장하는 도중에 시각을 선점 기한 너머로 돌리고 예약 작업을 먼저 돌린다.
@@ -806,3 +807,21 @@ PR 2b (D33, D23 e2e, D32 e2e)
 | docs | 「룩 N개를 모두 봤어요」 를 뺀 것이 와이어프레임과 다름 | 반영. `v28_app.js:2332` 의 `done: n>0&&k>=n` 확인. 룩이 있으면 보임 |
 | docs | `_layout.tsx` 등록과 GLOSSARY 155줄 누락 | 반영. `OVERLAY_SCREENS` 에 없으면 `headerShown` 이 꺼지지 않음 확인. 표 두 줄 더함 |
 | docs | 스키마 v4 에 없는 표와 열의 문서 동기화 없음 | 반영. 스키마 v4 633줄이 시도 표 열을 예고하지만 열 이름과 기본 상한 표는 없음. 순서 4 와 기획자 확인에 더함 |
+
+### PR 1c 코드 리뷰 반영 (2026-11-28, 지적 2건)
+
+| 등급 | 지적 | 반영 여부와 까닭 |
+| --- | --- | --- |
+| error | 대기 만료가 한 바퀴 100번이라, 상한 지난 작업이 101건 넘게 쌓이면 101번째가 선점되어 공급사로 감 | 반영. 판 0006 에 네 인자 `nuno_claim_job(토큰, 선점 초, 시각, 대기 상한 초)` 를 더했다. 고른 작업이 상한을 넘겼으면 `queue_timeout` 으로 끝내고 그 행을 준다 |
+| warning | 보관 기한 직전에 받은 gen30 주소가 기한 뒤 정리 전까지 열림 | 반영. 조회가 gen30 주소의 기한을 `min(지금 + RESULT_URL_TTL_SECONDS, delete_due_at)` 으로 자른다. `/v1/files` 는 고치지 않았다 |
+
+- 네 인자 선점의 대기 만료는 한 번에 한 건이다. 트랜잭션 하나가 대기 만료로 여러 사용자 행을 잠그지 않는다.
+  - worker `runNextJob` 은 `queue_timed_out` 행을 받으면 실패 푸시를 보내고 선점을 다시 부른다. 상한 안의 작업이나 빈 결과가 나올 때까지다.
+  - 상한 확인은 사용자 행과 작업 행을 잠근 뒤다. 잠금 순서는 판 3 선점과 같다.
+- 세 인자 선점은 판 3 그대로 남는다. main 의 `generation.db.test.ts` 가 부르기 때문이다. worker 는 부르지 않는다.
+- worker 1초 바퀴는 선점만 부른다. 대기 만료 함수 `expireQueuedJobs` 는 60초 예약 작업에만 남았다.
+  - 시험이 composition 차례를 베껴 쓰던 `tick()` 을 없앴다. 시험은 `runNextJob` 을 바로 부른다.
+- 새 시험: 상한 지난 작업 105건(한 바퀴 100번보다 많음)과 상한 안 작업 하나를 두고 `runNextJob` 만 한 번 부른다.
+  - 상한 안 작업만 `succeeded` 이고 공급사 호출 1번이다. 105건은 모두 `queue_timeout`, 시도 0행, 묶음 `released`, 실패 푸시 105번이다.
+  - 일부러 깨뜨려 확인: worker 가 세 인자 선점을 부르게 되돌리면 이 시험이 실패한다(선점한 작업이 상한 안 작업이 아님).
+- D29 시험에 단언 둘을 더했다. 기한 1초 전에 받은 주소의 `expiresAt` 이 보관 기한이고, 기한 1초 뒤 정리 전에 그 주소가 403 이다.

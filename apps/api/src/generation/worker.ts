@@ -86,17 +86,41 @@ function attemptRecord(result: CallResult) {
   }
 }
 
-/** 접수 작업 하나를 선점해 끝까지 돌린다. 접수 작업이 없으면 null. */
+interface ClaimRow {
+  job_id: string;
+  user_id: string;
+  input_manifest: unknown;
+  payment_kind: "trial" | "gold";
+  queue_timed_out: boolean;
+}
+
+/**
+ * 접수 작업 하나를 선점한다. 선점 함수가 대기 상한을 넘긴 작업을 만나면 그 작업을 queue_timeout 으로 끝내고
+ * 그 행을 준다. 그때는 실패를 알리고 다시 부른다. 한 번에 한 건이라 부를 때마다 트랜잭션 하나다.
+ */
+async function claimJob(deps: WorkerDeps, leaseToken: string): Promise<ClaimRow | null> {
+  for (;;) {
+    const [row] = await deps.db.query<ClaimRow>("SELECT * FROM nuno_claim_job($1, $2, $3, $4)", [
+      leaseToken,
+      LEASE_SECONDS,
+      deps.now(),
+      QUEUE_WAIT_SECONDS,
+    ]);
+    if (!row) return null;
+    if (!row.queue_timed_out) return row;
+    await deps.push.send({ userId: row.user_id, jobId: row.job_id, status: "failed" });
+  }
+}
+
+/**
+ * 접수 작업 하나를 선점해 끝까지 돌린다. 접수 작업이 없으면 null.
+ * 대기 상한을 넘긴 작업은 공급사를 부르지 않고 실패로 끝낸 뒤 다음 작업을 본다.
+ */
 export async function runNextJob(
   deps: WorkerDeps,
   leaseToken: string = randomUUID(),
 ): Promise<{ jobId: string; outcome: JobOutcome } | null> {
-  const [row] = await deps.db.query<{
-    job_id: string;
-    user_id: string;
-    input_manifest: unknown;
-    payment_kind: "trial" | "gold";
-  }>("SELECT * FROM nuno_claim_job($1, $2, $3)", [leaseToken, LEASE_SECONDS, deps.now()]);
+  const row = await claimJob(deps, leaseToken);
   if (!row) return null;
   const [config] = await deps.db.query<{ id: string; provider: string; model: string }>(
     `SELECT c.id, c.provider, c.model
@@ -268,8 +292,8 @@ export async function settleBudgets(deps: Pick<WorkerDeps, "db" | "now">): Promi
 const EXPIRE_CALLS_PER_SWEEP = 100;
 
 /**
- * 대기 상한을 넘긴 접수 작업을 실패와 풀기로 끝내고 알린다. 끝낸 작업 수를 낸다.
- * worker 는 선점하기 전마다 부른다. 상한을 넘긴 작업이 선점되어 공급사로 가지 않는다.
+ * 예약 작업. 대기 상한을 넘긴 접수 작업을 실패와 풀기로 끝내고 알린다. 끝낸 작업 수를 낸다.
+ * 선점이 밀려 있어도 그 작업들이 상한 직후에 끝나게 한다. 선점 함수도 상한을 따로 보므로 공급사로 가는 길을 막는 것은 이 함수가 아니다.
  * 작업마다 문장 하나, 곧 트랜잭션 하나로 부른다. 한 트랜잭션이 여러 사용자 행을 잠그지 않는다.
  */
 export async function expireQueuedJobs(

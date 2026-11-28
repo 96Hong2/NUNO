@@ -70,12 +70,14 @@ export function generationRoutes({ db, now, store }: GenerationDeps): Hono<AuthE
       row.storage_state === "kept" ||
       (row.storage_state === "gen30" && !isPastRetention(row.delete_due_at, at));
     const showResult = row.status === "succeeded" && row.r2_key !== null && viewable;
+    // gen30 주소는 보관 기한을 넘겨 살지 않는다. 정리가 파일을 지우기 전에도 기한 뒤에는 403 이다.
+    const notAfter = row.storage_state === "gen30" ? (row.delete_due_at ?? undefined) : undefined;
     return {
       jobId: row.id,
       status: row.status,
       paymentKind: row.payment_kind,
       failureCode: row.failure_code,
-      result: showResult && row.r2_key ? await store.signedUrl(row.r2_key, at) : null,
+      result: showResult && row.r2_key ? await store.signedUrl(row.r2_key, at, notAfter) : null,
       refund:
         row.hold_status === "released"
           ? { kind: row.payment_kind, amount: row.hold_amount ?? 0 }

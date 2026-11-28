@@ -23,8 +23,8 @@ import {
 } from "./worker.ts";
 
 // 접수 대기 상한, 늦은 결과 저장, 저장하지 않은 결과의 보관 기한 시험. 실제 Postgres 에 붙는다.
-// worker 는 p_now 와 상관없이 가장 오래된 접수 작업부터 선점한다. 시험마다 2023년의 서로 다른 한국 날짜로 접수하고,
-// 선점 전에 그 시각으로 대기 만료를 불러 그보다 앞서 남은 접수 작업을 비운다. 선점한 작업이 자기 작업인지 먼저 단언한다.
+// worker 는 가장 오래된 접수 작업부터 선점하고, 그 시각으로 대기 상한을 넘긴 작업은 공급사 없이 끝내며 지나간다.
+// 시험마다 2023년의 서로 다른 한국 날짜로 접수해 앞서 남은 접수 작업이 선점되지 않게 한다. 선점한 작업이 자기 작업인지 단언한다.
 const apiUrl = process.env.TEST_DATABASE_API_URL;
 const adminUrl = process.env.TEST_DATABASE_ADMIN_URL;
 if (!apiUrl || !adminUrl) {
@@ -101,12 +101,6 @@ function countingWorker(start: Date, resultStore: ResultStore = store) {
   return { deps, clock };
 }
 
-/** worker 의 1초 바퀴와 같은 차례: 대기 만료 다음 선점. */
-async function tick(deps: WorkerDeps, token?: string) {
-  await expireQueuedJobs(deps);
-  return runNextJob(deps, token);
-}
-
 interface SignedIn {
   token: string;
   userId: string;
@@ -165,10 +159,10 @@ function apiAt(now: Date) {
     async view(token: string, jobId: string) {
       const response = await call(`/v1/generation-jobs/${jobId}`, token);
       expect(response.status).toBe(200);
-      return (await response.json()) as { status: string; result: { url: string } | null } & Record<
-        string,
-        unknown
-      >;
+      return (await response.json()) as {
+        status: string;
+        result: { url: string; expiresAt: string } | null;
+      } & Record<string, unknown>;
     },
     keep: (token: string, jobId: string) =>
       call(`/v1/generation-jobs/${jobId}/keep`, token, {
@@ -246,7 +240,7 @@ async function ledgerCounts(userId: string) {
 /** 접수한 작업 하나를 끝까지 돌려 succeeded 로 만든다. */
 async function runToSuccess(at: Date, jobId: string) {
   const { deps } = countingWorker(at);
-  expect(await tick(deps)).toEqual({ jobId, outcome: "succeeded" });
+  expect(await runNextJob(deps)).toEqual({ jobId, outcome: "succeeded" });
 }
 
 describe("접수 뒤 대기 상한", () => {
@@ -275,7 +269,7 @@ describe("접수 뒤 대기 상한", () => {
 
     const over = plus(submittedAt, (5 * 60 + 1) * 1000);
     const { deps, clock } = countingWorker(over);
-    const done = await tick(deps);
+    const done = await runNextJob(deps);
 
     // 선점은 상한을 넘긴 작업을 건너뛰고 상한 안의 작업만 공급사로 보낸다.
     expect(done).toEqual({ jobId: freshJob, outcome: "succeeded" });
@@ -305,6 +299,51 @@ describe("접수 뒤 대기 상한", () => {
     await expect(
       api.query("SELECT * FROM nuno_expire_next_queued_job($1, 0)", [at]),
     ).rejects.toThrow(/대기 상한/);
+    await expect(
+      api.query("SELECT * FROM nuno_claim_job($1, $2, $3, 0)", [randomUUID(), LEASE_SECONDS, at]),
+    ).rejects.toThrow(/대기 상한/);
+  });
+
+  it("상한을 넘긴 접수 작업이 정리 한 바퀴보다 많이 쌓여도 선점은 그 작업들을 공급사로 보내지 않는다", async () => {
+    // worker 가 오래 내려가 있다가 다시 뜬 경우다. 대기 만료 예약 작업을 부르지 않고 선점만 부른다.
+    const JOBS = 105;
+    const submittedAt = new Date("2023-03-03T01:00:00Z");
+    const first = apiAt(submittedAt);
+    const owner = await first.readyUser();
+    await api.query("SELECT nuno_grant_test_gold($1, $2, $3)", [
+      owner.userId,
+      JOBS * 4,
+      submittedAt,
+    ]);
+    const staleJobs: string[] = [];
+    for (let n = 0; n < JOBS; n += 1) staleJobs.push(await first.submit(owner.token, "gold"));
+    expect(await balance(owner.userId, "hold")).toBe(JOBS * 4);
+
+    // 상한 안에 접수한 다른 사용자의 작업 하나. 선점은 상한을 넘긴 작업을 모두 지나 이 작업을 고른다.
+    const over = plus(submittedAt, (5 * 60 + 1) * 1000);
+    const second = apiAt(plus(over, -10 * 1000));
+    const fresh = await second.readyUser();
+    const freshJob = await second.submit(fresh.token);
+
+    const { deps, clock } = countingWorker(over);
+    expect(await runNextJob(deps)).toEqual({ jobId: freshJob, outcome: "succeeded" });
+    expect(clock.calls).toBe(1);
+
+    const [stale] = await admin.query<{ failed: number; attempts: number; released: number }>(
+      `SELECT count(*) FILTER (WHERE j.status = 'failed' AND j.failure_code = 'queue_timeout')::int AS failed,
+              (SELECT count(*)::int FROM generation_attempts a WHERE a.job_id = ANY($1::uuid[])) AS attempts,
+              (SELECT count(*)::int FROM gold_holds h
+               WHERE h.ref_kind = 'generation_job' AND h.ref_id = ANY($1::uuid[]) AND h.status = 'released'
+              ) AS released
+       FROM generation_jobs j WHERE j.id = ANY($1::uuid[])`,
+      [staleJobs],
+    );
+    expect(stale).toEqual({ failed: JOBS, attempts: 0, released: JOBS });
+    expect(await balance(owner.userId, "free_gold")).toBe(JOBS * 4);
+    expect(await balance(owner.userId, "hold")).toBe(0);
+    const stalePushes = pushed.filter((message) => staleJobs.includes(message.jobId));
+    expect(stalePushes).toHaveLength(JOBS);
+    expect(stalePushes.every((message) => message.status === "failed")).toBe(true);
   });
 });
 
@@ -340,7 +379,7 @@ describe("선점 기한이 지난 시도의 늦은 결과 저장", () => {
     };
     const { deps, clock } = countingWorker(at, slowStore);
     const firstToken = randomUUID();
-    const done = await tick(deps, firstToken);
+    const done = await runNextJob(deps, firstToken);
 
     expect(done).toEqual({ jobId: lateJob, outcome: "lost" });
     expect(clock.calls).toBe(1);
@@ -400,10 +439,16 @@ describe("저장하지 않은 결과의 보관 기한 30일", () => {
     const stillOpen = await before.view(token, unsavedJob);
     expect(stillOpen.result).not.toBeNull();
     expect((await before.open(stillOpen.result?.url ?? "")).status).toBe(200);
+    // 그때 받은 주소의 기한은 10분 뒤가 아니라 보관 기한이다.
+    expect(stillOpen.result?.expiresAt).toBe(new Date(at.getTime() + 30 * DAY_MS).toISOString());
 
-    // 기한 1초 뒤, 정리 전: 조회는 주소를 주지 않고 저장은 404 다. 복사본도 만들지 않는다.
+    // 기한 1초 뒤, 정리 전: 기한 1초 전에 받은 주소는 파일이 남아 있어도 열리지 않는다.
     const later = plus(at, 30 * DAY_MS + 1000);
     const after = apiAt(later);
+    expect(await store.read(unsaved.r2_key)).not.toBeNull();
+    expect((await after.open(stillOpen.result?.url ?? "")).status).toBe(403);
+
+    // 조회는 주소를 주지 않고 저장은 404 다. 복사본도 만들지 않는다.
     expect(await after.view(token, unsavedJob)).toMatchObject({
       status: "succeeded",
       result: null,

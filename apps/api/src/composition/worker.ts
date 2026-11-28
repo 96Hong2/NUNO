@@ -73,13 +73,8 @@ let active = 0;
 const claimTimer = setInterval(() => {
   if (active >= MAX_ACTIVE_JOBS) return;
   active += 1;
-  // 대기 상한을 넘긴 접수 작업을 먼저 끝내야 그 작업이 선점되어 공급사로 가지 않는다.
-  expireQueuedJobs(deps)
-    .then((expired) => {
-      if (expired > 0)
-        console.log(`대기 상한을 넘긴 접수 작업 ${expired}건을 실패와 풀기로 끝냈다`);
-      return runNextJob(deps);
-    })
+  // 대기 상한을 넘긴 접수 작업은 선점 함수가 공급사를 부르지 않고 끝낸다.
+  runNextJob(deps)
     .then((done) => {
       if (done) console.log(`작업 ${done.jobId}: ${done.outcome}`);
     })
@@ -116,6 +111,6 @@ function stop() {
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 console.log(
-  `worker: ${CLAIM_INTERVAL_MS}ms 마다 대기 만료와 선점, ${SWEEP_INTERVAL_MS}ms 마다 예약 작업`,
+  `worker: ${CLAIM_INTERVAL_MS}ms 마다 선점(대기 상한 확인 포함), ${SWEEP_INTERVAL_MS}ms 마다 예약 작업`,
 );
 if (devRoutes) console.log("개발 전용 가짜 공급사 모드를 사용자별로 읽는다(NUNO_DEV_ROUTES=1)");
