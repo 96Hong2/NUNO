@@ -9,12 +9,12 @@ AI 가 같은 규칙으로 기능을 반복해 더하고 고칠 수 있는 저�
 
 ## DoD (로드맵 원문, 번호는 이 파일에서 붙임)
 
-- [x] D1 [명령] `pnpm install` 뒤 `pnpm verify:fast` 가 타입 검사, 린트, 경계 검사, 단위 시험을 돌고 통과한다.
+- [x] D1 [명령] `pnpm install` 뒤 `pnpm verify:fast` 가 타입 검사, 린트, 경계 검사, 단위 시험을 실행하고 통과한다.
 - [x] D2 [명령] `packages/twin` 도메인 파일에 `react-native` import 를 넣으면 경계 검사가 실패한다. 실패 문구에 고치는 법이 한 문장 있다.
 - [x] D3 [명령] 같은 도메인 파일에 `Date.now()`, `Math.random()`, `fetch` 를 넣으면 린트가 실패한다.
 - [x] D4 [명령] 앱 코드가 `packages/twin` 의 `src/domain` 안쪽 경로를 import 하면 타입 검사나 경계 검사가 실패한다.
 - [x] D5 [명령] 시험 파일에 `.only`, `.skip`, 단언 없는 시험 중 하나를 넣으면 린트가 실패한다.
-- [x] D6 [명령] `pnpm new:context wardrobe` 를 돌리면 세 계층 틀이 생기고 `pnpm verify:fast` 가 그대로 통과한다.
+- [x] D6 [명령] `pnpm new:context wardrobe` 를 실행하면 세 계층 틀이 생긴다. 그 뒤에도 `pnpm verify:fast` 가 그대로 통과한다.
 - [x] D7 [명령] 룰 색인에 없는 `.claude/rules/*.md` 파일이 있거나 `paths:` 가 빠지면 `pnpm verify:fast` 가 실패한다.
 - [x] D8 [명령] `AGENTS.md` 의 작업 루프 줄이 전역 `task-dod-loop` 스킬을 가리키고, 새 세션의 스킬 목록에 그 스킬이 보인다.
 - [x] D9 [명령] 일부러 넣은 타입 오류 하나를 Stop 훅이 막고 이유를 보인다. 이 확인은 한 번만 한다.
@@ -26,7 +26,7 @@ AI 가 같은 규칙으로 기능을 반복해 더하고 고칠 수 있는 저�
 - [x] D15 [명령] `wc -m CLAUDE.md` 가 150~250 이다. 저장소에 `CLAUDE.local.md` 가 없고, Stop 훅에 `stop_hook_active` 확인이 없다.
 - [x] D16 [웹화면] `pnpm web` 으로 연 브라우저에서 하단 「홈」, 「피팅룸」, 「마이」 를 누르면 머리글에 그 탭 이름이 보이는 빈 화면이 열린다. 하단에 「탐색」 과 「찜」 은 없다.
 - [x] D17 [웹화면] 「피팅룸」 위쪽 「코디」, 「옷장」, 「트윈」, 「룩북」 칸을 누르면 그 칸의 빈 화면이 열린다. 「스토어」 칸은 없다.
-- [x] D18 [웹화면] 개발 빌드에서 「저장소 보기」 를 열면 쓰는 기기 저장소 어댑터 이름(expo-sqlite 또는 wa-sqlite)과 시험으로 쓴 값 한 줄이 보인다. 새로고침 뒤에도 그 값이 남는다.
+- [x] D18 [웹화면] 개발 빌드에서 「저장소 보기」 를 열면 지금 쓰는 기기 저장소 어댑터 이름이 보인다. 이름은 expo-sqlite 나 wa-sqlite 다. 시험으로 쓴 값 한 줄도 보인다. 새로고침 뒤에도 그 값이 남는다.
 - [x] D19 [명령] `plan_T1.md` 에 expo-sqlite 웹 읽기 쓰기 결과와 고른 웹 어댑터가 있다. Skia 웹 빌드 결과도 있다.
 - [ ] D20 [iOS] Xcode 설치 뒤 iOS 시뮬레이터에 같은 빈 셸이 뜬다.
 
