@@ -27,8 +27,8 @@ const coatCard = (page: Page) =>
   page.getByRole("list", { name: "옷 목록" }).getByRole("button", { name: COAT, exact: true });
 
 async function stripStage(page: Page) {
-  await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
-  await expect(toast(page)).toContainText("입은 옷을 모두 벗었어요");
+  await page.getByRole("button", { name: "옷 비우기" }).click();
+  await expect(toast(page)).toContainText("옷을 모두 비웠어요");
   await expect(page.getByTestId("stage-piece")).toHaveCount(0);
 }
 

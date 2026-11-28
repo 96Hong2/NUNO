@@ -10,7 +10,7 @@ async function openCoordi(page: Page) {
   await expect(page.getByRole("button", { name: "옷 칸 크게 올리기" })).toBeVisible();
 }
 
-test("견본 아우터를 누르면 입고 다시 누르면 벗고, 모두 벗기기는 되돌리기로 돌아온다", async ({
+test("기본 제공 아우터를 누르면 입고 다시 누르면 벗고, 옷 비우기는 되돌리기로 돌아온다", async ({
   page,
 }) => {
   const outside: string[] = [];
@@ -19,12 +19,12 @@ test("견본 아우터를 누르면 입고 다시 누르면 벗고, 모두 벗�
       outside.push(request.url());
   });
   await openCoordi(page);
-  await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
-  await expect(page.getByRole("alert")).toContainText("입은 옷을 모두 벗었어요");
+  await page.getByRole("button", { name: "옷 비우기" }).click();
+  await expect(page.getByRole("alert")).toContainText("옷을 모두 비웠어요");
   await page.getByRole("alert").getByRole("button", { name: "되돌리기" }).click();
   await expect(page.getByRole("img", { name: "코디를 입은 트윈 사진" }).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "입은 옷 모두 벗기" }).click();
+  await page.getByRole("button", { name: "옷 비우기" }).click();
   const coat = card(page, "그레이 더블 울 하프코트");
   await coat.click();
   await expect(coat).toHaveAttribute("aria-pressed", "true");

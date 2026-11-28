@@ -246,7 +246,7 @@ export default function CoordiScreen() {
 
   const clear = () => {
     if (outfit.length === 0) return;
-    void changeOutfit([]).then(withRestore("입은 옷을 모두 벗었어요"));
+    void changeOutfit([]).then(withRestore("옷을 모두 비웠어요"));
   };
 
   const step = (direction: "undo" | "redo") =>
@@ -367,7 +367,7 @@ export default function CoordiScreen() {
               </Pressable>
               <Pressable
                 role="button"
-                aria-label={outfit.length > 0 ? "입은 옷 모두 벗기" : "입은 옷이 없어요"}
+                aria-label={outfit.length > 0 ? "옷 비우기" : "입은 옷이 없어요"}
                 hitSlop={{ top: 4, bottom: 4 }}
                 onPress={clear}
                 style={[styles.pill, outfit.length === 0 && styles.dim]}
@@ -377,7 +377,7 @@ export default function CoordiScreen() {
                     <PersonIcon color={INK} />
                   </View>
                 </View>
-                <Text style={styles.pillLabel}>모두 벗기기</Text>
+                <Text style={styles.pillLabel}>옷 비우기</Text>
               </Pressable>
             </View>
             <Pressable role="button" onPress={() => setSheet("my")} style={styles.myButton}>

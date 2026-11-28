@@ -323,19 +323,14 @@ export const garmentMedia: GarmentMedia = {
 
   renderPreview: (photo, edits) => renderEdits(photo, edits, { trim: false }),
 
-  async store(id, photo, rendered): Promise<StoredGarmentFiles> {
+  async store(id, _photo, rendered): Promise<StoredGarmentFiles> {
     const directory = `garments/${id}`;
     const paths = {
-      originalPath: `${directory}/original.jpg`,
+      originalPath: `${directory}/cutout.png`,
       cutoutPath: `${directory}/cutout.png`,
       thumbPath: `${directory}/thumb.png`,
     };
-    const original = await bitmap(photo.originalUri);
-    const originalSize = fit(original.width, original.height, 2048);
-    const originalCanvas = canvas(originalSize.width, originalSize.height);
-    context(originalCanvas).drawImage(original, 0, 0, originalSize.width, originalSize.height);
-    // canvas 로 다시 구우면 사진의 위치 정보(EXIF)가 남지 않는다.
-    await writeFile(paths.originalPath, await toBlob(originalCanvas, "image/jpeg", 0.9));
+    // 원본 사진은 쓰지 않는다. 고른 사진은 메모리의 blob 주소로만 있다가 초안을 비울 때 놓아준다.
     const cutoutBlob = await blobOf(rendered.cutoutUri);
     await writeFile(paths.cutoutPath, cutoutBlob);
     const cutout = await createImageBitmap(cutoutBlob);
@@ -349,17 +344,15 @@ export const garmentMedia: GarmentMedia = {
   async storeImage(id, imageUri): Promise<StoredGarmentFiles> {
     const directory = `garments/${id}`;
     const paths = {
-      originalPath: `${directory}/original.png`,
+      originalPath: `${directory}/cutout.png`,
       cutoutPath: `${directory}/cutout.png`,
       thumbPath: `${directory}/thumb.png`,
     };
-    // 설치 파일 견본 그림은 이미 배경이 없다. canvas 로 다시 구워 PNG 로 쓴다(WebP 를 그대로 두지 않는다).
+    // 설치 파일 기본 제공 옷 그림은 이미 배경이 없다. canvas 로 다시 구워 PNG 로 쓴다(WebP 를 그대로 두지 않는다).
     const image = await createImageBitmap(await (await fetch(imageUri)).blob());
     const full = canvas(image.width, image.height);
     context(full).drawImage(image, 0, 0);
-    const png = await toBlob(full);
-    await writeFile(paths.originalPath, png);
-    await writeFile(paths.cutoutPath, png);
+    await writeFile(paths.cutoutPath, await toBlob(full));
     const thumbSize = fit(image.width, image.height, THUMB_SIDE);
     const thumb = canvas(thumbSize.width, thumbSize.height);
     context(thumb).drawImage(image, 0, 0, thumbSize.width, thumbSize.height);
@@ -387,6 +380,18 @@ export const garmentMedia: GarmentMedia = {
         URL.revokeObjectURL(uri);
         resolved.delete(path);
       }
+    }
+  },
+
+  async removeFile(path) {
+    const parts = path.split("/");
+    const name = parts.pop() ?? "";
+    const directory = await opfsDirectory(parts.join("/"), false).catch(() => null);
+    await directory?.removeEntry(name).catch(() => undefined);
+    const uri = resolved.get(path);
+    if (uri) {
+      URL.revokeObjectURL(uri);
+      resolved.delete(path);
     }
   },
 };

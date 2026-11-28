@@ -21,7 +21,7 @@ test("생년월일, 하린, 입고 싶은 옷, 「첫 코디」 룩북 저장, �
   await page.getByRole("button", { name: "이대로 입히기" }).click();
 
   await expect(page.getByRole("heading", { name: "완성 룩이에요" })).toBeVisible();
-  await expect(page.getByText("AI 가 만든 예시라 실제와 다를 수 있어요")).toBeInViewport();
+  await expect(page.getByText("AI 가 만든 예시예요")).toBeInViewport();
   await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "4");
   await page.getByRole("button", { name: "내 룩북에 저장" }).click();
   const sheet = page.getByRole("dialog", { name: "룩북 저장" });

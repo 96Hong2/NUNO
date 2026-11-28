@@ -311,7 +311,7 @@ export function ledgerDateLabel(at: string): string {
   return `${month}.${day}`;
 }
 
-/** 옷이 든 옷장 칸. 옷장에 넣지 않은 견본 옷은 null 이다. */
+/** 옷이 든 옷장 칸. 옷장에 넣지 않은 기본 제공 옷은 null 이다. */
 export type ManifestCloset = "mine" | "wanted" | null;
 
 /** 접수 입력 목록의 옷 한 벌 */
@@ -353,5 +353,5 @@ export function outfitKeyOf(manifest: GenerationManifest): string {
 export function closetLabel(closet: ManifestCloset): string {
   if (closet === "mine") return "내 옷장";
   if (closet === "wanted") return "담은 옷";
-  return "견본 옷";
+  return "기본 제공 옷";
 }

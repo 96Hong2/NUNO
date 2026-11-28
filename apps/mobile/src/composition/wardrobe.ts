@@ -2,9 +2,11 @@ import {
   countCloset,
   defaultGarmentName,
   deleteGarment,
+  forgetStoredOriginal,
   insertGarment,
   listCloset,
   listRecentGarments,
+  listStoredOriginals,
   moveGarments,
   NO_EDITS,
   normalizeGarmentName,
@@ -150,6 +152,25 @@ export async function removeGarment(id: string): Promise<void> {
   });
   closetChanged();
   setTimeout(() => void garmentMedia.remove(id), FILE_REMOVE_DELAY_MS);
+}
+
+let originalsSwept: Promise<void> | undefined;
+
+/**
+ * 원본 사진을 옷 폴더에 쓰던 앱이 남긴 원본 파일을 지운다. 앱을 켤 때 한 번 부른다.
+ * 지금 앱은 배경을 지운 뒤 원본을 남기지 않는다(「사진 보관 안내」).
+ */
+export function removeLeftoverOriginals(): Promise<void> {
+  originalsSwept ??= (async () => {
+    const { db } = await getDeviceDb();
+    for (const { id, originalPath } of await listStoredOriginals(db)) {
+      await garmentMedia.removeFile(originalPath);
+      await forgetStoredOriginal(db, id);
+    }
+  })().catch(() => {
+    originalsSwept = undefined;
+  });
+  return originalsSwept;
 }
 
 // ── 옷 넣기 네 단계 ─────────────────────────────────────────────
