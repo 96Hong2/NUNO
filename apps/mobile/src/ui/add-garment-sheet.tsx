@@ -1,4 +1,4 @@
-import type { GarmentMethod } from "@nuno/wardrobe";
+import { closetSlotsLabel, type GarmentMethod } from "@nuno/wardrobe";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 interface AddGarmentSheetProps {
@@ -44,9 +44,7 @@ export function AddGarmentSheet({ visible, counts, onPick, onClose }: AddGarment
           ))}
         </View>
         {counts ? (
-          <Text style={styles.count}>
-            내 옷장 {counts.mine + counts.wanted} / 100칸
-          </Text>
+          <Text style={styles.count}>{closetSlotsLabel(counts)}</Text>
         ) : null}
       </View>
     </Modal>

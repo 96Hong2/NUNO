@@ -185,7 +185,7 @@ export default function CutoutScreen() {
     const covers = edits.strokes.filter((stroke) => stroke.mode === "cover");
     const heightRatio = draft.photo.height / Math.max(1, draft.photo.width);
     if (faceStillVisible(edits.crop, draft.photo.face, covers, heightRatio)) {
-      toast.show("얼굴이 보이지 않게 자르기 네모를 줄여 주세요");
+      toast.show("얼굴이 보이지 않게 자르기 영역을 줄여 주세요");
       return;
     }
     leaving.current = true;

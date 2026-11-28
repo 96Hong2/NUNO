@@ -104,7 +104,7 @@ export default function SettingsScreen() {
           void confirm(
             withdrawConsent,
             "동의를 거뒀어요",
-            "동의를 거두지 못했어요. 잠시 뒤에 다시 해 주세요",
+            "동의를 거두지 못했어요. 잠시 후 다시 시도해 주세요",
           )
         }
         onClose={() => setSheet(null)}
@@ -116,7 +116,7 @@ export default function SettingsScreen() {
         action="로그아웃"
         busy={busy}
         onConfirm={() =>
-          void confirm(signOut, "로그아웃했어요", "로그아웃하지 못했어요. 잠시 뒤에 다시 해 주세요")
+          void confirm(signOut, "로그아웃했어요", "로그아웃하지 못했어요. 잠시 후 다시 시도해 주세요")
         }
         onClose={() => setSheet(null)}
       />

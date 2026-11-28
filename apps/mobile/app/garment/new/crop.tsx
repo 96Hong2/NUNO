@@ -45,7 +45,7 @@ export default function CropScreen() {
 
   const proceed = () => {
     if (faceVisible) {
-      toast.show("얼굴이 보이지 않게 네모를 옮기거나 붓으로 가려 주세요");
+      toast.show("얼굴이 보이지 않게 자르기 영역을 옮기거나 붓으로 가려 주세요");
       return;
     }
     if (leaving.current) return;
@@ -68,7 +68,7 @@ export default function CropScreen() {
             onPress={() => setCovering(!covering)}
             style={styles.cover}
           >
-            <Text style={styles.coverLabel}>{covering ? "네모 맞추기" : "붓으로 가리기"}</Text>
+            <Text style={styles.coverLabel}>{covering ? "자르기 영역 맞추기" : "붓으로 가리기"}</Text>
           </Pressable>
         </>
       }

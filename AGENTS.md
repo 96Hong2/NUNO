@@ -30,7 +30,7 @@
 | 골드 원장, 묶음, 충전 | `apps/api/src/gold`: T7 에서 만든다(서버 업무 코드 자리, ADR 0002) |
 | 가입, 동의, 계정 삭제 | `apps/api/src/account`(서버 업무 코드 자리, ADR 0002) |
 | 신고, 차단 | `packages/safety`: T8 에서 new:context 로 만든다 |
-| 공유 링크와 링크 끊기 | `packages/share`: T9 에서 new:context 로 만든다 |
+| 공유 링크와 공유 중지 | `packages/share`: T9 에서 new:context 로 만든다 |
 | 시계 포트와 한국 날짜 헬퍼, ID 포트(시험용 고정 시계와 순번 ID 포함) | `packages/clock`, `packages/ids` |
 | 기기 저장 판과 옮기기 단계 | 각 컨텍스트가 자기 표의 옮기기 단계를 낸다. 순서는 `apps/mobile/src/composition/migrations.ts` 한 곳(T2-1 에서 만든다) |
 | 앱 화면과 라우트, 기기 SDK 어댑터, composition | `apps/mobile`. 그 폴더 `AGENTS.md` 를 따른다 |

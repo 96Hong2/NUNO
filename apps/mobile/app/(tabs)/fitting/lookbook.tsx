@@ -29,7 +29,7 @@ export default function LookbookScreen() {
   const create = async (title: string) => {
     const made = await createLookbook(title);
     if (!made) {
-      toast.show("룩북을 만들지 못했어요. 잠시 뒤에 다시 해 주세요", undefined, overSheet);
+      toast.show("룩북을 만들지 못했어요. 잠시 후 다시 시도해 주세요", undefined, overSheet);
       return;
     }
     setCreating(false);

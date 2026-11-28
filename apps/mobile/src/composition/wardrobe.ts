@@ -86,6 +86,12 @@ export async function loadRecentGarments(): Promise<ClosetView> {
   return { counts, garments: await Promise.all(garments.map(withThumb)) };
 }
 
+/** 옷 추가 완료 화면의 「내 옷장 N / 100칸」 에 쓰는 칸별 옷 수 */
+export async function loadClosetCounts(): Promise<ClosetCounts> {
+  const { db } = await getDeviceDb();
+  return countCloset(db);
+}
+
 export async function toggleFavorite(id: string, favorite: boolean): Promise<void> {
   const { db } = await getDeviceDb();
   await setFavorite(db, id, favorite, now());

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// 기대값은 와이어프레임 v27 의 옷 추가 화면과 시안 v2 명세 4(옷 정보, 트윈에 맞춰 보기)에서 가져온다.
+// 기대값은 와이어프레임 v27 의 옷 추가 화면(옷장 칸 수 줄은 v28)과 시안 v2 명세 4(옷 정보, 트윈에 맞춰 보기)에서 가져온다.
 test.use({ viewport: { width: 390, height: 844 } });
 
 const FIXTURES = "e2e/fixtures/garments";
@@ -16,6 +16,7 @@ async function openCutout(page: Page) {
   await page.getByRole("button", { name: "옷 추가", exact: true }).first().click();
   const sheet = page.getByRole("dialog", { name: "옷을 어떻게 추가할까요?" });
   await expect(sheet.getByRole("heading", { name: "옷을 어떻게 추가할까요?" })).toBeVisible();
+  await expect(sheet.getByText("내 옷장 0 / 100칸", { exact: true })).toBeVisible();
   const chooser = page.waitForEvent("filechooser");
   await sheet.getByRole("button", { name: "앨범에서 고르기" }).click();
   await (await chooser).setFiles(`${FIXTURES}/knit-stripe.jpg`);
@@ -86,7 +87,9 @@ test("이름을 비우고 「다음」 을 누르면 칸 아래 오류가 뜨고
 
   await expect(page.getByRole("heading", { name: "내 옷에 추가했어요" })).toBeVisible();
   await expect(page.getByText("브라운 스트라이프 니트", { exact: true })).toBeVisible();
-  await expect(page.getByText("사진으로 계산한 크기로 입혀요", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("사진으로 계산한 크기로 입혀요. 내 옷장 1 / 100칸", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "이 옷으로 코디하기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "한 벌 더 넣기" })).toBeVisible();
 
@@ -106,6 +109,9 @@ test("「사고 싶은 옷」 으로 고르면 「담은 옷에 추가」 뒤 �
   await page.getByRole("button", { name: "담은 옷에 추가" }).click();
 
   await expect(page.getByRole("heading", { name: "담은 옷에 추가했어요" })).toBeVisible();
+  await expect(
+    page.getByText("사진으로 계산한 크기로 입혀요. 내 옷장 1 / 100칸", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "한 벌 더 넣기" })).toBeVisible();
   await page.getByRole("button", { name: "닫기" }).click();
   await expect(segment(page, "담은 옷")).toHaveAttribute("aria-pressed", "true");

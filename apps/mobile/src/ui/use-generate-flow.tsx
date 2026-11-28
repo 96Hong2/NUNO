@@ -171,7 +171,7 @@ export function useGenerateFlow(
   const signIn = () =>
     void run(async () => {
       if (!(await devSignIn())) {
-        notify("로그인하지 못했어요. 잠시 뒤에 다시 해 주세요");
+        notify("로그인하지 못했어요. 잠시 후 다시 시도해 주세요");
         return;
       }
       proceed(await reload());
